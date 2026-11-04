@@ -5,6 +5,7 @@ import { failedRequestService } from "../services/order.requester.service";
 import { requesterOrderHistoryQueryKeys } from "./requesterOrderQueryKeys";
 import { toast } from "react-toastify";
 import { creditKeys } from "@/features/credit/hooks/credit.keys";
+import { orderQueryKeys } from "./orderQueryKeys";
 
 export function useFailRequest() {
     const queryClient = useQueryClient();
@@ -18,6 +19,9 @@ export function useFailRequest() {
                 }),
                 queryClient.invalidateQueries({
                     queryKey: creditKeys.all,
+                }),
+                queryClient.invalidateQueries({
+                    queryKey: orderQueryKeys.all
                 })
             ]);
 

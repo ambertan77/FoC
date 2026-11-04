@@ -30,10 +30,7 @@ export async function getAllOrders(input: GetAllOrdersInput) {
                     ],
                 }
                 : {}),
-            ...(status ? { status: status } : {}), // If status is provided, include it in the where clause; otherwise, don't filter by status 
-            expiryAt: {
-                gt: now // only include orders that have not yet expired
-            }
+            ...(status ? { status: status } : {}) // If status is provided, include it in the where clause; otherwise, don't filter by status 
         },
         orderBy: { [sortBy]: sortOrder },
         take: LIMIT,
@@ -55,10 +52,7 @@ export async function getAllOrders(input: GetAllOrdersInput) {
                     ],
                 }
                 : {}),
-            ...(status ? { status: status } : {}), // If status is provided, include it in the where clause; otherwise, don't filter by status
-            expiryAt: {
-                gt: now // only include orders that have not yet expired
-            }
+            ...(status ? { status: status } : {}) // If status is provided, include it in the where clause; otherwise, don't filter by status
         }
     });
 

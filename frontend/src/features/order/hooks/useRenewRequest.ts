@@ -5,6 +5,7 @@ import type { Order, RenewRequestPayload } from "../types/order.types";
 import { requesterOrderHistoryQueryKeys } from "./requesterOrderQueryKeys";
 import { creditKeys } from "@/features/credit/hooks/credit.keys";
 import { renewRequestService } from "../services/order.requester.service";
+import { orderQueryKeys } from "./orderQueryKeys";
 
 export function useRenewRequest() {
     const queryClient = useQueryClient();
@@ -22,6 +23,9 @@ export function useRenewRequest() {
                 queryClient.invalidateQueries({
                     queryKey: creditKeys.all,
                 }),
+                queryClient.invalidateQueries({
+                    queryKey: orderQueryKeys.all
+                })
             ]);
 
             toast.success("Renewal request submitted. Please wait for the credit reservation approval.");

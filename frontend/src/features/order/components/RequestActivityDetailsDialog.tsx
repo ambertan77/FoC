@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import SupplierSelect from "./SupplierSelect";
 import DateTimePicker from "./DateTimePicker";
 import { statusVariant, type Order, type ViewerRole } from "../types/order.types";
-import { useOrderRelatedUserDetails } from "../hooks/useOrderRelatedUserDetails";
+import { useOrderCourierDetails, useOrderRequesterDetails } from "../hooks/useOrderRelatedUserDetails";
 import { createRequestSchema } from "../schemas/create-request.schema";
 import useUpdateRequest from "../hooks/useUpdateRequest";
 import useAcceptRequest from "../hooks/useAcceptRequest";
@@ -64,17 +64,13 @@ const RequestActivityDetailsDialog = ({
     handleReorder,
 }: RequestActivityDetailsDialogProps) => {
     const [isEditing, setIsEditing] = useState(false);
-    const relatedDetailsQuery = useOrderRelatedUserDetails(
-        order,
-        viewerRole,
-        open,
-    );
 
-    const userId =
-        viewerRole === "requester" ? order.courierId : order.requesterId;
-    const relatedPersonLabel =
-        viewerRole === "requester" ? "Courier" : "Requester";
-    const relatedPerson = relatedDetailsQuery.data;
+    const showCourier = viewerRole !== "courier"; // show courier details if viewerRole is requester or admin
+    const showRequester = viewerRole !== "requester"; // show requester details if viewerRole is courier or admin
+    const courierDetailsQuery = useOrderCourierDetails(order, viewerRole, open && showCourier);
+    const courierDetails = courierDetailsQuery.data;
+    const requesterDetailsQuery = useOrderRequesterDetails(order, viewerRole, open && showRequester);
+    const requesterDetails = requesterDetailsQuery.data;
 
     const { updateRequest, isPending } = useUpdateRequest();
     const { acceptRequest, isPending: isAccepting } = useAcceptRequest();
@@ -390,30 +386,55 @@ const RequestActivityDetailsDialog = ({
                         </div>
                     )}
 
-                    {/* Show the details of the related person (requester or courier) */}
-                    <div className="space-y-2 border-t pt-4">
-                        <p className="font-medium text-base">{relatedPersonLabel} Details</p>
+                    {/* Show the details of the requester */}
+                    {showRequester && (
+                        <div className="space-y-2 border-t pt-4">
+                            <p className="font-medium text-base">Requester Details</p>
 
-                        {!userId && viewerRole === "requester" ? (
-                            <p className="text-sm text-muted-foreground">
-                                No courier has accepted this request yet.
-                            </p>
-                        ) : relatedDetailsQuery.isPending ? (
-                            <p className="text-sm text-muted-foreground">
-                                Loading {relatedPersonLabel.toLowerCase()} details…
-                            </p>
-                        ) : relatedDetailsQuery.isError ? (
-                            <p role="alert" className="text-sm text-destructive">
-                                Could not load {relatedPersonLabel.toLowerCase()} details.
-                            </p>
-                        ) : relatedPerson ? (
-                            <>
-                                <DetailText label="Email" value={relatedPerson.email} />
-                                <DetailText label="Username" value={relatedPerson.username} />
-                                <DetailText label="Phone" value={relatedPerson.phoneNumber} />
-                            </>
-                        ) : null}
-                    </div>
+                            {requesterDetailsQuery.isPending ? (
+                                <p className="text-sm text-muted-foreground">
+                                    Loading requester details…
+                                </p>
+                            ) : requesterDetailsQuery.isError ? (
+                                <p role="alert" className="text-sm text-destructive">
+                                    Could not load requester details.
+                                </p>
+                            ) : requesterDetails ? (
+                                <>
+                                    <DetailText label="Email" value={requesterDetails.email} />
+                                    <DetailText label="Username" value={requesterDetails.username} />
+                                    <DetailText label="Phone" value={requesterDetails.phoneNumber} />
+                                </>
+                            ) : null}
+                        </div>
+                    )}
+
+                    {/* Show the details of the courier */}
+                    {showCourier && (
+                        <div className="space-y-2 border-t pt-4">
+                            <p className="font-medium text-base">Courier Details</p>
+
+                            {!order.courierId ? (
+                                <p className="text-sm text-muted-foreground">
+                                    No courier has accepted this request yet.
+                                </p>
+                            ) : courierDetailsQuery.isPending ? (
+                                <p className="text-sm text-muted-foreground">
+                                    Loading courier details…
+                                </p>
+                            ) : courierDetailsQuery.isError ? (
+                                <p role="alert" className="text-sm text-destructive">
+                                    Could not load courier details.
+                                </p>
+                            ) : courierDetails ? (
+                                <>
+                                    <DetailText label="Email" value={courierDetails.email} />
+                                    <DetailText label="Username" value={courierDetails.username} />
+                                    <DetailText label="Phone" value={courierDetails.phoneNumber} />
+                                </>
+                            ) : null}
+                        </div>
+                    )}
 
                     {canEditRequest && (
                         <div className="flex justify-end gap-2">
