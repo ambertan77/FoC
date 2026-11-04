@@ -11,12 +11,3 @@ export type ReservationInput = z.infer<typeof reservationSchema>;
 
 export const abortReservationSchema = reservationSchema.extend({ reservationId: reservationIdSchema });
 export type AbortReservationInput = z.infer<typeof abortReservationSchema>;
-
-export const renewReservationSchema = z.strictObject({
-    renewalKey: z.string().min(1).max(255),
-    previousReservationId: reservationIdSchema,
-    orderId: reservationIdSchema,
-    requesterId: reservationIdSchema,
-    amount: z.number().int().min(1).max(2_147_483_647),
-});
-export type RenewReservationInput = z.infer<typeof renewReservationSchema>;
