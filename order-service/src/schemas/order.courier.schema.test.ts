@@ -2,7 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
     getCourierOrderHistorySchema,
-    getOpenOrdersSchema
+    getOpenOrdersSchema,
+    courierUpdateStatusSchema
 } from "../schemas/order.courier.schema.js";
 
 const validOpenOrdersInput = {
@@ -19,6 +20,10 @@ const validCourierHistoryInput = {
     status: "ACCEPTED",
     sortOrder: "desc"
 };
+
+const validCourierUpdateStatusInput = {
+    expectedVersion: "2"
+}
 
 test("getOpenOrdersSchema accepts a complete valid payload", () => {
     const result = getOpenOrdersSchema.parse(validOpenOrdersInput);
@@ -122,6 +127,23 @@ test("getCourierOrderHistorySchema rejects invalid status input", () => {
 test("getCourierOrderHistorySchema rejects invalid status input", () => {
     assert.throws(
         () => getOpenOrdersSchema.parse({ ...validCourierHistoryInput, sortBy: "INVALID_STATUS" }),
+        (error: unknown) => error instanceof Error && error.name === "ZodError",
+    );
+});
+
+test("courierUpdateStatusSchema accepts a valid input", () => {
+    const result = courierUpdateStatusSchema.parse(validCourierUpdateStatusInput);
+
+    assert.equal(result.expectedVersion, 2)
+});
+
+test("courierUpdateStatusSchema rejects invalid page input", () => {
+    assert.throws(
+        () => courierUpdateStatusSchema.parse({ ...validCourierUpdateStatusInput, expectedVersion: "0" }),
+        (error: unknown) => error instanceof Error && error.name === "ZodError",
+    );
+    assert.throws(
+        () => courierUpdateStatusSchema.parse({ ...validCourierUpdateStatusInput, expectedVersion: "-10" }),
         (error: unknown) => error instanceof Error && error.name === "ZodError",
     );
 });

@@ -92,15 +92,15 @@ const StatusUpdateDialog = ({
 
         if (newStatus === "OPEN") {
             // Courier drops the acceptance: ACCEPTED -> OPEN
-            await dropRequest(order.id);
+            await dropRequest({ orderId: order.id, expectedVersion: order.version });
             return;
         } else if (newStatus === "PICKED_UP") {
             // Courier picks up the order: ACCEPTED -> PICKED_UP
-            await pickUpRequest(order.id);
+            await pickUpRequest({ orderId: order.id, expectedVersion: order.version });
             return;
         } else if (newStatus === "COMPLETED") {
             // Courier completes the order: PICKED_UP -> COMPLETED
-            await completeRequest(order.id);
+            await completeRequest({ orderId: order.id, expectedVersion: order.version });
             return;
         } else if (newStatus === "CANCELED") {
             // Requester cancels the order: OPEN -> CANCELED

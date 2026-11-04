@@ -471,7 +471,7 @@ const RequestActivityDetailsDialog = ({
                                 variant="indigo"
                                 isLoading={isAccepting}
                                 disabled={isAccepting}
-                                onClick={() => acceptRequest(order.id)}
+                                onClick={() => acceptRequest({ orderId: order.id, expectedVersion: order.version })}
                             >
                                 Accept
                             </Button>

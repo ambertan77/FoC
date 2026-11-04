@@ -34,10 +34,12 @@ export const getOpenRequestsService = async (
 
 export const acceptRequestService = async (
     orderId: string,
+    payload: { expectedVersion: number }
 ): Promise<Order> => {
     try {
         const response = await orderApi.post<ApiResponse<Order>>(
-            `${ENDPOINTS.order.acceptOrder}`.replace(":orderId", orderId)
+            `${ENDPOINTS.order.acceptOrder}`.replace(":orderId", orderId),
+            payload
         );
 
         return response.data.data!;
@@ -48,10 +50,12 @@ export const acceptRequestService = async (
 
 export const pickUpRequestService = async (
     orderId: string,
+    payload: { expectedVersion: number }
 ): Promise<Order> => {
     try {
         const response = await orderApi.post<ApiResponse<Order>>(
-            `${ENDPOINTS.order.pickUpOrder}`.replace(":orderId", orderId)
+            `${ENDPOINTS.order.pickUpOrder}`.replace(":orderId", orderId),
+            payload
         );
 
         return response.data.data!;
@@ -62,10 +66,12 @@ export const pickUpRequestService = async (
 
 export const completeRequestService = async (
     orderId: string,
+    payload: { expectedVersion: number }
 ): Promise<Order> => {
     try {
         const response = await orderApi.post<ApiResponse<Order>>(
-            `${ENDPOINTS.order.completeOrder}`.replace(":orderId", orderId)
+            `${ENDPOINTS.order.completeOrder}`.replace(":orderId", orderId),
+            payload
         );
 
         return response.data.data!;
@@ -76,10 +82,12 @@ export const completeRequestService = async (
 
 export const dropRequestService = async (
     orderId: string,
+    payload: { expectedVersion: number }
 ): Promise<Order> => {
     try {
         const response = await orderApi.delete<ApiResponse<Order>>(
-            `${ENDPOINTS.order.acceptOrder}`.replace(":orderId", orderId)
+            `${ENDPOINTS.order.dropOrder}`.replace(":orderId", orderId),
+            { data: payload }
         );
 
         return response.data.data!;
