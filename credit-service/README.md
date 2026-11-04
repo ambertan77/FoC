@@ -53,9 +53,58 @@ Order Service owns order status and order IDs. Credit Service owns credit accoun
 
 ## Asynchronous Workflows with RabbitMQ
 
+### Messaging Overview
+
+Services communicate through RabbitMQ. Every message is one of two kinds:
+
+- **Event**: a fact that already happened, named in the past tense (`USER_REGISTERED`, `ORDER_RECEIVED`). The publisher does not know or care who consumes it. Events go to **topic** exchanges, so more consumers can subscribe later without changing the publisher.
+- **Command**: a request that one specific service must act on (`CREDIT_RESERVATION_REQUEST`). The sender depends on the outcome, so the command goes to a **direct** exchange with exactly one consumer. The outcome comes back as an event.
+
+#### Exchange types used
+
+| Type | Routing rule | Used for |
+| --- | --- | --- |
+| Direct | Delivered to queues whose binding key exactly equals the routing key | Commands (`credit.commands`) |
+| Topic | Delivered to queues whose binding pattern matches the routing key. `*` matches exactly one word and `#` matches zero or more | Events (`user.events`, `order.events`, `credit.events`) |
+
+Fanout and header exchanges are not used.
+
+#### All messages
+
+| Message | Kind | Flow | Exchange (type) | Routing key | Binding | Consumer queue |
+| --- | --- | --- | --- | --- | --- | --- |
+| `USER_REGISTERED` | Event | User → Credit | `user.events` (topic) | `user.registered.v1` | `user.registered.v1` | `credit.user-registered.v1` |
+| `CREDIT_RESERVATION_REQUEST` | Command | Order → Credit | `credit.commands` (direct) | `credit.reserve.v1` | `credit.reserve.v1` | `credit.reserve.v1` |
+| `ORDER_RECEIVED` | Event | Order → Credit | `order.events` (topic) | `order.received.v1` | `order.*.v1` | `credit.order-events.v1` |
+| `ORDER_CANCELED` | Event | Order → Credit | `order.events` (topic) | `order.canceled.v1` | `order.*.v1` | `credit.order-events.v1` |
+| `ORDER_EXPIRED` | Event | Order → Credit | `order.events` (topic) | `order.expired.v1` | `order.*.v1` | `credit.order-events.v1` |
+| `ORDER_FAILED` | Event | Order → Credit | `order.events` (topic) | `order.failed.v1` | `order.*.v1` | `credit.order-events.v1` |
+| `CREDIT_RESERVATION_SUCCEEDED` | Event | Credit → Order | `credit.events` (topic) | `credit.reservation.succeeded.v1` | `credit.reservation.*.v1` | `order.credit-events.v1` |
+| `CREDIT_RESERVATION_FAILED` | Event | Credit → Order | `credit.events` (topic) | `credit.reservation.failed.v1` | `credit.reservation.*.v1` | `order.credit-events.v1` |
+
+All exchanges are durable. Each publishing service owns its exchange. Exchange names are not versioned; routing keys and queue names carry the `.v1` suffix.
+
+#### Queue topology (same for every consumer)
+
+Each consumer has three durable quorum queues:
+
+| Queue | Purpose |
+| --- | --- |
+| `<name>.v1` | Main queue, bound to the exchange |
+| `<name>.retry.v1` | Delay queue with a 10-second TTL and no consumer. Expired messages dead-letter through the default exchange (`""`) straight back to the main queue by name |
+| `<name>.dead.v1` | Dead-letter queue (DLQ) with no TTL and no consumer. The consumer publishes here itself |
+
+All queues use `reject-publish` when full and `x-delivery-limit: -1`. The retry queue uses `x-dead-letter-strategy: at-least-once`, so a retry can be delivered more than once.
+
+Retries return to the main queue by queue name, not through the topic exchange. This stops other queues bound to the same key from receiving duplicates. A retried message therefore arrives with the queue name as its routing key. When a consumer forwards a message to theretry or dead queue, it stores the original key in the `x-original-routing-key` header, and on a delayed retry it validates that header against the event type.
+
+Publishers and consumers both declare the topology of every queue they publish to or read from, so a `mandatory` publish is never returned as unroutable because the other service has not started yet. Keep these definitions identical in all services. A mismatch fails at startup with `PRECONDITION_FAILED`.
+
+The DLQ is a consumer-side concept: it holds messages that reached the broker but could not be processed. The publisher-side equivalent is an outbox row with status `DEAD`.
+
 ### Registration and Initial Credit Grant
 
-User-service sends this registration event in an AMQP message. The initial credit amount is fixed by Credit; the event does not choose it.
+`USER_REGISTERED` is an **event**. User Service reports that a student registered; Credit Service decides that its reaction is to grant the initial credits. User Service does not know that Credit exists.
 
 ```json
 {
@@ -74,12 +123,14 @@ Credit trusts the publisher to report verified student registrations. It does no
 
 | Component | Declaration |
 | --- | --- |
-| Exchange | Durable topic exchange `foc.events` |
+| Exchange | Durable topic exchange `user.events` (published by User Service) |
 | Registration route | `user.registered.v1` → `credit.user-registered.v1` |
-| Retry queue | `credit.user-registered.retry.v1`, 10-second TTL, dead-letter route back to the registration exchange/key |
+| Retry queue | `credit.user-registered.retry.v1`, 10-second TTL, dead-letters through the default exchange back to `credit.user-registered.v1` |
 | Dead-letter queue | `credit.user-registered.dead.v1`, no TTL |
 
 All three queues are durable quorum queues. They use `reject-publish` when full and disable automatic delivery-count limits. The retry queue uses at-least-once dead-lettering, which can deliver the same message more than once. Retry and dead-letter messages are sent to queue names through the default exchange.
+
+The consumer checks that the routing key is `user.registered.v1`. On a delayed retry it reads the key from `x-original-routing-key`.
 
 Both services define the same exchanges, queues and bindings in `src/libs/rabbitmq.ts`. Update both files together when changing the contract.
 
@@ -178,7 +229,14 @@ These statuses describe errors from the function; there is no public HTTP grant 
 
 ### Order Reservation and Renewal
 
-Order Service publishes a reservation request when a requester creates an order or renews an expired one. It records the request in its outbox as part of the same database transaction as its order change. Credit Service consumes the request and publishes a result through its own outbox.
+`CREDIT_RESERVATION_REQUEST` is a **command**. Order Service needs Credit Service specifically to reserve credits, and an order stays `PENDING_RESERVATION` until it gets the answer. It is published to the direct exchange `credit.commands` with routing key `credit.reserve.v1` and is consumed from `credit.reserve.v1` (retry `credit.reserve.retry.v1`, dead `credit.reserve.dead.v1`).
+
+Credit Service answers with an **event** on the topic exchange `credit.events`: `CREDIT_RESERVATION_SUCCEEDED` (`credit.reservation.succeeded.v1`) or `CREDIT_RESERVATION_FAILED` (`credit.reservation.failed.v1`). Order Service consumes both from `order.credit-events.v1` (retry `order.credit-events.retry.v1`, dead `order.credit-events.dead.v1`).
+
+```Text
+Order Service ── CREDIT_RESERVATION_REQUEST (command) ──▶ [credit.commands, direct] ──▶ credit.reserve.v1 ──▶ Credit Service
+Order Service ◀── CREDIT_RESERVATION_SUCCEEDED / FAILED (event) ── [credit.events, topic] ◀── Credit Service
+```
 
 A create request has this shape:
 
@@ -217,7 +275,7 @@ The renewal’s `expectedVersion` lets Order Service reject a result if the orde
 
 ### Order Settlement
 
-Settlement means paying out or returning a reservation. Credit handles these v1 events on `foc.events`:
+Settlement means paying out or returning a reservation. Order Service publishes four **events** on the durable topic exchange `order.events`. Credit consumes them from `credit.order-events.v1`, bound with the pattern `order.*.v1`.
 
 | Event | Routing key | Result |
 | --- | --- | --- |
@@ -226,9 +284,7 @@ Settlement means paying out or returning a reservation. Credit handles these v1 
 | `ORDER_EXPIRED` | `order.expired.v1` | Return held credits to the requester (F6) |
 | `ORDER_FAILED` | `order.failed.v1` | Refund held credits to the requester (F7) |
 
-`ORDER_COMPLETED` does not pay the courier. There is no browser-facing transfer endpoint.
-
-Order must check receipt permission and save the valid status change and outbox event in one transaction. The Order event producer and outbox publisher are still pending.
+These are events, not commands. Order reports what happened, and Credit owns the rules for transferring, releasing or refunding credits. The pattern `order.*.v1` also matches any future `order.<x>.v1` event, and the consumer sends unknown ones to the DLQ as `INVALID_EVENT`.
 
 #### Event format
 
@@ -297,21 +353,19 @@ Credit's consumer does not complete Order's lifecycle workflow. After cancellati
 
 #### Queues and retries
 
-Settlement uses three separate durable quorum queues:
+Settlement uses three durable quorum queues:
 
-- `credit.order-settlement.v1`: incoming events.
-- `credit.order-settlement.retry.v1`: delayed retries.
-- `credit.order-settlement.dead.v1`: events needing investigation, also called the dead-letter queue or DLQ.
+- `credit.order-events.v1`: incoming events.
+- `credit.order-events.retry.v1`: delayed retries (10-second TTL).
+- `credit.order-events.dead.v1`: events needing investigation (the DLQ).
 
-All four F5 to F7 routes are bound. Registration queues and bindings are unchanged.
-
-The retry queue has a 10-second TTL, rejects publishing when full, and uses at-least-once dead-lettering back to the existing receipt route. Retry forwarding waits for confirmation and keeps the original route in `x-settlement-routing-key`. The consumer checks that header against eventType for delayed retries. This preserves the existing durable queue settings without deleting queues. Redrive uses the event's own route.
+The retry queue dead-letters through the default exchange straight back to `credit.order-events.v1`. Retry forwarding waits for confirmation and keeps the original routing key in `x-original-routing-key`. The consumer checks that header against `eventType` for delayed retries. Redrive republishes to `order.events` with the event's own routing key.
 
 Missing accounts or reservations, or conflicts that use up the local serialization attempts, get at most five delayed retries: six processing attempts in total. Invalid messages and conflicts go straight to the DLQ. Dead letters have no TTL.
 
 A database outage closes the consumer session. Reconnect waits grow from 1 to 60 seconds without increasing the event's retry count. Before acknowledging an original message, retry/DLQ forwarding must be confirmed and successfully routed.
 
-The settlement consumer starts alongside registration after the HTTP server begins listening. It processes one message at a time (prefetch 1) and stops before Prisma disconnects. Settlement needs no additional environment variables or migration.
+The settlement consumer starts alongside registration after the HTTP server begins listening. It processes one message at a time (prefetch 1) and stops before Prisma disconnects.
 
 #### Broker integration checks
 
@@ -390,6 +444,8 @@ Messages can be delivered more than once. Credit Service uses request event IDs 
 
 Exactly-once delivery is not guaranteed. For example, a publisher may receive RabbitMQ confirmation and stop before marking its database row published. The event may then be published again, so consumers must remain idempotent.
 
+Commands and events get the same delivery guarantees: at-least-once delivery with idempotent consumers. A command is not safer than an event. Credit Service recognizes a repeated `CREDIT_RESERVATION_REQUEST` by its event ID and stored request data, and the outcome is published once per request through its outbox.
+
 ### Dead-Letter Inspection and Redrive
 
 Inspect queue counts without consuming messages:
@@ -398,56 +454,37 @@ Inspect queue counts without consuming messages:
 docker compose exec rabbitmq rabbitmqctl list_queues -p / name messages_ready messages_unacknowledged consumers
 ```
 
-Investigate the cause of a dead-lettered message before redriving it. Redrive republishes the original message for another processing attempt; it does not repair invalid data or change a reservation’s final state.
+Redrive commands for each Credit dead-letter queue:
 
-Stop Credit Service while keeping RabbitMQ running, then for each workflow, run the redrive command with a positive limit. The command processes the oldest available dead letters, stopping at the requested limit or the number of ready messages counted at startup, whichever is smaller.
-
-For registration messages, run:
-
-```sh
-npm run redrive:registration -- --limit 10
-```
-
-For a compiled deployment:
-
-```sh
-npm run redrive:prod -- --limit 10
-```
-
-For settlement messages, run:
-
-```sh
-npm run redrive:settlement -- --limit 10
-```
-
-For credit reservation messages, run:
-
-```sh
-npm run redrive:reservation -- --limit 10
-```
-
-For credit outbox messages, run:
-
-```sh
-npm run redrive:credit-outbox -- --limit 10
-```
+| Workflow | Dead queue | Command |
+| --- | --- | --- |
+| Registration | `credit.user-registered.dead.v1` | `npm run redrive:registration -- --limit 10` |
+| Settlement | `credit.order-events.dead.v1` | `npm run redrive:settlement -- --limit 10` |
+| Reservation requests | `credit.reserve.dead.v1` | `npm run redrive:reservation -- --limit 10` |
+| Credit outbox (`DEAD` rows) | database | `npm run redrive:credit-outbox -- --limit 10` |
 
 Redrive means sending a dead-letter message back for another processing attempt. The command only needs `RABBITMQ_URL`; it does not start Prisma or the HTTP server.
 
-Restart credit-service afterward. Keeping its consumer paused during redrive prevents a still-failing event from returning to the dead-letter queue and being picked up again in the same run. Run one redrive command at a time.
+Restart credit service afterward. Keeping its consumer paused during redrive prevents a still-failing event from returning to the dead-letter queue and being picked up again in the same run. Run one redrive command at a time.
 
 The command processes the oldest available dead letters. It stops at the requested positive limit or the number of ready messages counted at startup, whichever is smaller.
 
 For each message, it:
 
-- Preserves the exact event bytes, event ID, occurrence time and message ID.
+- Preserves the exact event bytes, event ID and message ID.
 - Resets `x-retry-count` to zero, increments `x-redrive-count`, and sets `x-redriven-at`.
 - Keeps failure and death headers for diagnosis, but drops message expiration and AMQP user identity.
-- Acknowledges the dead letter only after RabbitMQ confirms republication to the registration route.
+- Acknowledges the dead letter only after RabbitMQ confirms republication to its original exchange and routing key:
 
-A broker failure stops the command with exit code 1. The current unacknowledged message becomes available again when the connection closes. Invalid event bodies, identities or redrive counts also stop the command without removing the message. Investigate these separately; redrive does not rewrite events or repair accounts.
+  | Workflow | Republished to |
+  | --- | --- |
+  | Registration | `user.events` with `user.registered.v1` |
+  | Settlement | `order.events` with the event's own key (`order.received.v1`, `order.canceled.v1`, `order.expired.v1` or `order.failed.v1`) |
+  | Reservation requests | `credit.commands` with `credit.reserve.v1` |
 
-A crash after forwarding but before acknowledgment can create a duplicate delivery. The grant function still prevents a second grant. A successful redrive means the message was republished; Credit may not have processed it yet.
+A broker failure stops the command with exit code 1. The current unacknowledged message becomes available again when the connection closes. Invalid event bodies, identities or redrive counts also stop the command without removing the message. Investigate these separately; redrive does not rewrite events or repair accounts and reservations.
+
+A crash after forwarding but before acknowledgment can create a duplicate delivery. Credit Service's handlers are idempotent, so a duplicate cannot grant reserve, transfer, release or refund twice. A successful redrive means the message was republished; credit service may not have processed it yet.
 
 ### Database Transactions and Credit Ledger
 

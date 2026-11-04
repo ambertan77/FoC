@@ -56,7 +56,7 @@ In the Order Service, there are two main roles: Requester (user who created an o
 | From | Action and Conditions | To | Changed By | Trigger and Credit Operation |
 | --- | --- | --- | --- | --- |
 | NULL | Request is valid, expiry date in the future, pickup and delivery suppliers exist. | PENDING_RESERVATION | Requester ID | Request is submitted. Order Service creates the order, history row, and `CREDIT_RESERVATION_REQUEST` outbox row in one transaction. Credit reservation happens asynchronously. |
-| PENDING_RESERVATION | Credit Service successfully reserves the requested credits. | OPEN | NULL (system) | Credit Service publishes an `CREDIT_RESERVATION_SUCCEEDED` outbox event.Order Service consumes it, records the reservation ID, and records the status change. |
+| PENDING_RESERVATION | Credit Service successfully reserves the requested credits. | OPEN | NULL (system) | Credit Service publishes an `CREDIT_RESERVATION_SUCCEEDED` outbox event. Order Service consumes it, records the reservation ID, and records the status change. |
 | PENDING_RESERVATION | Credit Service cannot reserve the requested credits. | RESERVATION_FAILED | NULL (system) | Credit Service publishes an `CREDIT_RESERVATION_FAILED` outbox event. Order Service consumes it and updates the order to `RESERVATION_FAILED`. No credits are reserved. |
 | OPEN | Requester owns the request, no courier is assigned, supplies exits, expected version matches, editable fields are valid, order must be in OPEN status. | OPEN | Requester ID | Requester updates the request. Offered credits cannot be changed after it is created. No change to credit reservations. |
 | OPEN | No courier assigned, the user is not the requester, order has not expired, order must be in OPEN status. | ACCEPTED | Courier ID | Courier accepts the request. No change in credit reservations. |
@@ -87,14 +87,42 @@ We use the expected version which comes from the payload and the current version
 
 The Order Service uses RabbitMQ for credit operations that do not need to complete before an order request is accepted by the API. It uses a transactional outbox so the order change and the message to publish are recorded together in the Order Service database.
 
+### Messaging Overview
+
+Every message is one of two kinds:
+
+- **Command**: asks one specific service to do something and expects an outcome (`CREDIT_RESERVATION_REQUEST`). It goes to a **direct** exchange with a single consumer.
+- **Event**: states a fact that already happened (`ORDER_RECEIVED`, `CREDIT_RESERVATION_SUCCEEDED`). The publisher does not know who consumes it. Events go to **topic** exchanges, so new consumers can subscribe without changing the publisher.
+
+| Type | Routing rule | Used for |
+| --- | --- | --- |
+| Direct | Queue binding key must exactly equal the routing key | Commands (`credit.commands`) |
+| Topic | Binding pattern is matched against the routing key. `*` is exactly one word, `#` is zero or more | Events (`order.events`, `credit.events`) |
+
+| Message | Kind | Flow | Exchange (type) | Routing key | Consumer queue |
+| --- | --- | --- | --- | --- | --- |
+| `CREDIT_RESERVATION_REQUEST` | Command | Order → Credit | `credit.commands` (direct) | `credit.reserve.v1` | `credit.reserve.v1` |
+| `ORDER_RECEIVED` | Event | Order → Credit | `order.events` (topic) | `order.received.v1` | `credit.order-events.v1` |
+| `ORDER_CANCELED` | Event | Order → Credit | `order.events` (topic) | `order.canceled.v1` | `credit.order-events.v1` |
+| `ORDER_EXPIRED` | Event | Order → Credit | `order.events` (topic) | `order.expired.v1` | `credit.order-events.v1` |
+| `ORDER_FAILED` | Event | Order → Credit | `order.events` (topic) | `order.failed.v1` | `credit.order-events.v1` |
+| `CREDIT_RESERVATION_SUCCEEDED` | Event | Credit → Order | `credit.events` (topic) | `credit.reservation.succeeded.v1` | `order.credit-events.v1` |
+| `CREDIT_RESERVATION_FAILED` | Event | Credit → Order | `credit.events` (topic) | `credit.reservation.failed.v1` | `order.credit-events.v1` |
+
+```Text
+Order Service ── CREDIT_RESERVATION_REQUEST (command) ──▶ credit.commands ──▶ credit.reserve.v1 ──▶ Credit Service
+Order Service ── ORDER_* (events) ──────────────────────▶ order.events ─────▶ credit.order-events.v1 ──▶ Credit Service 
+Order Service ◀── CREDIT_RESERVATION_* (events) ── credit.events ◀─── Credit Service (consumed from order.credit-events.v1)
+```
+
 ### Creating an Order and Reserving Credits
 
 1. The Order Service validates the request and synchronously verifies that the pickup and delivery suppliers exist.
-2. In one database transaction, it creates the order with status `PENDING_RESERVATION`, records the initial status history, and creates a `CREDIT_RESERVATION_REQUEST` with an `CREATE` request type outbox row.
-3. The Order Service outbox publisher sends the request to RabbitMQ. It marks the outbox row as published only after RabbitMQ confirms the message.
-4. The Credit Service consumes the reservation request and attempts to reserve the credits. It records the outcome and creates a result outbox row in its own database transaction.
-5. The Credit Service publishes either `CREDIT_RESERVATION_SUCCEEDED` or `CREDIT_RESERVATION_FAILED`.
-6. The Order Service consumes the result and updates the order:
+2. In one database transaction, it creates the order with status `PENDING_RESERVATION`, records the initial status history, and creates a `CREDIT_RESERVATION_REQUEST` outbox row with request type `CREATE`.
+3. The Order Service outbox publisher sends the command to `credit.commands` with routing key `credit.reserve.v1`. It marks the outbox row as published only after RabbitMQ confirms the message.
+4. The Credit Service consumes the command and attempts to reserve the credits. It records the outcome and creates a result outbox row in its own database transaction.
+5. The Credit Service publishes either `CREDIT_RESERVATION_SUCCEEDED` or `CREDIT_RESERVATION_FAILED` to `credit.events`.
+6. The Order Service consumes the result from `order.credit-events.v1` and updates the order:
    - On success, it saves the reservation ID and changes the status from `PENDING_RESERVATION` to `OPEN`.
    - On failure, it records the failure code and changes the status to `RESERVATION_FAILED`.
 
@@ -102,23 +130,23 @@ The create API response means that the order was submitted. Its initial status i
 
 ### Renewing an Expired Order
 
-When a requester renews an expired order, the Order Service validates the new expiry time and expected version. It then sets `renewalPending` and writes a `CREDIT_RESERVATION_REQUEST` with an `RENEW` request type to its outbox. The order stays `EXPIRED` while the Credit Service processes the request.
+When a requester renews an expired order, the Order Service validates the new expiry time and expected version. It then sets `renewalPending` and writes a `CREDIT_RESERVATION_REQUEST`command with request type `RENEW` to its outbox. It uses the same exchange and routing key as a create request. The order stays `EXPIRED` while the Credit Service processes the request.
 
 - On success, the Order Service saves the new reservation ID and expiry time, clears `renewalPending`, and changes the order from `EXPIRED` to `OPEN`.
 - On failure, the order stays `EXPIRED`; the Order Service clears `renewalPending` and records the renewal failure code.
 
 ### Order Settlement Events
 
-The Order Service also publishes these events after the corresponding order status change:
+The Order Service publishes these **events** to the topic exchange `order.events` after the corresponding order status change:
 
-| Event | Credit Service operation |
-| --- | --- |
-| `ORDER_RECEIVED` | Transfer the reserved credits to the courier |
-| `ORDER_CANCELED` | Release the reserved credits |
-| `ORDER_EXPIRED` | Release the reserved credits |
-| `ORDER_FAILED` | Refund the reserved credits |
+| Event | Routing key | Credit Service operation |
+| --- | --- | --- |
+| `ORDER_RECEIVED` | `order.received.v1` | Transfer the reserved credits to the courier |
+| `ORDER_CANCELED` | `order.canceled.v1` | Release the reserved credits |
+| `ORDER_EXPIRED` | `order.expired.v1` | Release the reserved credits |
+| `ORDER_FAILED` | `order.failed.v1` | Refund the reserved credits |
 
-For these transitions, the order, status-history row, and outbox event are written in the same Order Service transaction. The credit operation happens asynchronously after the event is published.
+For these transitions, the order, status-history row, and outbox event are written in the same Order Service transaction. The credit operation happens asynchronously after the event is published. Each event carries the `reservationId`, so Credit Service settles the exact reservation even after renewals.
 
 ### Reliability and Duplicate Handling
 
@@ -134,29 +162,31 @@ This prevents concurrent publishers from doing the same work, but it cannot guar
 
 ### Exchanges, Routes, and Queues
 
-Order Service uses the durable topic exchange `foc.events`.
+Order Service publishes to the durable exchanges `credit.commands` (direct) and `order.events` (topic), and consumes from `credit.events` (topic). Each publishing service owns its exchange. Exchange names are not versioned; routing keys and queue names carry `.v1`.
 
-It publishes these events. The receiving queues are owned and declared by Credit Service.
+Order Service declares the Credit Service owned queues that it publishes to, so a `mandatory` publish is not returned as unroutable when Credit Service has not started yet. Keep these definitions identical to Credit Service, or startup fails with `PRECONDITION_FAILED`.
 
-| Order Service event | Routing key | Consumer |
-| --- | --- | --- |
-| `CREDIT_RESERVATION_REQUEST` | `credit.reservation.requested.v1` | Credit Service |
-| `ORDER_RECEIVED` | `order.received.v1` | Credit Service |
-| `ORDER_CANCELED` | `order.canceled.v1` | Credit Service |
-| `ORDER_EXPIRED` | `order.expired.v1` | Credit Service |
-| `ORDER_FAILED` | `order.failed.v1` | Credit Service |
+| Published by Order | Exchange | Routing key | Consumer | Queue (declared by both) |
+| --- | --- | --- | --- | --- |
+| `CREDIT_RESERVATION_REQUEST` | `credit.commands` | `credit.reserve.v1` | Credit Service | `credit.reserve.v1` |
+| `ORDER_RECEIVED` | `order.events` | `order.received.v1` | Credit Service | `credit.order-events.v1` |
+| `ORDER_CANCELED` | `order.events` | `order.canceled.v1` | Credit Service | `credit.order-events.v1` |
+| `ORDER_EXPIRED` | `order.events` | `order.expired.v1` | Credit Service | `credit.order-events.v1` |
+| `ORDER_FAILED` | `order.events` | `order.failed.v1` | Credit Service | `credit.order-events.v1` |
 
 Order Service consumes reservation results using this topology:
 
 | Queue | Purpose |
 | --- | --- |
-| `order.credit-reservation-results.v1` | Receives reservation success and failure results, and delayed retry messages |
-| `order.credit-reservation-results.retry.v1` | Holds messages for the configured 10-second retry delay |
-| `order.credit-reservation-results.dead.v1` | Holds messages that need investigation or manual redrive |
+| `order.credit-events.v1` | Receives reservation success and failure results (bound to `credit.events` with `credit.reservation.*.v1`) and delayed retries |
+| `order.credit-events.retry.v1` | Holds messages for the 10-second retry delay |
+| `order.credit-events.dead.v1` | Holds messages that need investigation or manual redrive (the DLQ) |
 
-The result queue binds to `credit.reservation.succeeded.v1`, `credit.reservation.failed.v1`, and `credit.reservation.result.retry.v1`. The retry queue dead-letters messages back to the shared exchange using the retry routing key after the delay.
+The retry queue dead-letters through the default exchange straight back to `order.credit-events.v1`, so no other queue receives a duplicate. A retried message arrives with the queue name as its routing key, so the consumer forwards the original key in the `x-original-routing-key` header and validates it against the event type on delayed retries.
 
-These queues are durable quorum queues. They reject new publishes when full and disable the broker’s automatic delivery limit. The retry queue uses at-least-once dead-lettering, so a retry can be delivered more than once. The consumer must handle duplicate results idempotently.
+These are durable quorum queues. They reject new publishes when full and disable the broker's automatic delivery limit. The retry queue uses at-least-once dead-lettering, so a retry can be delivered more than once. The consumer must handle duplicate results idempotently.
+
+The DLQ belongs to the consumer: it holds messages that reached the broker but could not be processed. For the publisher side, a failed publish ends as an outbox row with status `DEAD`.
 
 ### Dead-Letter Inspection and Redrive
 
@@ -166,38 +196,27 @@ Inspect queue counts without consuming messages:
 docker compose exec rabbitmq rabbitmqctl list_queues -p / name messages_ready messages_unacknowledged consumers
 ```
 
-Investigate the cause of a dead-lettered message before redriving it. Redrive republishes the original message for another processing attempt; it does not repair invalid data or change a reservation’s final state.
+Investigate the cause of a dead-lettered message before redriving it. Redrive republishes the original message for another processing attempt; it does not repair invalid data or change a reservation's final state.
 
-Stop Order Service while keeping RabbitMQ running, then for each workflow, run the redrive command with a positive limit. The command processes the oldest available dead letters, stopping at the requested limit or the number of ready messages counted at startup, whichever is smaller.
+Stop Order Service while keeping RabbitMQ running, then run one redrive command at a time with a positive limit:
 
-For credit reservation results message, run:
+| Workflow | Source | Command |
+| --- | --- | --- |
+| Credit reservation results | `order.credit-events.dead.v1` | `npm run redrive:credit-reservation-results -- --limit 10` |
+| Order outbox (`DEAD` rows) | database | `npm run redrive:order-outbox -- --limit 10` |
 
-```sh
-npm run redrive:credit-reservation-results -- --limit 10
-```
-
-For order outbox messages, run:
-
-```sh
-npm run redrive:order-outbox -- --limit 10
-```
-
-Redrive means sending a dead-letter message back for another processing attempt. The command only needs `RABBITMQ_URL`; it does not start Prisma or the HTTP server.
-
-Restart order-service afterward. Keeping its consumer paused during redrive prevents a still-failing event from returning to the dead-letter queue and being picked up again in the same run. Run one redrive command at a time.
-
-The command processes the oldest available dead letters. It stops at the requested positive limit or the number of ready messages counted at startup, whichever is smaller.
+Redrive means sending a dead-letter message back for another processing attempt. The command only needs `RABBITMQ_URL`; it does not start Prisma or the HTTP server. It processes the oldest available dead letters and stops at the requested limit or the number of ready messages counted at startup, whichever is smaller. Restart order-service afterward. Keeping its consumer paused prevents a still-failing event from returning to the dead-letter queue in the same run.
 
 For each message, it:
 
-- Preserves the exact event bytes, event ID, occurrence time and message ID.
+- Preserves the exact event bytes, event ID and message ID.
 - Resets `x-retry-count` to zero, increments `x-redrive-count`, and sets `x-redriven-at`.
 - Keeps failure and death headers for diagnosis, but drops message expiration and AMQP user identity.
-- Acknowledges the dead letter only after RabbitMQ confirms republication to the registration route.
+- Acknowledges the dead letter only after RabbitMQ confirms republication to `credit.events` with the result's own routing key (`credit.reservation.succeeded.v1` or `credit.reservation.failed.v1`).
 
-A broker failure stops the command with exit code 1. The current unacknowledged message becomes available again when the connection closes. Invalid event bodies, identities or redrive counts also stop the command without removing the message. Investigate these separately; redrive does not rewrite events or repair accounts.
+A broker failure stops the command with exit code 1. The current unacknowledged message becomes available again when the connection closes. Invalid event bodies, identities or redrive counts also stop the command without removing the message. Investigate these separately; redrive does not rewrite events or repair orders.
 
-A crash after forwarding but before acknowledgment can create a duplicate delivery. The grant function still prevents a second grant. A successful redrive means the message was republished; order-service may not have processed it yet.
+A crash after forwarding but before acknowledgment can create a duplicate delivery. The result inbox still prevents the order update from being applied twice. A successful redrive means the message was republished; order-service may not have processed it yet.
 
 ## Background Workers
 
