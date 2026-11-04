@@ -58,7 +58,8 @@ export async function processSettlementMessage(
                     ...message.properties.headers,
                     ...(nextRetry === null ? {} : { "x-retry-count": nextRetry }),
                     "x-credit-failure": reason,
-                    "x-settlement-routing-key": parsed.success ? SETTLEMENT_MESSAGING.routingKeys[parsed.data.eventType] : message.fields.routingKey,
+                    "x-original-routing-key":
+                        message.properties.headers?.["x-original-routing-key"] ?? message.fields.routingKey,
                 },
             });
             channel.ack(message);
@@ -75,9 +76,13 @@ export async function processSettlementMessage(
 
     // The existing retry queue dead-letters on the receipt route; retain the
     // original event route in metadata without replacing a durable queue.
-    const routingKey = validRetry && retryCount > 0 && message.fields.routingKey === SETTLEMENT_MESSAGING.routingKey
-        ? message.properties.headers?.["x-settlement-routing-key"] ?? message.fields.routingKey
-        : message.fields.routingKey;
+    const originalKeyHeader = message.properties.headers?.["x-original-routing-key"];
+    const viaRetry = message.fields.routingKey === SETTLEMENT_MESSAGING.queue;
+    const routingKey =
+        viaRetry && typeof originalKeyHeader === "string"
+            ? originalKeyHeader
+            : message.fields.routingKey;
+
     if (!parsed.success || message.properties.messageId !== parsed.data.eventId
         || routingKey !== SETTLEMENT_MESSAGING.routingKeys[parsed.data.eventType]) {
         await forward(SETTLEMENT_MESSAGING.deadQueue, "INVALID_EVENT", null);

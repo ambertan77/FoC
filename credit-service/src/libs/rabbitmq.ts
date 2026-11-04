@@ -9,153 +9,136 @@ import {
 
 const BROKER_TIMEOUT_MS = 10_000;
 
+const quorumQueueOptions = {
+  durable: true,
+  autoDelete: false,
+  arguments: {
+    "x-queue-type": "quorum",
+    "x-delivery-limit": -1,
+    "x-overflow": "reject-publish",
+  },
+} as const;
+
+/** Declares: main queue (bound to the exchange), retry queue, dead queue. */
+async function declareConsumerTopology(
+  channel: Channel,
+  t: {
+    exchange: string;
+    exchangeType: "direct" | "topic";
+    bindingKeys: readonly string[];
+    queue: string;
+    retryQueue: string;
+    deadQueue: string;
+    retryDelayMs: number;
+  },
+): Promise<void> {
+  await channel.assertExchange(t.exchange, t.exchangeType, {
+    durable: true,
+    autoDelete: false,
+  });
+
+  // Main queue
+  await channel.assertQueue(t.queue, quorumQueueOptions);
+  for (const key of t.bindingKeys) {
+    await channel.bindQueue(t.queue, t.exchange, key);
+  }
+
+  // Dead queue: the consumer publishes here after max attempts
+  await channel.assertQueue(t.deadQueue, quorumQueueOptions);
+
+  // Retry queue: holds a message for retryDelayMs, then dead-letters it
+  // via the default exchange straight back to the main queue (by queue name),
+  // so no other queue bound to the exchange receives a duplicate.
+  await channel.assertQueue(t.retryQueue, {
+    ...quorumQueueOptions,
+    arguments: {
+      ...quorumQueueOptions.arguments,
+      "x-message-ttl": t.retryDelayMs,
+      "x-dead-letter-exchange": "",
+      "x-dead-letter-routing-key": t.queue,
+      "x-dead-letter-strategy": "at-least-once",
+    },
+  });
+}
+
 // --------------------- For user registration events ---------------------
 // Keep this topology identical in user-service and credit-service. Each service
 // declares it independently so startup order does not affect message routing.
 export const REGISTRATION_MESSAGING = {
-  exchange: "foc.events",
-  routingKey: "user.registered.v1",
+  exchange: "user.events",
+  exchangeType: "topic",
+  routingKeys: {
+    USER_REGISTERED: "user.registered.v1",
+  },
+  bindingKeys: ["user.registered.v1"],
   queue: "credit.user-registered.v1",
   retryQueue: "credit.user-registered.retry.v1",
   deadQueue: "credit.user-registered.dead.v1",
   retryDelayMs: 10_000,
 } as const;
 
-export async function declareRegistrationTopology(
-  channel: Channel
-): Promise<void> {
-  const topology = REGISTRATION_MESSAGING;
-  const queueOptions = {
-    durable: true,
-    autoDelete: false,
-    arguments: {
-      "x-queue-type": "quorum",
-      "x-delivery-limit": -1,
-      "x-overflow": "reject-publish",
-    },
-  };
-
-  await channel.assertExchange(topology.exchange, "topic", {
-    durable: true,
-    autoDelete: false,
-  });
-  await channel.assertQueue(topology.queue, queueOptions);
-  await channel.bindQueue(topology.queue, topology.exchange, topology.routingKey);
-  await channel.assertQueue(topology.deadQueue, queueOptions);
-  await channel.assertQueue(topology.retryQueue, {
-    ...queueOptions,
-    arguments: {
-      ...queueOptions.arguments,
-      "x-message-ttl": topology.retryDelayMs,
-      "x-dead-letter-exchange": topology.exchange,
-      "x-dead-letter-routing-key": topology.routingKey,
-      // Retain expired retries until the destination confirms receipt.
-      "x-dead-letter-strategy": "at-least-once",
-    },
-  });
-  // Retry/dead queues are addressed by name using the default exchange ("").
-}
+export const declareRegistrationTopology = (channel: Channel) =>
+  declareConsumerTopology(channel, REGISTRATION_MESSAGING);
 
 // --------------------- For settlement events---------------------
 export const SETTLEMENT_MESSAGING = {
-  exchange: "foc.events",
-  routingKey: "order.received.v1",
+  exchange: "order.events",
+  exchangeType: "topic",
   routingKeys: {
     ORDER_RECEIVED: "order.received.v1",
+    ORDER_FAILED: "order.failed.v1",
     ORDER_CANCELED: "order.canceled.v1",
     ORDER_EXPIRED: "order.expired.v1",
-    ORDER_FAILED: "order.failed.v1",
   },
-  queue: "credit.order-settlement.v1",
-  retryQueue: "credit.order-settlement.retry.v1",
-  deadQueue: "credit.order-settlement.dead.v1",
+  bindingKeys: ["order.*.v1"], // matches all four events above
+  queue: "credit.order-events.v1",
+  retryQueue: "credit.order-events.retry.v1",
+  deadQueue: "credit.order-events.dead.v1",
   retryDelayMs: 10_000,
 } as const;
 
-export async function declareSettlementTopology(
-  channel: Channel
-): Promise<void> {
-  const topology = SETTLEMENT_MESSAGING;
-  const options = {
-    durable: true,
-    autoDelete: false,
-    arguments: {
-      "x-queue-type": "quorum",
-      "x-delivery-limit": -1,
-      "x-overflow": "reject-publish",
-    }
-  };
-  await channel.assertExchange(topology.exchange, "topic", {
-    durable: true, autoDelete: false
-  });
-  await channel.assertQueue(topology.queue, options);
-  for (const routingKey of Object.values(topology.routingKeys)) {
-    await channel.bindQueue(topology.queue, topology.exchange, routingKey);
-  }
-  await channel.assertQueue(topology.deadQueue, options);
-  await channel.assertQueue(topology.retryQueue, {
-    ...options, arguments: {
-      ...options.arguments,
-      "x-message-ttl": topology.retryDelayMs,
-      "x-dead-letter-exchange": topology.exchange,
-      "x-dead-letter-routing-key": topology.routingKey,
-      "x-dead-letter-strategy": "at-least-once",
-    }
-  });
-}
+export const declareSettlementTopology = (channel: Channel) =>
+  declareConsumerTopology(channel, SETTLEMENT_MESSAGING);
 
 // --------------------- For reservation request events ---------------------
 export const RESERVATION_REQUEST_MESSAGING = {
-  exchange: "foc.events",
-  routingKey: "credit.reservation.requested.v1",
-  queue: "credit.order-reservation-requests.v1",
-  retryQueue: "credit.order-reservation-requests.retry.v1",
-  deadQueue: "credit.order-reservation-requests.dead.v1",
+  exchange: "credit.commands",
+  exchangeType: "direct",
+  routingKeys: {
+    CREDIT_RESERVATION_REQUEST: "credit.reserve.v1",
+  },
+  queue: "credit.reserve.v1",
+  retryQueue: "credit.reserve.retry.v1",
+  deadQueue: "credit.reserve.dead.v1",
   retryDelayMs: 10_000,
 } as const;
 
-export async function declareReservationRequestTopology(
-  channel: Channel,
-): Promise<void> {
-  const topology = RESERVATION_REQUEST_MESSAGING;
-  const queueOptions = {
-    durable: true,
-    autoDelete: false,
-    arguments: {
-      "x-queue-type": "quorum",
-      "x-delivery-limit": -1,
-      "x-overflow": "reject-publish",
-    },
-  };
-
-  await channel.assertExchange(topology.exchange, "topic", {
-    durable: true,
-    autoDelete: false,
+export const declareReservationRequestTopology = (channel: Channel) =>
+  declareConsumerTopology(channel, {
+    ...RESERVATION_REQUEST_MESSAGING,
+    bindingKeys: Object.values(RESERVATION_REQUEST_MESSAGING.routingKeys),
   });
 
-  await channel.assertQueue(topology.queue, queueOptions);
-  await channel.bindQueue(
-    topology.queue,
-    topology.exchange,
-    topology.routingKey,
-  );
+// --------------------- For reservation result events ---------------------
+export const RESERVATION_RESULT_MESSAGING = {
+  exchange: "credit.events",
+  exchangeType: "topic",
+  routingKeys: {
+    CREDIT_RESERVATION_SUCCEEDED: "credit.reservation.succeeded.v1",
+    CREDIT_RESERVATION_FAILED: "credit.reservation.failed.v1",
+  },
+  bindingKeys: ["credit.reservation.*.v1"], // matches succeeded + failed
+  queue: "order.credit-events.v1",
+  retryQueue: "order.credit-events.retry.v1",
+  deadQueue: "order.credit-events.dead.v1",
+  retryDelayMs: 10_000,
+} as const;
 
-  // The consumer forwards retries and dead-lettered messages to these queues
-  // through RabbitMQ's default exchange.
-  await channel.assertQueue(topology.deadQueue, queueOptions);
-  await channel.assertQueue(topology.retryQueue, {
-    ...queueOptions,
-    arguments: {
-      ...queueOptions.arguments,
-      "x-message-ttl": topology.retryDelayMs,
-      "x-dead-letter-exchange": topology.exchange,
-      "x-dead-letter-routing-key": topology.routingKey,
-      "x-dead-letter-strategy": "at-least-once",
-    },
-  });
-}
+export const declareReservationResultTopology = (channel: Channel) =>
+  declareConsumerTopology(channel, RESERVATION_RESULT_MESSAGING);
 
 
+// ---------------------  Connection helpers --------------------- 
 /** Call from a background worker, never from registration or HTTP startup. */
 async function connectMessaging(declareTopology: (channel: Channel) => Promise<void>): Promise<{
   connection: ChannelModel;
@@ -264,26 +247,6 @@ export async function publishConfirmed(
       finish(new Error("RabbitMQ publication failed"));
     }
   });
-}
-
-
-// --------------------- For reservation result events ---------------------
-export const RESERVATION_RESULT_MESSAGING = {
-  exchange: "foc.events",
-  routingKeys: {
-    succeeded: "credit.reservation.succeeded.v1",
-    failed: "credit.reservation.failed.v1",
-  },
-} as const;
-
-export async function declareReservationResultTopology(
-  channel: Channel,
-): Promise<void> {
-  await channel.assertExchange(
-    RESERVATION_RESULT_MESSAGING.exchange,
-    "topic",
-    { durable: true, autoDelete: false },
-  );
 }
 
 export function connectReservationResultMessaging() {

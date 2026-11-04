@@ -7,51 +7,76 @@ import {
   type Options,
 } from "amqplib";
 
+
+const BROKER_TIMEOUT_MS = 10_000;
+
+const quorumQueueOptions = {
+  durable: true,
+  autoDelete: false,
+  arguments: {
+    "x-queue-type": "quorum",
+    "x-delivery-limit": -1,
+    "x-overflow": "reject-publish",
+  },
+} as const;
+
+/** Declares: main queue (bound to the exchange), retry queue, dead queue. */
+async function declareConsumerTopology(
+  channel: Channel,
+  t: {
+    exchange: string;
+    exchangeType: "direct" | "topic";
+    bindingKeys: readonly string[];
+    queue: string;
+    retryQueue: string;
+    deadQueue: string;
+    retryDelayMs: number;
+  },
+): Promise<void> {
+  await channel.assertExchange(t.exchange, t.exchangeType, {
+    durable: true,
+    autoDelete: false,
+  });
+
+  await channel.assertQueue(t.queue, quorumQueueOptions);
+  for (const key of t.bindingKeys) {
+    await channel.bindQueue(t.queue, t.exchange, key);
+  }
+
+  await channel.assertQueue(t.deadQueue, quorumQueueOptions);
+
+  // Retry goes through the default exchange straight back to the main queue,
+  // so no other queue bound to the exchange receives a duplicate.
+  await channel.assertQueue(t.retryQueue, {
+    ...quorumQueueOptions,
+    arguments: {
+      ...quorumQueueOptions.arguments,
+      "x-message-ttl": t.retryDelayMs,
+      "x-dead-letter-exchange": "",
+      "x-dead-letter-routing-key": t.queue,
+      "x-dead-letter-strategy": "at-least-once",
+    },
+  });
+}
+
+
 // Keep this topology identical in user-service and credit-service. Each service
 // declares it independently so startup order does not affect message routing.
 export const REGISTRATION_MESSAGING = {
-  exchange: "foc.events",
-  routingKey: "user.registered.v1",
+  exchange: "user.events",
+  exchangeType: "topic",
+  routingKeys: {
+    USER_REGISTERED: "user.registered.v1",
+  },
+  bindingKeys: ["user.registered.v1"],
   queue: "credit.user-registered.v1",
   retryQueue: "credit.user-registered.retry.v1",
   deadQueue: "credit.user-registered.dead.v1",
   retryDelayMs: 10_000,
 } as const;
 
-const BROKER_TIMEOUT_MS = 10_000;
-
-export async function declareRegistrationTopology(channel: Channel): Promise<void> {
-  const topology = REGISTRATION_MESSAGING;
-  const queueOptions = {
-    durable: true,
-    autoDelete: false,
-    arguments: {
-      "x-queue-type": "quorum",
-      "x-delivery-limit": -1,
-      "x-overflow": "reject-publish",
-    },
-  };
-
-  await channel.assertExchange(topology.exchange, "topic", {
-    durable: true,
-    autoDelete: false,
-  });
-  await channel.assertQueue(topology.queue, queueOptions);
-  await channel.bindQueue(topology.queue, topology.exchange, topology.routingKey);
-  await channel.assertQueue(topology.deadQueue, queueOptions);
-  await channel.assertQueue(topology.retryQueue, {
-    ...queueOptions,
-    arguments: {
-      ...queueOptions.arguments,
-      "x-message-ttl": topology.retryDelayMs,
-      "x-dead-letter-exchange": topology.exchange,
-      "x-dead-letter-routing-key": topology.routingKey,
-      // Retain expired retries until the destination confirms receipt.
-      "x-dead-letter-strategy": "at-least-once",
-    },
-  });
-  // Retry/dead queues are addressed by name using the default exchange ("").
-}
+export const declareRegistrationTopology = (channel: Channel) =>
+  declareConsumerTopology(channel, REGISTRATION_MESSAGING);
 
 /** Call from a background worker, never from registration or HTTP startup. */
 export async function connectRegistrationMessaging(): Promise<{
@@ -150,3 +175,16 @@ export async function publishConfirmed(
     }
   });
 }
+
+export const publishUserRegistered = (
+  channel: ConfirmChannel,
+  content: Buffer,
+  properties: Options.Publish = {},
+) =>
+  publishConfirmed(
+    channel,
+    REGISTRATION_MESSAGING.exchange,
+    REGISTRATION_MESSAGING.routingKeys.USER_REGISTERED,
+    content,
+    properties,
+  );

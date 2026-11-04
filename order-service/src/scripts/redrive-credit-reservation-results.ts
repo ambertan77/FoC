@@ -1,9 +1,7 @@
+import { creditReservationResultSchema } from "../schemas/credit-reservation-result.schema.js";
 import {
-    creditReservationResultSchema,
-} from "../schemas/credit-reservation-result.schema.js";
-import {
-    connectCreditReservationResultMessaging,
-    CREDIT_RESERVATION_RESULT_MESSAGING,
+    connectReservationResultMessaging,
+    RESERVATION_RESULT_MESSAGING,
     publishConfirmed,
 } from "../libs/rabbitmq.js";
 import { MAX_RESULT_BYTES } from "../workers/credit-reservation-result.consumer.js";
@@ -11,27 +9,20 @@ import { MAX_RESULT_BYTES } from "../workers/credit-reservation-result.consumer.
 const usage =
     "Usage: npm run redrive:reservation-results -- --limit <positive integer>";
 
-const routingKeys = {
-    CREDIT_RESERVATION_SUCCEEDED:
-        CREDIT_RESERVATION_RESULT_MESSAGING.routingKeys.CREDIT_RESERVATION_SUCCEEDED,
-    CREDIT_RESERVATION_FAILED:
-        CREDIT_RESERVATION_RESULT_MESSAGING.routingKeys.CREDIT_RESERVATION_FAILED,
-} as const;
-
 async function redrive(limit: number): Promise<void> {
-    const { connection, channel } =
-        await connectCreditReservationResultMessaging();
+    const { connection, channel } = await connectReservationResultMessaging();
 
     try {
         const { messageCount } = await channel.checkQueue(
-            CREDIT_RESERVATION_RESULT_MESSAGING.deadQueue,
+            RESERVATION_RESULT_MESSAGING.deadQueue,
         );
+
         const count = Math.min(limit, messageCount);
         let forwarded = 0;
 
         for (let index = 0; index < count; index++) {
             const message = await channel.get(
-                CREDIT_RESERVATION_RESULT_MESSAGING.deadQueue,
+                RESERVATION_RESULT_MESSAGING.deadQueue,
                 { noAck: false },
             );
 
@@ -69,11 +60,10 @@ async function redrive(limit: number): Promise<void> {
             ) {
                 throw new Error("INVALID_REDRIVE_COUNT");
             }
-
             await publishConfirmed(
                 channel,
-                CREDIT_RESERVATION_RESULT_MESSAGING.exchange,
-                routingKeys[parsed.data.eventType],
+                RESERVATION_RESULT_MESSAGING.exchange,
+                RESERVATION_RESULT_MESSAGING.routingKeys[parsed.data.eventType],
                 message.content,
                 {
                     messageId: message.properties.messageId,

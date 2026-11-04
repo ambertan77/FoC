@@ -35,9 +35,9 @@ type ClaimedEvent = {
 
 const routingKeys: Record<CreditOutboxEventType, string> = {
     [CreditOutboxEventType.CREDIT_RESERVATION_SUCCEEDED]:
-        RESERVATION_RESULT_MESSAGING.routingKeys.succeeded,
+        RESERVATION_RESULT_MESSAGING.routingKeys.CREDIT_RESERVATION_SUCCEEDED,
     [CreditOutboxEventType.CREDIT_RESERVATION_FAILED]:
-        RESERVATION_RESULT_MESSAGING.routingKeys.failed,
+        RESERVATION_RESULT_MESSAGING.routingKeys.CREDIT_RESERVATION_FAILED,
 };
 
 function isPublishableCreditReservationResultType(
@@ -258,12 +258,6 @@ export function startCreditOutboxPublisher(): () => Promise<void> {
                 | undefined;
 
             try {
-                const messaging =
-                    await connectReservationResultMessaging();
-                connection = messaging.connection;
-                channel = messaging.channel;
-                retry = 0;
-
                 const events = await claimBatch();
 
                 if (events.length === 0) {
@@ -273,6 +267,12 @@ export function startCreditOutboxPublisher(): () => Promise<void> {
                     });
                     continue;
                 }
+
+                // Connect only now that there is something to publish.
+                const messaging = await connectReservationResultMessaging();
+                connection = messaging.connection;
+                channel = messaging.channel;
+                retry = 0;
 
                 // Use one in-flight publish per channel.
                 for (const event of events) {

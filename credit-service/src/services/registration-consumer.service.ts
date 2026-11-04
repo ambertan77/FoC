@@ -9,8 +9,8 @@ import {
     publishConfirmed,
     REGISTRATION_MESSAGING,
 } from "../libs/rabbitmq.js";
+import { MAX_RETRIES } from "../constants/consumer.constant.js";
 
-const MAX_RETRIES = 5;
 const transientCodes = new Set([
     "P1001", "P1002", "P1008", "P1017", "P2024", "P2028", "P2034", "P2037",
     "ECONNREFUSED", "ECONNRESET", "ETIMEDOUT", "EPIPE", "ENOTFOUND", "EAI_AGAIN",
@@ -72,6 +72,13 @@ async function processMessage(
         attempt: validRetry ? retryCount + 1 : null,
     };
 
+    const originalKeyHeader = message.properties.headers?.["x-original-routing-key"];
+    const viaRetry = message.fields.routingKey === REGISTRATION_MESSAGING.queue;
+    const routingKey =
+        viaRetry && typeof originalKeyHeader === "string"
+            ? originalKeyHeader
+            : message.fields.routingKey;
+
     async function forward(queue: string, reason: string, nextRetry: number | null) {
         try {
             await publishConfirmed(channel, "", queue, message.content, {
@@ -81,6 +88,8 @@ async function processMessage(
                 contentType: message.properties.contentType ?? "application/json",
                 headers: {
                     ...message.properties.headers,
+                    "x-original-routing-key":
+                        message.properties.headers?.["x-original-routing-key"] ?? message.fields.routingKey,
                     ...(nextRetry === null ? {} : { "x-retry-count": nextRetry }),
                     "x-credit-failure": reason,
                 },
@@ -97,10 +106,15 @@ async function processMessage(
         }
     }
 
-    if (!parsed.success || message.properties.messageId !== parsed.data.eventId) {
+    if (
+        !parsed.success ||
+        message.properties.messageId !== parsed.data.eventId ||
+        routingKey !== REGISTRATION_MESSAGING.routingKeys.USER_REGISTERED
+    ) {
         await forward(REGISTRATION_MESSAGING.deadQueue, "INVALID_EVENT", null);
         return;
     }
+
     if (!validRetry) {
         await forward(REGISTRATION_MESSAGING.deadQueue, "INVALID_RETRY_COUNT", null);
         return;

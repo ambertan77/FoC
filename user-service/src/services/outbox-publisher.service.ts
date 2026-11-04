@@ -2,8 +2,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import type { PrismaClient } from "../generated/prisma/client.js";
 import {
   connectRegistrationMessaging,
-  publishConfirmed,
-  REGISTRATION_MESSAGING,
+  publishUserRegistered,
 } from "../libs/rabbitmq.js";
 
 const POLL_INTERVAL_MS = 5_000; // 5 seconds between polls when no pending events are found.
@@ -92,14 +91,11 @@ export function startOutboxPublisher(prisma: PrismaClient): () => Promise<void> 
           try {
             const { channel } = await getSession();
             operation = "PUBLISH";
-            await publishConfirmed(
+            await publishUserRegistered(
               channel,
-              REGISTRATION_MESSAGING.exchange,
-              REGISTRATION_MESSAGING.routingKey,
               Buffer.from(JSON.stringify(event.payload)),
               { messageId: event.eventId },
             );
-
             operation = "MARK_PUBLISHED";
             await prisma.outboxEvent.update({
               where: { eventId: event.eventId, publishedAt: null },

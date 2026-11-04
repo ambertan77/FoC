@@ -53,6 +53,12 @@ export async function processReservationRequestMessage(
     message: ConsumeMessage,
 ): Promise<void> {
     let body: unknown;
+    const originalKeyHeader = message.properties.headers?.["x-original-routing-key"];
+    const viaRetry = message.fields.routingKey === RESERVATION_REQUEST_MESSAGING.queue;
+    const routingKey =
+        viaRetry && typeof originalKeyHeader === "string"
+            ? originalKeyHeader
+            : message.fields.routingKey;
 
     // 1. Parse the message content as JSON and check its size.
     try {
@@ -79,7 +85,7 @@ export async function processReservationRequestMessage(
     if (
         !parsed.success ||
         message.properties.messageId !== parsed.data.eventId ||
-        message.fields.routingKey !== RESERVATION_REQUEST_MESSAGING.routingKey
+        routingKey !== RESERVATION_REQUEST_MESSAGING.routingKeys.CREDIT_RESERVATION_REQUEST
     ) {
         await forwardMessage(
             channel,
