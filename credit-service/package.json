@@ -7,7 +7,7 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "test": "node --import tsx --test test/*.test.ts",
+    "test": "node --import tsx --test \"test/**/*.test.ts\" \"src/**/*.test.ts\"",
     "dev": "nodemon --exec tsx src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",

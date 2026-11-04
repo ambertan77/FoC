@@ -4,7 +4,6 @@ import { prisma } from "../libs/prisma.js";
 import { abortReservation, getReservation, reserveCredits } from "../services/credit.service.js";
 import {
     abortReservationSchema,
-    renewReservationSchema,
     reservationIdSchema,
     reservationSchema,
 } from "../schemas/reservation.schema.js";
