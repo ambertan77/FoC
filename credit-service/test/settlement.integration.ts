@@ -326,7 +326,15 @@ test("F5/F6/F7 PostgreSQL settlement, races, rollback and history", { skip: !con
                 await publishConfirmed(channel, SETTLEMENT_MESSAGING.exchange, SETTLEMENT_MESSAGING.routingKeys.ORDER_RECEIVED, pendingBody, { messageId: pending.event.eventId });
                 await processSettlementMessage(prisma, channel, await get(SETTLEMENT_MESSAGING.queue));
                 const start = Date.now(); const retry = await get(SETTLEMENT_MESSAGING.queue);
-                assert.ok(Date.now() - start >= 9_000); assert.equal(retry.properties.headers?.["x-retry-count"], 1); assert.equal(retry.content.toString(), pendingBody.toString());
+                assert.ok(Date.now() - start >= 9_000);
+                assert.equal(retry.properties.headers?.["x-retry-count"], 1);
+                assert.equal(retry.content.toString(), pendingBody.toString());
+                // new
+                assert.equal(retry.fields.routingKey, SETTLEMENT_MESSAGING.queue);
+                assert.equal(
+                    retry.properties.headers?.["x-original-routing-key"],
+                    SETTLEMENT_MESSAGING.routingKeys.ORDER_RECEIVED,
+                );
                 await grantInitialCredits(prisma, pending.event.courierId); await processSettlementMessage(prisma, channel, retry);
                 const contradictory = { ...pending.event, eventId: randomUUID() };
                 await publishConfirmed(channel, SETTLEMENT_MESSAGING.exchange, SETTLEMENT_MESSAGING.routingKeys.ORDER_RECEIVED, Buffer.from(JSON.stringify(contradictory)), { messageId: contradictory.eventId });
@@ -375,7 +383,10 @@ test("F5/F6/F7 PostgreSQL settlement, races, rollback and history", { skip: !con
                 }
                 const unroutable = await connectSettlementMessaging();
                 try {
-                    await assert.rejects(publishConfirmed(unroutable.channel, SETTLEMENT_MESSAGING.exchange, "order.unroutable.v1", body, { messageId: event.eventId }), /unroutable/);
+                    await assert.rejects(
+                        publishConfirmed(unroutable.channel, SETTLEMENT_MESSAGING.exchange, "unrouted.v1", body, { messageId: event.eventId }),
+                        /unroutable/,
+                    );
                 } finally { await unroutable.connection.close().catch(() => undefined); }
                 const background = await held(); const stop = startSettlementConsumer(prisma);
                 try {
