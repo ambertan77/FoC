@@ -83,6 +83,25 @@ export interface Order {
     renewalFailureCode: string | null;
 }
 
+export type OrderHistoryParams = {
+    page: number;
+    status?: OrderStatus;
+    sortBy: SortBy;
+    sortOrder: SortOrder;
+    filterLocation?: string; // the string passed in here should be the supplierId
+    searchString?: string;
+}; // params for admins viewing (live and past) order dashboard
+
+export type OrderHistoryResponse = {
+    orders: Order[];
+    pagination: {
+        limit: number;
+        page: number;
+        totalCount: number;
+        totalPages: number;
+    };
+}; // response structure for querying admin's (live and past) order dashboard
+
 export type RequesterOrderHistoryParams = {
     page: number;
     limit: number;
@@ -151,7 +170,7 @@ export type OrderRelatedSupplierDetails = {
     type: string;
 };
 
-export type ViewerRole = "requester" | "courier";
+export type ViewerRole = "requester" | "courier" | "admin";
 
 export type SortBy = "createdAt" | "expiryAt" | "acceptedAt" | "offeredCredits";
 

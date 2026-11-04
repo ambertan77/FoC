@@ -54,6 +54,7 @@ export const ENDPOINTS = {
 
     order: {
         getOpenOrders: `${BASE_ORDER}`,
+        getAllOrders: `${BASE_ORDER}/all`,
         acceptOrder: `${BASE_ORDER}/:orderId/acceptance`,
         pickUpOrder: `${BASE_ORDER}/:orderId/pickup`,
         completeOrder: `${BASE_ORDER}/:orderId/completion`,

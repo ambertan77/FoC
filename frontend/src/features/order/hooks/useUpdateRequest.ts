@@ -4,6 +4,7 @@ import type { ParsedError } from "@/utils/errorHandler";
 import { updateRequestService } from "../services/order.requester.service";
 import { toast } from "react-toastify";
 import { requesterOrderHistoryQueryKeys } from "./requesterOrderQueryKeys";
+import { orderQueryKeys } from "./orderQueryKeys";
 
 export function useUpdateRequest() {
     const queryClient = useQueryClient();
@@ -11,9 +12,14 @@ export function useUpdateRequest() {
     const { mutateAsync, isPending, isSuccess, isError } = useMutation<Order, ParsedError, UpdateRequestPayload>({
         mutationFn: ({ orderId, expectedVersion, payload }) => updateRequestService(orderId, { ...payload, expectedVersion }),
         onSuccess: async () => {
-            await queryClient.invalidateQueries({
-                queryKey: requesterOrderHistoryQueryKeys.all,
-            });
+            await Promise.all([
+                queryClient.invalidateQueries({
+                    queryKey: requesterOrderHistoryQueryKeys.all,
+                }),
+                queryClient.invalidateQueries({ 
+                    queryKey: orderQueryKeys.all 
+                })
+            ]);
             
             toast.success("Request updated successfully");
         },
