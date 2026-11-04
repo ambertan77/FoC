@@ -1,6 +1,6 @@
 import { AppError } from "../errors/errors.js";
 import { prisma } from "../libs/prisma.js";
-import type { GetCourierOrderHistoryInput, GetOpenOrdersInput } from "../schemas/order.courier.schema.js";
+import type { GetCourierOrderHistoryInput, GetOpenOrdersInput, CourierUpdateStatusInput } from "../schemas/order.courier.schema.js";
 import { OrderStatus } from "../generated/prisma/client.js";
 
 // order lifecycle statuses
@@ -85,7 +85,9 @@ export async function getAllOpenOrders(courierId: string, input: GetOpenOrdersIn
     };
 }
 
-export async function acceptOpenOrder(courierId: string, orderId: string) {
+export async function acceptOpenOrder(courierId: string, orderId: string, input: CourierUpdateStatusInput) {
+    const expectedVersion: number = input.expectedVersion; 
+
     const oldStatus: OrderStatus = STATUS.OPEN;
     const newStatus: OrderStatus = STATUS.ACCEPTED;
 
@@ -106,6 +108,11 @@ export async function acceptOpenOrder(courierId: string, orderId: string) {
         throw new AppError(`Order ${orderId} has expired`, 409);
     }
 
+    // ensure the found order's version matches the expected current version for optimistic concurrency control
+    if (order.version !== expectedVersion) {
+        throw new AppError(`Order ${orderId} changed while accepting. Reload and try again.`, 409);
+    }
+
     // disallow action if order is no longer open (F3.1.3)
     if (order.status !== STATUS.OPEN) {
         throw new AppError(`Order ${orderId} is not in the OPEN status and cannot be accepted`, 400);
@@ -121,7 +128,7 @@ export async function acceptOpenOrder(courierId: string, orderId: string) {
         const updatedOrder = await tx.order.update({
             where: {
                 id: order.id,
-                version: order.version, // ensure the version has remained unchanged since we last queried
+                version: expectedVersion, // ensure the version has remained unchanged since we last queried
                 expiryAt: {
                     gt: now, // ensure that the order has not expired before updating
                 }
@@ -160,7 +167,9 @@ export async function acceptOpenOrder(courierId: string, orderId: string) {
     return result;
 }
 
-export async function pickUpAcceptedOrder(courierId: string, orderId: string) {
+export async function pickUpAcceptedOrder(courierId: string, orderId: string, input: CourierUpdateStatusInput) {
+    const expectedVersion: number = input.expectedVersion; 
+
     const oldStatus: OrderStatus = STATUS.ACCEPTED;
     const newStatus: OrderStatus = STATUS.PICKED_UP;
 
@@ -181,6 +190,11 @@ export async function pickUpAcceptedOrder(courierId: string, orderId: string) {
         throw new AppError(`Order ${orderId} has expired`, 409);
     }
 
+    // ensure the found order's version matches the expected current version for optimistic concurrency control
+    if (order.version !== expectedVersion) {
+        throw new AppError(`Order ${orderId} changed while picking up. Reload and try again.`, 409);
+    }
+
     // check that the user trying to mark the order as PICKED_UP is listed as the courier of the order (F4.1.1)
     if (order.courierId !== courierId) {
         throw new AppError(`Courier ${courierId} is not assigned to order ${orderId}`, 403);
@@ -196,7 +210,7 @@ export async function pickUpAcceptedOrder(courierId: string, orderId: string) {
         const updatedOrder = await tx.order.update({
             where: {
                 id: order.id,
-                version: order.version // ensure the version has remained unchanged since we last queried
+                version: expectedVersion, // ensure the version has remained unchanged since we last queried
             },
             data: {
                 status: newStatus,
@@ -231,7 +245,9 @@ export async function pickUpAcceptedOrder(courierId: string, orderId: string) {
     return result;
 }
 
-export async function completePickedUpOrder(courierId: string, orderId: string) {
+export async function completePickedUpOrder(courierId: string, orderId: string, input: CourierUpdateStatusInput) {
+    const expectedVersion: number = input.expectedVersion;
+    
     const oldStatus: OrderStatus = STATUS.PICKED_UP;
     const newStatus: OrderStatus = STATUS.COMPLETED;
 
@@ -252,6 +268,11 @@ export async function completePickedUpOrder(courierId: string, orderId: string) 
         throw new AppError(`Order ${orderId} has expired`, 409);
     }
 
+     // ensure the found order's version matches the expected current version for optimistic concurrency control
+    if (order.version !== expectedVersion) {
+        throw new AppError(`Order ${orderId} changed while completing. Reload and try again.`, 409);
+    }
+
     // check that the user trying to mark the order as COMPLETED is listed as the courier of the order (F5.1.1)
     if (order.courierId !== courierId) {
         throw new AppError(`Courier ${courierId} is not assigned to order ${orderId}`, 403);
@@ -267,7 +288,7 @@ export async function completePickedUpOrder(courierId: string, orderId: string) 
         const updatedOrder = await tx.order.update({
             where: {
                 id: order.id,
-                version: order.version // ensure the version has remained unchanged since we last queried
+                version: expectedVersion // ensure the version has remained unchanged since we last queried
             },
             data: {
                 status: newStatus,
@@ -302,7 +323,9 @@ export async function completePickedUpOrder(courierId: string, orderId: string) 
     return result;
 }
 
-export async function dropAcceptedOrder(courierId: string, orderId: string) {
+export async function dropAcceptedOrder(courierId: string, orderId: string, input: CourierUpdateStatusInput) {
+    const expectedVersion: number = input.expectedVersion;
+
     const oldStatus: OrderStatus = STATUS.ACCEPTED;
     const newStatus: OrderStatus = STATUS.OPEN;
 
@@ -321,6 +344,11 @@ export async function dropAcceptedOrder(courierId: string, orderId: string) {
         throw new AppError(`Order ${orderId} has expired`, 409);
     }
 
+     // ensure the found order's version matches the expected current version for optimistic concurrency control
+    if (order.version !== expectedVersion) {
+        throw new AppError(`Order ${orderId} changed while dropping. Reload and try again.`, 409);
+    }
+
     // check that the user trying to drop the order is listed as the courier of the order 
     if (order.courierId !== courierId) {
         throw new AppError(`Courier ${courierId} is not assigned to order ${orderId}`, 403);
@@ -336,7 +364,7 @@ export async function dropAcceptedOrder(courierId: string, orderId: string) {
         const updatedOrder = await tx.order.update({
             where: {
                 id: order.id,
-                version: order.version // ensure the version has remained unchanged since we last queried
+                version: expectedVersion // ensure the version has remained unchanged since we last queried
             },
             data: {
                 courierId: null, // remove courier (F7.2)

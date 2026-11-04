@@ -18,5 +18,10 @@ export const getCourierOrderHistorySchema = z.object({
     sortOrder: z.enum(['asc', 'desc']).default('desc') 
 });
 
+export const courierUpdateStatusSchema = z.object({
+    expectedVersion: z.coerce.number().int().positive() // expected version for optimistic concurrency control
+})
+
 export type GetOpenOrdersInput = z.infer<typeof getOpenOrdersSchema>;
 export type GetCourierOrderHistoryInput = z.infer<typeof getCourierOrderHistorySchema>;
+export type CourierUpdateStatusInput = z.infer<typeof courierUpdateStatusSchema>;

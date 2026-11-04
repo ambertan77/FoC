@@ -46,7 +46,7 @@ const MOCK_ACCEPTED_ORDER = { ...MOCK_OPEN_ORDER, courierId: "stu_2", status: "A
 
 const MOCK_PICKED_UP_ORDER = { ...MOCK_ACCEPTED_ORDER, status: "PICKED_UP", version: 3, pickedUpAt: now };
 
-const MOCK_COMPLETED_ORDER = { ...MOCK_ACCEPTED_ORDER, status: "COMPLETED", version: 4, completedAt: now };
+const MOCK_COMPLETED_ORDER = { ...MOCK_PICKED_UP_ORDER, status: "COMPLETED", version: 4, completedAt: now };
 
 const VALID_GET_OPEN_ORDERS_INPUT: GetOpenOrdersInput = {
     page: 1, 
@@ -295,7 +295,7 @@ test("acceptOpenOrder returns error code 404 when the order with specified id do
     const { calls } = useSharedMockPrisma(t, { findUniqueReturn: null });
 
     await assert.rejects(
-        () => acceptOpenOrder("stu_2", "id_that_does_not_exist"),
+        () => acceptOpenOrder("stu_2", "id_that_does_not_exist", { expectedVersion: 1 }),
         (error: unknown) => {
             assert.ok(error instanceof AppError);
             assert.equal(error.statusCode, 404);
@@ -317,7 +317,7 @@ test("acceptOpenOrder returns error code 409 when the order status is EXPIRED", 
     });
 
     await assert.rejects(
-        () => acceptOpenOrder("stu_2", MOCK_OPEN_ORDER.id),
+        () => acceptOpenOrder("stu_2", MOCK_OPEN_ORDER.id, { expectedVersion: MOCK_OPEN_ORDER.version }),
         (error: unknown) => {
             assert.ok(error instanceof AppError);
             assert.equal(error.statusCode, 409);
@@ -339,7 +339,29 @@ test("acceptOpenOrder returns error code 409 when the time stated in expiryAt ha
     });
 
     await assert.rejects(
-        () => acceptOpenOrder("stu_2", MOCK_OPEN_ORDER.id),
+        () => acceptOpenOrder("stu_2", MOCK_OPEN_ORDER.id, { expectedVersion: MOCK_OPEN_ORDER.version }),
+        (error: unknown) => {
+            assert.ok(error instanceof AppError);
+            assert.equal(error.statusCode, 409);
+            assert.equal(error.code, "CONFLICT");
+            return true;
+        },
+    );
+    
+    // check number of calls
+    assert.equal(calls.findUnique, 1);
+    assert.equal(calls.transaction, 0);
+    assert.equal(calls.update, 0);
+    assert.equal(calls.orderStatusHistoryCreate, 0);
+});
+
+test("acceptOpenOrder returns error code 409 when expected version is different", async (t) => {
+    const { calls } = useSharedMockPrisma(t, {
+        findUniqueReturn: MOCK_OPEN_ORDER,
+    });
+
+    await assert.rejects(
+        () => acceptOpenOrder("stu_2", MOCK_OPEN_ORDER.id, { expectedVersion: MOCK_OPEN_ORDER.version + 1 }),
         (error: unknown) => {
             assert.ok(error instanceof AppError);
             assert.equal(error.statusCode, 409);
@@ -359,7 +381,7 @@ test("acceptOpenOrder returns error code 400 when the order is no longer open", 
     const { calls } = useSharedMockPrisma(t, { findUniqueReturn: MOCK_ACCEPTED_ORDER });
 
     await assert.rejects(
-        () => acceptOpenOrder("stu_3", MOCK_ACCEPTED_ORDER.id),
+        () => acceptOpenOrder("stu_3", MOCK_ACCEPTED_ORDER.id, { expectedVersion: MOCK_ACCEPTED_ORDER.version }),
         (error: unknown) => {
             assert.ok(error instanceof AppError);
             assert.equal(error.statusCode, 400);
@@ -379,7 +401,7 @@ test("acceptOpenOrder returns error code 403 when the requester tries to accept 
     const { calls } = useSharedMockPrisma(t, { findUniqueReturn: MOCK_OPEN_ORDER });
 
     await assert.rejects(
-        () => acceptOpenOrder(MOCK_OPEN_ORDER.requesterId, MOCK_OPEN_ORDER.id),
+        () => acceptOpenOrder(MOCK_OPEN_ORDER.requesterId, MOCK_OPEN_ORDER.id, { expectedVersion: MOCK_OPEN_ORDER.version }),
         (error: unknown) => {
             assert.ok(error instanceof AppError);
             assert.equal(error.statusCode, 403);
@@ -402,7 +424,7 @@ test("acceptOpenOrder returns error code 500 and skips the status history when t
     });
 
     await assert.rejects(
-        () => acceptOpenOrder("stu_2", MOCK_OPEN_ORDER.id),
+        () => acceptOpenOrder("stu_2", MOCK_OPEN_ORDER.id, { expectedVersion: MOCK_OPEN_ORDER.version }),
         (error: unknown) => {
             assert.ok(error instanceof AppError);
             assert.equal(error.statusCode, 500);
@@ -425,7 +447,7 @@ test("acceptOpenOrder returns error code 500 and skips the status history when p
     });
 
     await assert.rejects(
-        () => acceptOpenOrder("stu_2", MOCK_OPEN_ORDER.id),
+        () => acceptOpenOrder("stu_2", MOCK_OPEN_ORDER.id, { expectedVersion: MOCK_OPEN_ORDER.version }),
         (error: unknown) => {
             assert.ok(error instanceof AppError);
             assert.equal(error.statusCode, 500);
@@ -450,7 +472,7 @@ test("acceptOpenOrder returns error code 500 when the status history cannot be r
     });
 
     await assert.rejects(
-        () => acceptOpenOrder("stu_2", MOCK_OPEN_ORDER.id),
+        () => acceptOpenOrder("stu_2", MOCK_OPEN_ORDER.id, { expectedVersion: MOCK_OPEN_ORDER.version }),
         (error: unknown) => {
             assert.ok(error instanceof AppError);
             assert.equal(error.statusCode, 500);
@@ -479,7 +501,7 @@ test("acceptOpenOrder executes successfully with a valid input", async (t) => {
         updateReturn: MOCK_ACCEPTED_ORDER,
     });
 
-    const result = await acceptOpenOrder("stu_2", MOCK_OPEN_ORDER.id);
+    const result = await acceptOpenOrder("stu_2", MOCK_OPEN_ORDER.id, { expectedVersion: MOCK_OPEN_ORDER.version });
 
     // check arguments passed into prisma findUnique query
     assert.deepEqual(captured.findUniqueArgs, { where: { id: MOCK_OPEN_ORDER.id } });
@@ -511,7 +533,7 @@ test("pickUpAcceptedOrder returns error code 404 when specified order id does no
     const { calls } = useSharedMockPrisma(t, { findUniqueReturn: null });
 
     await assert.rejects(
-        () => pickUpAcceptedOrder("stu_2", "id_that_does_not_exist"),
+        () => pickUpAcceptedOrder("stu_2", "id_that_does_not_exist", { expectedVersion: MOCK_ACCEPTED_ORDER.version }),
         (error: unknown) => {
             assert.ok(error instanceof AppError);
             assert.equal(error.statusCode, 404);
@@ -531,7 +553,7 @@ test("pickUpAcceptedOrder returns error code 403 when the caller is not the assi
     const { calls } = useSharedMockPrisma(t, { findUniqueReturn: MOCK_ACCEPTED_ORDER });
 
     await assert.rejects(
-        () => pickUpAcceptedOrder("stu_3", MOCK_ACCEPTED_ORDER.id),
+        () => pickUpAcceptedOrder("stu_3", MOCK_ACCEPTED_ORDER.id, { expectedVersion: MOCK_ACCEPTED_ORDER.version }),
         (error: unknown) => {
             assert.ok(error instanceof AppError);
             assert.equal(error.statusCode, 403);
@@ -552,7 +574,7 @@ test("pickUpAcceptedOrder returns error code 400 when the order is not in the AC
     const { calls } = useSharedMockPrisma(t, { findUniqueReturn: order }); 
 
     await assert.rejects(
-        () => pickUpAcceptedOrder("stu_2", MOCK_PICKED_UP_ORDER.id),
+        () => pickUpAcceptedOrder("stu_2", order.id, { expectedVersion: order.version }),
         (error: unknown) => {
             assert.ok(error instanceof AppError);
             assert.equal(error.statusCode, 400);
@@ -573,10 +595,32 @@ test("pickUpAcceptedOrder returns error code 409 when the time stated in expiryA
     });
 
     await assert.rejects(
-        () => pickUpAcceptedOrder("stu_2", MOCK_PICKED_UP_ORDER.id),
+        () => pickUpAcceptedOrder("stu_2", MOCK_ACCEPTED_ORDER.id, { expectedVersion: MOCK_ACCEPTED_ORDER.version }),
         (error: unknown) => {
             assert.ok(error instanceof AppError);
             assert.equal(error.statusCode, 409); 
+            assert.equal(error.code, "CONFLICT");
+            return true;
+        },
+    );
+    
+    // check number of calls
+    assert.equal(calls.findUnique, 1);
+    assert.equal(calls.transaction, 0);
+    assert.equal(calls.update, 0);
+    assert.equal(calls.orderStatusHistoryCreate, 0);
+});
+
+test("pickUpAcceptedOrder returns error code 409 when expected version is different", async (t) => {
+    const { calls } = useSharedMockPrisma(t, {
+        findUniqueReturn: MOCK_ACCEPTED_ORDER,
+    });
+
+    await assert.rejects(
+        () => pickUpAcceptedOrder("stu_2", MOCK_ACCEPTED_ORDER.id, { expectedVersion: MOCK_ACCEPTED_ORDER.version + 1 }),
+        (error: unknown) => {
+            assert.ok(error instanceof AppError);
+            assert.equal(error.statusCode, 409);
             assert.equal(error.code, "CONFLICT");
             return true;
         },
@@ -602,7 +646,7 @@ test("pickUpAcceptedOrder updates order status successfully with valid inputs", 
         updateReturn: MOCK_PICKED_UP_ORDER,
     });
 
-    const result = await pickUpAcceptedOrder("stu_2", MOCK_ACCEPTED_ORDER.id);
+    const result = await pickUpAcceptedOrder("stu_2", MOCK_ACCEPTED_ORDER.id, { expectedVersion: MOCK_ACCEPTED_ORDER.version });
 
     // check arguments passed into prisma findUnique query
     assert.deepEqual(captured.findUniqueArgs, { where: { id: MOCK_ACCEPTED_ORDER.id } });
@@ -635,7 +679,7 @@ test("pickUpAcceptedOrder returns error code 500 and skips the status history wh
     });
 
     await assert.rejects(
-        () => pickUpAcceptedOrder("stu_2", MOCK_ACCEPTED_ORDER.id),
+        () => pickUpAcceptedOrder("stu_2", MOCK_ACCEPTED_ORDER.id, { expectedVersion: MOCK_ACCEPTED_ORDER.version }),
         (error: unknown) => {
             assert.ok(error instanceof AppError);
             assert.equal(error.statusCode, 500);
@@ -658,7 +702,7 @@ test("pickUpAcceptedOrder returns error code 500 and skips the status history wh
     });
 
     await assert.rejects(
-        () => pickUpAcceptedOrder("stu_2", MOCK_ACCEPTED_ORDER.id),
+        () => pickUpAcceptedOrder("stu_2", MOCK_ACCEPTED_ORDER.id, { expectedVersion: MOCK_ACCEPTED_ORDER.version }),
         (error: unknown) => {
             assert.ok(error instanceof AppError);
             assert.equal(error.statusCode, 500);
@@ -682,7 +726,7 @@ test("pickUpAcceptedOrder returns error code 500 when the status history cannot 
     });
 
     await assert.rejects(
-        () => pickUpAcceptedOrder("stu_2", MOCK_ACCEPTED_ORDER.id),
+        () => pickUpAcceptedOrder("stu_2", MOCK_ACCEPTED_ORDER.id, { expectedVersion: MOCK_ACCEPTED_ORDER.version }),
         (error: unknown) => {
             assert.ok(error instanceof AppError);
             assert.equal(error.statusCode, 500);
@@ -702,7 +746,7 @@ test("completePickedUpOrder returns error code 404 when the specified order id d
     const { calls } = useSharedMockPrisma(t, { findUniqueReturn: null });
 
     await assert.rejects(
-        () => completePickedUpOrder("stu_2", "id_that_does_not_exist"),
+        () => completePickedUpOrder("stu_2", "id_that_does_not_exist", { expectedVersion: MOCK_PICKED_UP_ORDER.version }),
         (error: unknown) => {
             assert.ok(error instanceof AppError);
             assert.equal(error.statusCode, 404);
@@ -718,11 +762,55 @@ test("completePickedUpOrder returns error code 404 when the specified order id d
     assert.equal(calls.orderStatusHistoryCreate, 0);
 });
 
+test("completePickedUpOrder returns error code 409 when the time stated in expiryAt has passed", async (t) => {
+    const { calls } = useSharedMockPrisma(t, {
+        findUniqueReturn: { ...MOCK_PICKED_UP_ORDER, expiryAt: new Date(Date.now() - 1) },
+    });
+
+    await assert.rejects(
+        () => completePickedUpOrder("stu_2", MOCK_PICKED_UP_ORDER.id, { expectedVersion: MOCK_PICKED_UP_ORDER.version }),
+        (error: unknown) => {
+            assert.ok(error instanceof AppError);
+            assert.equal(error.statusCode, 409);
+            assert.equal(error.code, "CONFLICT");
+            return true;
+        },
+    );
+    
+    // check number of calls
+    assert.equal(calls.findUnique, 1);
+    assert.equal(calls.transaction, 0);
+    assert.equal(calls.update, 0);
+    assert.equal(calls.orderStatusHistoryCreate, 0);
+});
+
+test("completePickedUpOrder returns error code 409 when expected version is different", async (t) => {
+    const { calls } = useSharedMockPrisma(t, {
+        findUniqueReturn: MOCK_PICKED_UP_ORDER,
+    });
+
+    await assert.rejects(
+        () => completePickedUpOrder("stu_2", MOCK_PICKED_UP_ORDER.id, { expectedVersion: MOCK_PICKED_UP_ORDER.version + 1 }),
+        (error: unknown) => {
+            assert.ok(error instanceof AppError);
+            assert.equal(error.statusCode, 409);
+            assert.equal(error.code, "CONFLICT");
+            return true;
+        },
+    );
+    
+    // check number of calls
+    assert.equal(calls.findUnique, 1);
+    assert.equal(calls.transaction, 0);
+    assert.equal(calls.update, 0);
+    assert.equal(calls.orderStatusHistoryCreate, 0);
+});
+
 test("completePickedUpOrder returns error code 403 when the caller is not the assigned courier", async (t) => {
     const { calls } = useSharedMockPrisma(t, { findUniqueReturn: MOCK_PICKED_UP_ORDER });
 
     await assert.rejects(
-        () => pickUpAcceptedOrder("stu_3", MOCK_PICKED_UP_ORDER.id),
+        () => completePickedUpOrder("stu_3", MOCK_PICKED_UP_ORDER.id, { expectedVersion: MOCK_PICKED_UP_ORDER.version }),
         (error: unknown) => {
             assert.ok(error instanceof AppError);
             assert.equal(error.statusCode, 403);
@@ -742,7 +830,7 @@ test("completePickedUpOrder returns error code 400 when the order is not in the 
     const { calls } = useSharedMockPrisma(t, { findUniqueReturn: MOCK_ACCEPTED_ORDER }); // status order is not yet advanced to PICKED_UP
 
     await assert.rejects(
-        () => completePickedUpOrder("stu_2", MOCK_ACCEPTED_ORDER.id),
+        () => completePickedUpOrder("stu_2", MOCK_ACCEPTED_ORDER.id, { expectedVersion: MOCK_ACCEPTED_ORDER.version }),
         (error: unknown) => {
             assert.ok(error instanceof AppError);
             assert.equal(error.statusCode, 400);
@@ -755,28 +843,6 @@ test("completePickedUpOrder returns error code 400 when the order is not in the 
     assert.equal(calls.findUnique, 1);
     assert.equal(calls.transaction, 0);
     assert.equal(calls.update, 0);
-});
-
-test("completePickedUpOrder returns error code 409 when the time stated in expiryAt has passed", async (t) => {
-    const { calls } = useSharedMockPrisma(t, {
-        findUniqueReturn: { ...MOCK_PICKED_UP_ORDER, expiryAt: new Date(Date.now() - 1) },
-    });
-
-    await assert.rejects(
-        () => completePickedUpOrder("stu_2", MOCK_ACCEPTED_ORDER.id),
-        (error: unknown) => {
-            assert.ok(error instanceof AppError);
-            assert.equal(error.statusCode, 409);
-            assert.equal(error.code, "CONFLICT");
-            return true;
-        },
-    );
-    
-    // check number of calls
-    assert.equal(calls.findUnique, 1);
-    assert.equal(calls.transaction, 0);
-    assert.equal(calls.update, 0);
-    assert.equal(calls.orderStatusHistoryCreate, 0);
 });
 
 test("completePickedUpOrder updates order status successfully with valid inputs", async (t) => {
@@ -792,7 +858,7 @@ test("completePickedUpOrder updates order status successfully with valid inputs"
         updateReturn: MOCK_COMPLETED_ORDER,
     });
 
-    const result = await completePickedUpOrder("stu_2", MOCK_COMPLETED_ORDER.id);
+    const result = await completePickedUpOrder("stu_2", MOCK_PICKED_UP_ORDER.id, { expectedVersion: MOCK_PICKED_UP_ORDER.version });
 
     // check arguments passed into prisma findUnique query
     assert.deepEqual(captured.findUniqueArgs, { where: { id: MOCK_PICKED_UP_ORDER.id } });
@@ -825,7 +891,7 @@ test("completePickedUpOrder returns error code 500 and skips the status history 
     });
 
     await assert.rejects(
-        () => completePickedUpOrder("stu_2", MOCK_PICKED_UP_ORDER.id),
+        () => completePickedUpOrder("stu_2", MOCK_PICKED_UP_ORDER.id, { expectedVersion: MOCK_PICKED_UP_ORDER.version }),
         (error: unknown) => {
             assert.ok(error instanceof AppError);
             assert.equal(error.statusCode, 500);
@@ -848,7 +914,7 @@ test("completePickedUpOrder returns error code 500 and skips the status history 
     });
 
     await assert.rejects(
-        () => completePickedUpOrder("stu_2", MOCK_PICKED_UP_ORDER.id),
+        () => completePickedUpOrder("stu_2", MOCK_PICKED_UP_ORDER.id, { expectedVersion: MOCK_PICKED_UP_ORDER.version }),
         (error: unknown) => {
             assert.ok(error instanceof AppError);
             assert.equal(error.statusCode, 500);
@@ -873,7 +939,7 @@ test("completePickedUpOrder returns error code 500 when the status history canno
     });
 
     await assert.rejects(
-        () => completePickedUpOrder("stu_2", MOCK_PICKED_UP_ORDER.id),
+        () => completePickedUpOrder("stu_2", MOCK_PICKED_UP_ORDER.id, { expectedVersion: MOCK_PICKED_UP_ORDER.version }),
         (error: unknown) => {
             assert.ok(error instanceof AppError);
             assert.equal(error.statusCode, 500);
@@ -893,7 +959,7 @@ test("dropAcceptedOrder returns error code 404 when the specified order id does 
     const { calls } = useSharedMockPrisma(t, { findUniqueReturn: null });
 
     await assert.rejects(
-        () => dropAcceptedOrder("stu_2", "id_that_does_not_exist"),
+        () => dropAcceptedOrder("stu_2", "id_that_does_not_exist", { expectedVersion: MOCK_ACCEPTED_ORDER.version }),
         (error: unknown) => {
             assert.ok(error instanceof AppError);
             assert.equal(error.statusCode, 404);
@@ -910,10 +976,10 @@ test("dropAcceptedOrder returns error code 404 when the specified order id does 
 });
 
 test("dropAcceptedOrder returns error code 403 when the caller is not the assigned courier", async (t) => {
-    const { calls } = useSharedMockPrisma(t, { findUniqueReturn: MOCK_OPEN_ORDER });
+    const { calls } = useSharedMockPrisma(t, { findUniqueReturn: MOCK_ACCEPTED_ORDER });
 
     await assert.rejects(
-        () => dropAcceptedOrder("stu_3", MOCK_OPEN_ORDER.id),
+        () => dropAcceptedOrder("stu_3", MOCK_ACCEPTED_ORDER.id, { expectedVersion: MOCK_ACCEPTED_ORDER.version }),
         (error: unknown) => {
             assert.ok(error instanceof AppError);
             assert.equal(error.statusCode, 403);
@@ -933,7 +999,7 @@ test("dropAcceptedOrder returns error code 400 when the order is not in the ACCE
     const { calls } = useSharedMockPrisma(t, { findUniqueReturn: MOCK_PICKED_UP_ORDER }); // already in picked up status
 
     await assert.rejects(
-        () => dropAcceptedOrder("stu_2", MOCK_PICKED_UP_ORDER.id),
+        () => dropAcceptedOrder("stu_2", MOCK_PICKED_UP_ORDER.id, { expectedVersion: MOCK_PICKED_UP_ORDER.version }),
         (error: unknown) => {
             assert.ok(error instanceof AppError);
             assert.equal(error.statusCode, 400);
@@ -951,11 +1017,33 @@ test("dropAcceptedOrder returns error code 400 when the order is not in the ACCE
 
 test("dropAcceptedOrder returns error code 409 when the time stated in expiryAt has passed", async (t) => {
     const { calls } = useSharedMockPrisma(t, {
-        findUniqueReturn: { ...MOCK_OPEN_ORDER, expiryAt: new Date(Date.now() - 1) },
+        findUniqueReturn: { ...MOCK_ACCEPTED_ORDER, expiryAt: new Date(Date.now() - 1) },
     });
 
     await assert.rejects(
-        () => dropAcceptedOrder("stu_2", MOCK_PICKED_UP_ORDER.id),
+        () => dropAcceptedOrder("stu_2", MOCK_ACCEPTED_ORDER.id, { expectedVersion: MOCK_ACCEPTED_ORDER.version }),
+        (error: unknown) => {
+            assert.ok(error instanceof AppError);
+            assert.equal(error.statusCode, 409);
+            assert.equal(error.code, "CONFLICT");
+            return true;
+        },
+    );
+    
+    // check number of calls
+    assert.equal(calls.findUnique, 1);
+    assert.equal(calls.transaction, 0);
+    assert.equal(calls.update, 0);
+    assert.equal(calls.orderStatusHistoryCreate, 0);
+});
+
+test("dropAcceptedOrder returns error code 409 when expected version is different", async (t) => {
+    const { calls } = useSharedMockPrisma(t, {
+        findUniqueReturn: MOCK_ACCEPTED_ORDER,
+    });
+
+    await assert.rejects(
+        () => dropAcceptedOrder("stu_2", MOCK_ACCEPTED_ORDER.id, { expectedVersion: MOCK_ACCEPTED_ORDER.version + 1 }),
         (error: unknown) => {
             assert.ok(error instanceof AppError);
             assert.equal(error.statusCode, 409);
@@ -978,7 +1066,7 @@ test("dropAcceptedOrder returns error code 500 and skips the status history when
     });
 
     await assert.rejects(
-        () => dropAcceptedOrder("stu_2", MOCK_ACCEPTED_ORDER.id),
+        () => dropAcceptedOrder("stu_2", MOCK_ACCEPTED_ORDER.id, { expectedVersion: MOCK_ACCEPTED_ORDER.version }),
         (error: unknown) => {
             assert.ok(error instanceof AppError);
             assert.equal(error.statusCode, 500);
@@ -1001,7 +1089,7 @@ test("dropAcceptedOrder returns error code 500 and skips the status history when
     });
 
     await assert.rejects(
-        () => dropAcceptedOrder("stu_2", MOCK_ACCEPTED_ORDER.id),
+        () => dropAcceptedOrder("stu_2", MOCK_ACCEPTED_ORDER.id, { expectedVersion: MOCK_ACCEPTED_ORDER.version }),
         (error: unknown) => {
             assert.ok(error instanceof AppError);
             assert.equal(error.statusCode, 500);
@@ -1025,7 +1113,7 @@ test("dropAcceptedOrder returns error code 500 and skips the order status histor
     });
 
     await assert.rejects(
-        () => dropAcceptedOrder("stu_2", MOCK_ACCEPTED_ORDER.id),
+        () => dropAcceptedOrder("stu_2", MOCK_ACCEPTED_ORDER.id, { expectedVersion: MOCK_ACCEPTED_ORDER.version }),
         (error: unknown) => {
             assert.ok(error instanceof AppError);
             assert.equal(error.statusCode, 500);
@@ -1054,7 +1142,7 @@ test("dropAcceptedOrder executes successfully with valid inputs", async (t) => {
         updateReturn: { ...MOCK_OPEN_ORDER, version: 3 }
     });
 
-    const result = await dropAcceptedOrder("stu_2", MOCK_ACCEPTED_ORDER.id);
+    const result = await dropAcceptedOrder("stu_2", MOCK_ACCEPTED_ORDER.id, { expectedVersion: MOCK_ACCEPTED_ORDER.version });
 
     // check arguments passed into prisma findUnique query
     assert.deepEqual(captured.findUniqueArgs, { where: { id: MOCK_ACCEPTED_ORDER.id } });

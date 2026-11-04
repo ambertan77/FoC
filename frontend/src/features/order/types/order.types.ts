@@ -214,6 +214,11 @@ export type RenewRequestPayload = {
     payload: RenewRequestFormData;
 }
 
+export type CourierUpdateStatusPayload = {
+    orderId: string;
+    expectedVersion: number;
+}
+
 export type ReorderFormInput = {
     name: string;
     description: string;
