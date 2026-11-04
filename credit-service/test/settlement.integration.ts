@@ -164,7 +164,7 @@ test("F5/F6/F7 PostgreSQL settlement, races, rollback and history", { skip: !con
         });
         await t.test("lost acknowledgment after commit replays without another transfer", async () => {
             const { event } = await held();
-            const delivery = { content: Buffer.from(JSON.stringify(event)), fields: { routingKey: SETTLEMENT_MESSAGING.routingKey }, properties: { messageId: event.eventId } } as ConsumeMessage;
+            const delivery = { content: Buffer.from(JSON.stringify(event)), fields: { routingKey: SETTLEMENT_MESSAGING.routingKeys.ORDER_RECEIVED }, properties: { messageId: event.eventId } } as ConsumeMessage;
             await assert.rejects(processSettlementMessage(prisma, { ack: () => { throw new Error("ack lost"); } } as unknown as ConfirmChannel, delivery), /ack lost/);
             let acked = false;
             await processSettlementMessage(prisma, { ack: () => { acked = true; } } as unknown as ConfirmChannel, delivery);
@@ -314,22 +314,22 @@ test("F5/F6/F7 PostgreSQL settlement, races, rollback and history", { skip: !con
             }
             try {
                 const { event } = await held(); const body = Buffer.from(JSON.stringify(event));
-                await publishConfirmed(channel, SETTLEMENT_MESSAGING.exchange, SETTLEMENT_MESSAGING.routingKey, body, { messageId: event.eventId });
+                await publishConfirmed(channel, SETTLEMENT_MESSAGING.exchange, SETTLEMENT_MESSAGING.routingKeys.ORDER_RECEIVED, body, { messageId: event.eventId });
                 await declareRegistrationTopology(channel);
                 const delivered = await get(SETTLEMENT_MESSAGING.queue); assert.equal(delivered.content.toString(), body.toString());
                 assert.equal(await channel.get(REGISTRATION_MESSAGING.queue, { noAck: false }), false);
                 await processSettlementMessage(prisma, channel, delivered);
-                await publishConfirmed(channel, SETTLEMENT_MESSAGING.exchange, SETTLEMENT_MESSAGING.routingKey, body, { messageId: event.eventId });
+                await publishConfirmed(channel, SETTLEMENT_MESSAGING.exchange, SETTLEMENT_MESSAGING.routingKeys.ORDER_RECEIVED, body, { messageId: event.eventId });
                 await processSettlementMessage(prisma, channel, await get(SETTLEMENT_MESSAGING.queue));
                 assert.deepEqual(await balances(event.requesterId, event.courierId), [40, 0, 60, 0]);
                 const pending = await held(); pending.event.courierId = randomUUID(); const pendingBody = Buffer.from(JSON.stringify(pending.event));
-                await publishConfirmed(channel, SETTLEMENT_MESSAGING.exchange, SETTLEMENT_MESSAGING.routingKey, pendingBody, { messageId: pending.event.eventId });
+                await publishConfirmed(channel, SETTLEMENT_MESSAGING.exchange, SETTLEMENT_MESSAGING.routingKeys.ORDER_RECEIVED, pendingBody, { messageId: pending.event.eventId });
                 await processSettlementMessage(prisma, channel, await get(SETTLEMENT_MESSAGING.queue));
                 const start = Date.now(); const retry = await get(SETTLEMENT_MESSAGING.queue);
                 assert.ok(Date.now() - start >= 9_000); assert.equal(retry.properties.headers?.["x-retry-count"], 1); assert.equal(retry.content.toString(), pendingBody.toString());
                 await grantInitialCredits(prisma, pending.event.courierId); await processSettlementMessage(prisma, channel, retry);
                 const contradictory = { ...pending.event, eventId: randomUUID() };
-                await publishConfirmed(channel, SETTLEMENT_MESSAGING.exchange, SETTLEMENT_MESSAGING.routingKey, Buffer.from(JSON.stringify(contradictory)), { messageId: contradictory.eventId });
+                await publishConfirmed(channel, SETTLEMENT_MESSAGING.exchange, SETTLEMENT_MESSAGING.routingKeys.ORDER_RECEIVED, Buffer.from(JSON.stringify(contradictory)), { messageId: contradictory.eventId });
                 await processSettlementMessage(prisma, channel, await get(SETTLEMENT_MESSAGING.queue));
                 const dead = await get(SETTLEMENT_MESSAGING.deadQueue); assert.equal(dead.properties.headers?.["x-credit-failure"], "CONFLICT"); channel.ack(dead);
                 await channel.checkQueue(SETTLEMENT_MESSAGING.deadQueue);
@@ -343,7 +343,7 @@ test("F5/F6/F7 PostgreSQL settlement, races, rollback and history", { skip: !con
                 await processSettlementMessage(prisma, channel, redriven);
                 // Real connection loss after commit returns the unacknowledged delivery.
                 const lost = await held();
-                await publishConfirmed(channel, SETTLEMENT_MESSAGING.exchange, SETTLEMENT_MESSAGING.routingKey, Buffer.from(JSON.stringify(lost.event)), { messageId: lost.event.eventId });
+                await publishConfirmed(channel, SETTLEMENT_MESSAGING.exchange, SETTLEMENT_MESSAGING.routingKeys.ORDER_RECEIVED, Buffer.from(JSON.stringify(lost.event)), { messageId: lost.event.eventId });
                 const crashed = await connectSettlementMessaging();
                 const unacked = await crashed.channel.get(SETTLEMENT_MESSAGING.queue, { noAck: false });
                 assert.ok(unacked); await transferCredits(prisma, JSON.parse(unacked.content.toString()));
@@ -379,7 +379,7 @@ test("F5/F6/F7 PostgreSQL settlement, races, rollback and history", { skip: !con
                 } finally { await unroutable.connection.close().catch(() => undefined); }
                 const background = await held(); const stop = startSettlementConsumer(prisma);
                 try {
-                    await publishConfirmed(channel, SETTLEMENT_MESSAGING.exchange, SETTLEMENT_MESSAGING.routingKey, Buffer.from(JSON.stringify(background.event)), { messageId: background.event.eventId });
+                    await publishConfirmed(channel, SETTLEMENT_MESSAGING.exchange, SETTLEMENT_MESSAGING.routingKeys.ORDER_RECEIVED, Buffer.from(JSON.stringify(background.event)), { messageId: background.event.eventId });
                     const deadline = Date.now() + 10_000;
                     while ((await getReservation(background.event.reservationId)).status !== "TRANSFERRED" && Date.now() < deadline) await delay(100);
                     assert.equal((await getReservation(background.event.reservationId)).status, "TRANSFERRED");
