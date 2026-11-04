@@ -5,6 +5,7 @@ import type { CreateRequestPayload, Order } from "@/features/order/types/order.t
 import { createRequestService } from "@/features/order/services/order.requester.service";
 import { creditKeys } from "@/features/credit/hooks/credit.keys";
 import { requesterOrderHistoryQueryKeys } from "./requesterOrderQueryKeys";
+import { orderQueryKeys } from "./orderQueryKeys";
 
 const useCreateRequest = () => {
     const queryClient = useQueryClient();
@@ -33,6 +34,9 @@ const useCreateRequest = () => {
                 }),
                 queryClient.invalidateQueries({
                     queryKey: creditKeys.transactions(order.requesterId),
+                }),
+                queryClient.invalidateQueries({
+                    queryKey: orderQueryKeys.all,
                 }),
             ]);
             toast.success(`

@@ -10,7 +10,16 @@ import {
     getOpenOrders,
     pickUpOrder
 } from "../controllers/order.courier.controller.js";
-import { cancelRequest, createRequest, failRequest, getRequesterOrderHistory, receiveRequest, renewExpiredRequest, updateRequest } from "../controllers/order.requester.controller.js";
+import { getAllOrders } from "../controllers/order.controller.js";
+import { 
+    cancelRequest,
+    createRequest,
+    failRequest,
+    getRequesterOrderHistory,
+    receiveRequest,
+    renewExpiredRequest,
+    updateRequest 
+} from "../controllers/order.requester.controller.js";
 
 const orderRouter = Router();
 
@@ -33,6 +42,9 @@ orderRouter.get("/me/courier", authorize(Role.STUDENT), getCourierOrderHistory);
 
 // Update a specific order by ID
 orderRouter.patch("/:orderId", authorize(Role.STUDENT), updateRequest);
+
+// Get all orders for admin dashboard
+orderRouter.get("/all", authorize(Role.ADMIN), getAllOrders);
 
 // Get a specific order by ID
 // orderRouter.get("/:orderId");

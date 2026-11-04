@@ -5,6 +5,7 @@ import { receiveRequestService } from "../services/order.requester.service";
 import { requesterOrderHistoryQueryKeys } from "./requesterOrderQueryKeys";
 import { toast } from "react-toastify";
 import { creditKeys } from "@/features/credit/hooks/credit.keys";
+import { orderQueryKeys } from "./orderQueryKeys";
 
 export function useReceiveRequest() {
     const queryClient = useQueryClient();
@@ -18,6 +19,9 @@ export function useReceiveRequest() {
                 }),
                 queryClient.invalidateQueries({
                     queryKey: creditKeys.all,
+                }),
+                queryClient.invalidateQueries({
+                    queryKey: orderQueryKeys.all
                 })
             ]);
             toast.success("Request marked as received");

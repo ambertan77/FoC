@@ -1,0 +1,255 @@
+import { useState } from "react";
+import { SearchIcon } from 'lucide-react';
+import { Field } from '@/components/ui/field';
+import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
+import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import RequestActivityCard from "@/features/order/components/RequestActivityCard";
+import SupplierSelect from "@/features/order/components/SupplierSelect";
+import { useOrderHistory } from "@/features/order/hooks/useOrderHistory";
+import { useSuppliersByIds } from "@/features/order/hooks/useSuppliersByIds";
+import { ORDER_STATUSES, type OrderStatus, type SortBy, type SortOrder } from "@/features/order/types/order.types";
+import { formatStringToTitleCase } from "@/utils/formatText";
+
+const convertStatusToTitle = (status: OrderStatus | "ALL") => {
+    if (status === "ALL") {
+        return "Total Orders";
+    }
+
+    if (status === "PENDING_RESERVATION") {
+        return "Orders Pending Reservation";
+    }
+
+    if (status === "RESERVATION_FAILED") {
+        return "Orders with Failed Reservation"
+    }
+
+    return formatStringToTitleCase(status) + " Orders";
+}
+
+const ManageOrdersPage = () => {
+    const [page, setPage] = useState(1);
+    const [selectedStatus, setSelectedStatus] = useState<OrderStatus | "ALL">("ALL");
+    const [sortBy, setSortBy] = useState<SortBy>("createdAt");
+    const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
+    const [supplierIdFilter, setSupplierIdFilter] = useState<string | undefined>(undefined);
+    const [searchString, setSearchString] = useState<string>("");
+
+
+    const orderHistoryQuery = useOrderHistory({
+        page: page,
+        sortBy: sortBy,
+        sortOrder: sortOrder,
+        ...(selectedStatus !== "ALL" && { status: selectedStatus }),
+        ...(supplierIdFilter && { filterLocation: supplierIdFilter }),
+        ...(searchString && { searchString: searchString }),
+    });
+
+    const requestsData = orderHistoryQuery.data;
+    const requests = requestsData?.orders ?? [];
+    const totalCount = requestsData?.pagination?.totalCount ?? 0;
+    const totalPages = requestsData?.pagination.totalPages ?? 0; // LIMIT handled by backend, not passed in from frontend
+
+    // Collect unique supplier IDs from the requests to fetch their details
+    const supplierIds = [
+        ...new Set(
+            requests.flatMap((order) => [
+                order.pickupSupplierId,
+                order.deliverySupplierId,
+            ]),
+        ),
+    ];
+    const suppliersQuery = useSuppliersByIds(supplierIds);
+
+    const supplierNameById = new Map(
+        (suppliersQuery.data ?? []).map((supplier) => [
+            supplier.id,
+            supplier.name,
+        ]),
+    );
+    const isSuppliersLoading =
+        supplierIds.length > 0 && suppliersQuery.isPending;
+
+    const handleStatusChange = (value: string) => {
+        setSelectedStatus(value as OrderStatus | "ALL");
+        setPage(1);
+    };
+
+    const handleSearchKeyInput = (event: React.ChangeEvent<HTMLInputElement>) => {
+        setSearchString(event.target.value);
+    }
+
+    return (
+        <>
+            <div className="flex flex-col items-start justify-center gap-5 px-5 md:px-10 py-5 w-full">
+                <div className="flex flex-col gap-1">
+                    <h1 className="text-xl md:text-2xl font-bold">{totalCount} {convertStatusToTitle(selectedStatus)}</h1>
+                    <p className="text-sm text-muted-foreground">Showing a maximum of 15 orders per page. Click on any order to view its full details.</p>
+                </div>
+
+                <Tabs value={selectedStatus} onValueChange={handleStatusChange} className="w-full">
+                    <TabsList className="w-fit max-w-full h-full flex flex-nowrap items-center justify-start gap-1 overflow-x-auto overflow-y-hidden">
+                        <TabsTrigger value="ALL">All</TabsTrigger>
+
+                        {ORDER_STATUSES.map((status) => (
+                            <TabsTrigger key={status} value={status}>
+                                {formatStringToTitleCase(status)}
+                            </TabsTrigger>
+                        ))}
+                    </TabsList>
+                </Tabs>
+
+                <div className="flex flex-col gap-1 w-full md:w-1/2">
+                    <Field className="w-full">
+                        <InputGroup className="bg-white">
+                            <InputGroupAddon align="inline-start">
+                                <SearchIcon />
+                            </InputGroupAddon>
+                            <InputGroupInput
+                                id="input-search-key"
+                                type="text"
+                                placeholder="Search for an order using its name"
+                                onChange={handleSearchKeyInput} />
+                        </InputGroup>
+                    </Field>
+                </div>
+
+                <div className="flex flex-wrap items-end gap-4">
+                    <div className="flex flex-col gap-1">
+                        <label className="text-sm font-medium">Filter Location</label>
+                        <SupplierSelect
+                            className="w-48 bg-white"
+                            value={supplierIdFilter ?? ""}
+                            onChange={(id) => {
+                                setSupplierIdFilter(id);
+                                setPage(1);
+                            }}
+                            placeholder="No location selected"
+                        />
+                    </div>
+
+                    <div className="space-y-1">
+                        <label className="text-sm font-medium">Sort by</label>
+                        <Select
+                            value={sortBy}
+                            onValueChange={(value) => {
+                                setSortBy(value as SortBy);
+                                setPage(1);
+                            }}
+                        >
+                            <SelectTrigger className="w-48 bg-white">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent alignItemWithTrigger={false}>
+                                <SelectItem value="createdAt">Creation date</SelectItem>
+                                <SelectItem value="expiryAt">Completion deadline</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div className="space-y-1">
+                        <label className="text-sm font-medium">Sort order</label>
+                        <Select
+                            value={sortOrder}
+                            onValueChange={(value) => {
+                                setSortOrder(value as SortOrder);
+                                setPage(1);
+                            }}
+                        >
+                            <SelectTrigger className="w-48 bg-white">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent alignItemWithTrigger={false}>
+                                <SelectItem value="desc">
+                                    {sortBy === "expiryAt" ? "Latest expiry first" : "Newest first"}
+                                </SelectItem>
+                                <SelectItem value="asc">
+                                    {sortBy === "expiryAt" ? "Soonest expiry first" : "Oldest first"}
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+
+                {orderHistoryQuery.isLoading && <p>Loading...</p>}
+
+                {orderHistoryQuery.isError && (
+                    <p className="text-red-500">
+                        Failed to load activities: {orderHistoryQuery.error.message}
+                    </p>
+                )}
+
+                {!orderHistoryQuery.isLoading &&
+                    !orderHistoryQuery.isError &&
+                    requests.length === 0 && (
+                        <p className="text-muted-foreground">No activities yet.</p>
+                    )}
+
+                {requests.length > 0 && (
+                    <>
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
+                            {requests.map((order) => (
+                                <RequestActivityCard
+                                    key={order.id}
+                                    order={order}
+                                    viewerRole="admin"
+                                    pickupSupplierName={supplierNameById.get(order.pickupSupplierId)}
+                                    deliverySupplierName={supplierNameById.get(order.deliverySupplierId)}
+                                    isSuppliersLoading={isSuppliersLoading}
+                                />
+                            ))}
+                        </div>
+                    </>
+                )}
+            </div >
+
+            {totalPages > 1 && (
+                <Pagination className="p-2 border rounded-xl w-fit shadow-sm border-slate-200 bg-white">
+                    < PaginationContent >
+                        <PaginationItem>
+                            <PaginationPrevious
+                                href="#"
+                                aria-disabled={page <= 1}
+                                className={
+                                    page <= 1
+                                        ? "pointer-events-none opacity-50"
+                                        : undefined
+                                }
+                                onClick={(event) => {
+                                    event.preventDefault();
+                                    if (page > 1) setPage(page - 1);
+                                }}
+                            />
+                        </PaginationItem>
+
+                        <PaginationItem>
+                            <span className="px-3 text-sm">
+                                Page {page} of {totalPages}
+                            </span>
+                        </PaginationItem>
+
+                        <PaginationItem>
+                            <PaginationNext
+                                href="#"
+                                aria-disabled={page >= totalPages}
+                                className={
+                                    page >= totalPages
+                                        ? "pointer-events-none opacity-50"
+                                        : undefined
+                                }
+                                onClick={(event) => {
+                                    event.preventDefault();
+                                    if (page < totalPages) setPage(page + 1);
+                                }}
+                            />
+                        </PaginationItem>
+                    </PaginationContent>
+                </Pagination>
+            )
+            }
+        </>
+    );
+};
+
+export default ManageOrdersPage;
