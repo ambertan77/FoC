@@ -3,6 +3,7 @@ name: Deploy
 on:
   push:
     branches: [main]
+    paths-ignore: ["**.md"] # docs-only changes don't need a redeploy
   workflow_dispatch:
 
 permissions:
@@ -25,7 +26,7 @@ jobs:
       matrix:
         service: [user-service, supplier-service, order-service, credit-service]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
@@ -48,7 +49,7 @@ jobs:
     needs: build-push
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Copy Compose config to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -113,8 +114,8 @@ jobs:
       VITE_ORDER_API_BASE_URL: /api
       VITE_CREDIT_API_BASE_URL: /api
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm

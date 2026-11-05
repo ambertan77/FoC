@@ -27,8 +27,8 @@ jobs:
       # prisma.config.ts reads DATABASE_URL; validate/generate never connect to it.
       DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -88,8 +88,8 @@ jobs:
       JWT_PUBLIC_KEY_PATH: /tmp/ci-public.pem
       ORDER_CREDIT_SERVICE_TOKEN: ci-only
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -113,8 +113,8 @@ jobs:
       VITE_ORDER_API_BASE_URL: /api
       VITE_CREDIT_API_BASE_URL: /api
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -140,7 +140,7 @@ jobs:
             frontend,
           ]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: docker/setup-buildx-action@v3
       - uses: docker/build-push-action@v6
         with:
