@@ -9,6 +9,7 @@ import orderRouter from "./routes/order.route.js";
 import { startOrderOutboxPublisher } from "./workers/order-outbox.publisher.js";
 import { prisma } from "./libs/prisma.js";
 import { startOrderExpiryWorker } from "./workers/order-expiry.worker.js";
+import { startOrderReceiptWorker } from "./workers/order-receipt.worker.js";
 import { startCreditReservationResultConsumer } from "./workers/credit-reservation-result.consumer.js";
 
 const app = express();
@@ -40,6 +41,7 @@ const PORT = config.port;
 
 let stopOutboxPublisher: (() => Promise<void>) | undefined;
 let stopOrderExpiryWorker: (() => Promise<void>) | undefined;
+let stopOrderReceiptWorker: (() => Promise<void>) | undefined;
 let stopCreditReservationResultConsumer: (() => Promise<void>) | undefined;
 let shuttingDown = false;
 
@@ -50,6 +52,7 @@ const server = app.listen(PORT, () => {
     if (!shuttingDown) {
         stopOutboxPublisher = startOrderOutboxPublisher();
         stopOrderExpiryWorker = startOrderExpiryWorker();
+        stopOrderReceiptWorker = startOrderReceiptWorker();
         stopCreditReservationResultConsumer = startCreditReservationResultConsumer();
     }
 });
@@ -67,6 +70,7 @@ const shutdown = async () => {
         await Promise.all([
             stopOutboxPublisher?.(),
             stopOrderExpiryWorker?.(),
+            stopOrderReceiptWorker?.(),
             stopCreditReservationResultConsumer?.(),
             new Promise<void>((resolve, reject) => {
                 server.close((err) => {

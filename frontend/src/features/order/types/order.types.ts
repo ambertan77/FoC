@@ -13,6 +13,7 @@ export const statusVariant: Record<OrderStatus, ButtonProps["variant"]> = {
     EXPIRED: "orange",
     PENDING_RESERVATION: "cyan",
     RESERVATION_FAILED: "pink",
+    AUTO_RECEIVED: "darkGreen",
 };
 
 export const ORDER_STATUSES = [
@@ -25,7 +26,8 @@ export const ORDER_STATUSES = [
     "FAILED",
     "EXPIRED",
     "PENDING_RESERVATION",
-    "RESERVATION_FAILED"
+    "RESERVATION_FAILED",
+    "AUTO_RECEIVED"
 ] as const;
 
 export const COURIER_ORDER_STATUSES = [
@@ -34,6 +36,7 @@ export const COURIER_ORDER_STATUSES = [
     "COMPLETED",
     "RECEIVED",
     "FAILED",
+    "AUTO_RECEIVED"
 ] as const;
 
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
@@ -44,6 +47,7 @@ export const REORDERABLE_STATUSES = new Set<OrderStatus>([
     "FAILED",
     "EXPIRED",
     "RESERVATION_FAILED",
+    "AUTO_RECEIVED",
 ]);
 
 export interface Order {
