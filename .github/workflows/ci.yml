@@ -37,15 +37,18 @@ jobs:
       - run: npx prisma validate
       - run: npx prisma generate
       - run: npm run build
-      - if: matrix.service == 'supplier-service' || matrix.service == 'user-service'
-        run: npm test
+      - run: npm test
         env:
-          # supplier's config.ts throws on missing variables when tests import it; CI-only values.
-          # (user-service sets its own in test/setup.ts.)
+          # Each service's config.ts throws on missing variables when tests import it; CI-only
+          # values, never connected to. (user-service sets its own in test/setup.ts.)
           PORT: "3001"
           FRONTEND_URL: http://localhost
           JWT_PUBLIC_KEY_PATH: /tmp/unused.pem
           ORDER_SUPPLIER_SERVICE_TOKEN: ci-only
+          ORDER_CREDIT_SERVICE_TOKEN: ci-only
+          SUPPLIER_SERVICE_URL: http://localhost
+          CREDIT_SERVICE_URL: http://localhost
+          RABBITMQ_URL: amqp://localhost
 
   credit-integration:
     name: credit-service integration
