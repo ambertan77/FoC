@@ -23,6 +23,7 @@ enum OrderStatus {
   FAILED
   PENDING_RESERVATION // Credit service is reserving the credits
   RESERVATION_FAILED // Credit service failed to reserve the credits, so the order creation fails.
+  AUTO_RECEIVED // System automatically marked order as received 30 minutes after courier completion
 }
 
 enum OrderEventType {
@@ -110,6 +111,8 @@ model Order {
   // Courier history for status and createdAt
   @@index([courierId, status, createdAt])
   @@index([courierId, status, expiryAt])
+  // For auto-receival of orders
+  @@index([status, completedAt])
 }
 
 model OrderStatusHistory {
