@@ -111,6 +111,8 @@ model Order {
   // Courier history for status and createdAt
   @@index([courierId, status, createdAt])
   @@index([courierId, status, expiryAt])
+  // For auto-receival of orders
+  @@index([status, completedAt])
 }
 
 model OrderStatusHistory {
