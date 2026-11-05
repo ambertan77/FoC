@@ -2,7 +2,7 @@ import { MAX_REQUEST_BYTES } from "../constants/consumer.constant.js";
 import { connectReservationRequestMessaging, publishConfirmed, RESERVATION_REQUEST_MESSAGING } from "../libs/rabbitmq.js";
 import { reservationRequestEventSchema } from "../schemas/reservation-request-event.schema.js";
 
-const usage = "Usage: npm run redrive:settlement -- --limit <positive integer>";
+const usage = "Usage: npm run redrive:reservation -- --limit <positive integer>";
 
 async function redrive(limit: number): Promise<void> {
     const { connection, channel } = await connectReservationRequestMessaging();
@@ -58,7 +58,7 @@ async function redrive(limit: number): Promise<void> {
             await publishConfirmed(
                 channel,
                 RESERVATION_REQUEST_MESSAGING.exchange,
-                RESERVATION_REQUEST_MESSAGING.routingKey,
+                RESERVATION_REQUEST_MESSAGING.routingKeys.CREDIT_RESERVATION_REQUEST,
                 message.content, // Preserve exact event bytes.
                 {
                     messageId: message.properties.messageId,

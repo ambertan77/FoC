@@ -37,7 +37,7 @@ async function redrive(limit: number): Promise<void> {
             await publishConfirmed(
                 channel,
                 REGISTRATION_MESSAGING.exchange,
-                REGISTRATION_MESSAGING.routingKey,
+                REGISTRATION_MESSAGING.routingKeys.USER_REGISTERED,
                 message.content, // Preserve exact event bytes, including occurredAt.
                 {
                     messageId: message.properties.messageId,
@@ -66,6 +66,7 @@ async function redrive(limit: number): Promise<void> {
         // Failure or interruption before ack leaves the original available for
         // redelivery. A lost ack can duplicate an event, never another grant.
         await connection.close().catch(() => undefined);
+        await channel.close().catch(() => undefined);
     }
 }
 

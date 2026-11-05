@@ -2,9 +2,9 @@ import { setTimeout as delay } from "node:timers/promises";
 import type { ConsumeMessage, ConfirmChannel } from "amqplib";
 import { AppError } from "../errors/errors.js";
 import {
-    connectCreditReservationResultMessaging,
+    connectReservationResultMessaging,
     publishConfirmed,
-    CREDIT_RESERVATION_RESULT_MESSAGING,
+    RESERVATION_RESULT_MESSAGING,
 } from "../libs/rabbitmq.js";
 import {
     creditReservationResultSchema,
@@ -27,11 +27,7 @@ function getRetryCount(message: ConsumeMessage): number | null {
 }
 
 function getExpectedRoutingKey(event: CreditReservationResult): string {
-    return event.eventType === "CREDIT_RESERVATION_SUCCEEDED"
-        ? CREDIT_RESERVATION_RESULT_MESSAGING.routingKeys
-            .CREDIT_RESERVATION_SUCCEEDED
-        : CREDIT_RESERVATION_RESULT_MESSAGING.routingKeys
-            .CREDIT_RESERVATION_FAILED;
+    return RESERVATION_RESULT_MESSAGING.routingKeys[event.eventType];
 }
 
 async function forwardMessage(
@@ -47,9 +43,9 @@ async function forwardMessage(
         correlationId: message.properties.correlationId,
         headers: {
             ...message.properties.headers,
-            ...(nextRetryCount === null
-                ? {}
-                : { "x-retry-count": nextRetryCount }),
+            "x-original-routing-key":
+                message.properties.headers?.["x-original-routing-key"] ?? message.fields.routingKey,
+            ...(nextRetryCount === null ? {} : { "x-retry-count": nextRetryCount }),
             "x-order-failure": reason.slice(0, 500),
         },
     });
@@ -81,7 +77,7 @@ export async function processCreditReservationResultMessage(
         await forwardMessage(
             channel,
             message,
-            CREDIT_RESERVATION_RESULT_MESSAGING.deadQueue,
+            RESERVATION_RESULT_MESSAGING.deadQueue,
             "INVALID_EVENT",
             null,
         );
@@ -91,21 +87,22 @@ export async function processCreditReservationResultMessage(
     // 2. Validate the event, retry count, message ID and routing key.
     const parsed = creditReservationResultSchema.safeParse(body);
     const retryCount = getRetryCount(message);
+    const originalKeyHeader = message.properties.headers?.["x-original-routing-key"];
+    const viaRetry = message.fields.routingKey === RESERVATION_RESULT_MESSAGING.queue;
+    const routingKey =
+        viaRetry && typeof originalKeyHeader === "string"
+            ? originalKeyHeader
+            : message.fields.routingKey;
 
     if (
         !parsed.success ||
         message.properties.messageId !== parsed.data.eventId ||
-        (
-            message.fields.routingKey !==
-            getExpectedRoutingKey(parsed.data) &&
-            message.fields.routingKey !==
-            CREDIT_RESERVATION_RESULT_MESSAGING.retryRoutingKey
-        )
+        routingKey !== getExpectedRoutingKey(parsed.data)
     ) {
         await forwardMessage(
             channel,
             message,
-            CREDIT_RESERVATION_RESULT_MESSAGING.deadQueue,
+            RESERVATION_RESULT_MESSAGING.deadQueue,
             "INVALID_EVENT",
             null,
         );
@@ -116,7 +113,7 @@ export async function processCreditReservationResultMessage(
         await forwardMessage(
             channel,
             message,
-            CREDIT_RESERVATION_RESULT_MESSAGING.deadQueue,
+            RESERVATION_RESULT_MESSAGING.deadQueue,
             "INVALID_RETRY_COUNT",
             null,
         );
@@ -147,7 +144,7 @@ export async function processCreditReservationResultMessage(
             await forwardMessage(
                 channel,
                 message,
-                CREDIT_RESERVATION_RESULT_MESSAGING.retryQueue,
+                RESERVATION_RESULT_MESSAGING.retryQueue,
                 "PROCESSING_FAILED",
                 retryCount + 1,
             );
@@ -155,7 +152,7 @@ export async function processCreditReservationResultMessage(
             await forwardMessage(
                 channel,
                 message,
-                CREDIT_RESERVATION_RESULT_MESSAGING.deadQueue,
+                RESERVATION_RESULT_MESSAGING.deadQueue,
                 "RETRIES_EXHAUSTED",
                 null,
             );
@@ -176,7 +173,7 @@ export function startCreditReservationResultConsumer():
 
     async function runSession(): Promise<void> {
         const { connection, channel } =
-            await connectCreditReservationResultMessaging();
+            await connectReservationResultMessaging();
 
         let ending = false;
         let finish!: () => void;
@@ -203,7 +200,7 @@ export function startCreditReservationResultConsumer():
             await channel.prefetch(1);
 
             const consumer = await channel.consume(
-                CREDIT_RESERVATION_RESULT_MESSAGING.queue,
+                RESERVATION_RESULT_MESSAGING.queue,
                 (message) => {
                     if (!message) {
                         end();

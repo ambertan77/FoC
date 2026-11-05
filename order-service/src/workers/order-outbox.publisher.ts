@@ -1,6 +1,11 @@
 import { setTimeout as delay } from "node:timers/promises";
 import { OrderEventType, OutboxEventStatus } from "../generated/prisma/client.js";
-import { connectOrderMessaging, ORDER_MESSAGING, publishConfirmed, type PublishableOrderEventType } from "../libs/rabbitmq.js";
+import {
+    connectOrderMessaging,
+    ORDER_PUBLISH_ROUTES,
+    publishConfirmed,
+    type PublishableOrderEventType,
+} from "../libs/rabbitmq.js";
 import { prisma } from "../libs/prisma.js";
 
 // Maximum number of outbox events to fetch and publish in a single batch.
@@ -25,14 +30,6 @@ type ClaimedEvent = {
     payload: unknown;
     retryCount: number;
     lockedUntil: Date;
-};
-
-const routingKeys: Record<PublishableOrderEventType, string> = {
-    [OrderEventType.CREDIT_RESERVATION_REQUEST]: ORDER_MESSAGING.routingKeys.CREDIT_RESERVATION_REQUEST,
-    [OrderEventType.ORDER_RECEIVED]: ORDER_MESSAGING.routingKeys.ORDER_RECEIVED,
-    [OrderEventType.ORDER_CANCELED]: ORDER_MESSAGING.routingKeys.ORDER_CANCELED,
-    [OrderEventType.ORDER_EXPIRED]: ORDER_MESSAGING.routingKeys.ORDER_EXPIRED,
-    [OrderEventType.ORDER_FAILED]: ORDER_MESSAGING.routingKeys.ORDER_FAILED,
 };
 
 /**
@@ -102,7 +99,7 @@ function serializePayload(payload: unknown, eventId: string): Buffer {
 export function isPublishableOrderEventType(
     eventType: OrderEventType,
 ): eventType is PublishableOrderEventType {
-    return Object.prototype.hasOwnProperty.call(routingKeys, eventType);
+    return Object.prototype.hasOwnProperty.call(ORDER_PUBLISH_ROUTES, eventType);
 }
 
 // Use a random jitter to help avoid simultaneous retries from multiple workers.
@@ -135,19 +132,16 @@ async function publishOne(
     }
 
     // 3. Get the routing key for the event type from the routingKeys mapping.
-    const routingKey = routingKeys[event.eventType];
+    const { exchange, routingKey } = ORDER_PUBLISH_ROUTES[event.eventType];
 
     try {
         // 4. Publish the event to RabbitMQ with publisher confirms.
         await publishConfirmed(
             channel,
-            ORDER_MESSAGING.exchange,
+            exchange,
             routingKey,
             serializePayload(event.payload, event.id),
-            {
-                messageId: event.id,
-                correlationId: event.orderId,
-            },
+            { messageId: event.id, correlationId: event.orderId },
         );
 
         // 5. If successful, update the outbox event status to PUBLISHED and clear the lease.
@@ -221,11 +215,6 @@ export function startOrderOutboxPublisher(): () => Promise<void> {
                 | undefined;
 
             try {
-                const messaging = await connectOrderMessaging();
-                connection = messaging.connection;
-                channel = messaging.channel;
-                retry = 0;
-
                 // Claim a batch of outbox events to publish.
                 const events = await claimBatch();
 
@@ -236,6 +225,12 @@ export function startOrderOutboxPublisher(): () => Promise<void> {
                     });
                     continue;
                 }
+
+                // Connect only now that there is something to publish.
+                const messaging = await connectOrderMessaging();
+                connection = messaging.connection;
+                channel = messaging.channel;
+                retry = 0;
 
                 // Publish each claimed event sequentially to ensure order and avoid concurrent publishes on the same channel.
                 for (const event of events) {
