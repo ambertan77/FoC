@@ -90,6 +90,7 @@ export async function updateOrdersAsReceived(): Promise<number> {
                         reservationId: order.creditReservationId,
                         orderId: order.id,
                         requesterId: order.requesterId,
+                        courierId: order.courierId,
                         amount: order.offeredCredits,
                     }
                 }
