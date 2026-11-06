@@ -55,7 +55,7 @@ In the Order Service, there are two main roles: Requester (user who created an o
 
 | From | Action and Conditions | To | Changed By | Trigger and Credit Operation |
 | --- | --- | --- | --- | --- |
-| NULL | Request is valid, expiry date in the future, pickup and delivery suppliers exist. | PENDING_RESERVATION | Requester ID | Request is submitted. Order Service creates the order, history row, and `CREDIT_RESERVATION_REQUEST` outbox row in one transaction. Credit reservation happens asynchronously. |
+| NULL | Request is valid, expiry date in the future, pickup and delivery suppliers exist. | PENDING_RESERVATION | Requester ID | Request is submitted. Order Service creates the order, history row, and `RESERVE_CREDITS` outbox row in one transaction. Credit reservation happens asynchronously. |
 | PENDING_RESERVATION | Credit Service successfully reserves the requested credits. | OPEN | NULL (system) | Credit Service publishes an `CREDIT_RESERVATION_SUCCEEDED` outbox event. Order Service consumes it, records the reservation ID, and records the status change. |
 | PENDING_RESERVATION | Credit Service cannot reserve the requested credits. | RESERVATION_FAILED | NULL (system) | Credit Service publishes an `CREDIT_RESERVATION_FAILED` outbox event. Order Service consumes it and updates the order to `RESERVATION_FAILED`. No credits are reserved. |
 | OPEN | Requester owns the request, no courier is assigned, supplies exits, expected version matches, editable fields are valid, order must be in OPEN status. | OPEN | Requester ID | Requester updates the request. Offered credits cannot be changed after it is created. No change to credit reservations. |
@@ -67,7 +67,7 @@ In the Order Service, there are two main roles: Requester (user who created an o
 | COMPLETED | The order belongs to the requester, order must be in COMPLETED status, a courier must be assigned, credit reservationId must exist, expected version matches. | FAILED | Requester ID | Requester reports that the delivery failed. Order Service publishes an `ORDER_FAILED` outbox event, triggering the credit service to refund the reservation. |
 | OPEN | The order belongs to the requester, order must be in OPEN status, no courier is assigned, credit reservationId must exist, expected version matches. | CANCELED | Requester ID | Requester cancels the request. Order Service publishes an `ORDER_CANCELED` outbox event, triggering the credit service to release the reservation. |
 | OPEN | The order must be in OPEN status, no courier has accepted it and expiryAt has passed. | EXPIRED | NULL (system) | The system’s expiry worker automatically expires the request. The expiry worker polls every 1 minute to check if any order has expired, and updates the order status accordingly. Order Service publishes an `ORDER_EXPIRED` outbox event, triggering the credit service to release the reservation. |
-| EXPIRED | The order belongs to the requester, order must be in EXPIRED status, credit reservationId must exist, expiry date in the future, expected version matches. | EXPIRED | Requester ID | Requester requests renewal. Order Service set `renewalPending` to true and publishes a new `CREDIT_RESERVATION_REQUEST` outbox event. Credit Service attempts to create a new reservation. The existing expired status is retained while the reservation is pending. |
+| EXPIRED | The order belongs to the requester, order must be in EXPIRED status, credit reservationId must exist, expiry date in the future, expected version matches. | EXPIRED | Requester ID | Requester requests renewal. Order Service set `renewalPending` to true and publishes a new `RESERVE_CREDITS` outbox event. Credit Service attempts to create a new reservation. The existing expired status is retained while the reservation is pending. |
 | EXPIRED | Credit Service successfully reserves the credits for the renewal attempt. | OPEN | NULL (system) | Credit Service publishes an `CREDIT_RESERVATION_SUCCEEDED` outbox event. Order Service consumes it, records the new reservation ID, updates the expiry date, and reopens the order. |
 | EXPIRED | Credit Service cannot reserve the credits for the renewal attempt. | EXPIRED | NULL (system) | Credit Service publishes an `CREDIT_RESERVATION_FAILED` outbox event. Order Service consumes it, sets `renewalPending` to false and stores the renewal failure code. The order remains expired. |
 | ACCEPTED | The order must be in ACCEPTED status, a courier must be assigned, and the expiry date has passed. | FAILED | NULL (system) | The system’s expiry worker automatically fails the request. The expiry worker polls every 1 minute to check if any order has expired, and updates the order status accordingly. Order Service publishes an `ORDER_FAILED` outbox event, triggering the credit service to refund the reservation. |
@@ -91,7 +91,7 @@ The Order Service uses RabbitMQ for credit operations that do not need to comple
 
 Every message is one of two kinds:
 
-- **Command**: asks one specific service to do something and expects an outcome (`CREDIT_RESERVATION_REQUEST`). It goes to a **direct** exchange with a single consumer.
+- **Command**: asks one specific service to do something and expects an outcome (`RESERVE_CREDITS`). It goes to a **direct** exchange with a single consumer.
 - **Event**: states a fact that already happened (`ORDER_RECEIVED`, `CREDIT_RESERVATION_SUCCEEDED`). The publisher does not know who consumes it. Events go to **topic** exchanges, so new consumers can subscribe without changing the publisher.
 
 | Type | Routing rule | Used for |
@@ -101,7 +101,7 @@ Every message is one of two kinds:
 
 | Message | Kind | Flow | Exchange (type) | Routing key | Consumer queue |
 | --- | --- | --- | --- | --- | --- |
-| `CREDIT_RESERVATION_REQUEST` | Command | Order → Credit | `credit.commands` (direct) | `credit.reserve.v1` | `credit.reserve.v1` |
+| `RESERVE_CREDITS` | Command | Order → Credit | `credit.commands` (direct) | `credit.reserve.v1` | `credit.reserve.v1` |
 | `ORDER_RECEIVED` | Event | Order → Credit | `order.events` (topic) | `order.received.v1` | `credit.order-events.v1` |
 | `ORDER_CANCELED` | Event | Order → Credit | `order.events` (topic) | `order.canceled.v1` | `credit.order-events.v1` |
 | `ORDER_EXPIRED` | Event | Order → Credit | `order.events` (topic) | `order.expired.v1` | `credit.order-events.v1` |
@@ -110,7 +110,7 @@ Every message is one of two kinds:
 | `CREDIT_RESERVATION_FAILED` | Event | Credit → Order | `credit.events` (topic) | `credit.reservation.failed.v1` | `order.credit-events.v1` |
 
 ```Text
-Order Service ── CREDIT_RESERVATION_REQUEST (command) ──▶ credit.commands ──▶ credit.reserve.v1 ──▶ Credit Service
+Order Service ── RESERVE_CREDITS (command) ──▶ credit.commands ──▶ credit.reserve.v1 ──▶ Credit Service
 Order Service ── ORDER_* (events) ──────────────────────▶ order.events ─────▶ credit.order-events.v1 ──▶ Credit Service 
 Order Service ◀── CREDIT_RESERVATION_* (events) ── credit.events ◀─── Credit Service (consumed from order.credit-events.v1)
 ```
@@ -118,7 +118,7 @@ Order Service ◀── CREDIT_RESERVATION_* (events) ── credit.events ◀�
 ### Creating an Order and Reserving Credits
 
 1. The Order Service validates the request and synchronously verifies that the pickup and delivery suppliers exist.
-2. In one database transaction, it creates the order with status `PENDING_RESERVATION`, records the initial status history, and creates a `CREDIT_RESERVATION_REQUEST` outbox row with request type `CREATE`.
+2. In one database transaction, it creates the order with status `PENDING_RESERVATION`, records the initial status history, and creates a `RESERVE_CREDITS` outbox row with request type `CREATE`.
 3. The Order Service outbox publisher sends the command to `credit.commands` with routing key `credit.reserve.v1`. It marks the outbox row as published only after RabbitMQ confirms the message.
 4. The Credit Service consumes the command and attempts to reserve the credits. It records the outcome and creates a result outbox row in its own database transaction.
 5. The Credit Service publishes either `CREDIT_RESERVATION_SUCCEEDED` or `CREDIT_RESERVATION_FAILED` to `credit.events`.
@@ -130,7 +130,7 @@ The create API response means that the order was submitted. Its initial status i
 
 ### Renewing an Expired Order
 
-When a requester renews an expired order, the Order Service validates the new expiry time and expected version. It then sets `renewalPending` and writes a `CREDIT_RESERVATION_REQUEST`command with request type `RENEW` to its outbox. It uses the same exchange and routing key as a create request. The order stays `EXPIRED` while the Credit Service processes the request.
+When a requester renews an expired order, the Order Service validates the new expiry time and expected version. It then sets `renewalPending` and writes a `RESERVE_CREDITS`command with request type `RENEW` to its outbox. It uses the same exchange and routing key as a create request. The order stays `EXPIRED` while the Credit Service processes the request.
 
 - On success, the Order Service saves the new reservation ID and expiry time, clears `renewalPending`, and changes the order from `EXPIRED` to `OPEN`.
 - On failure, the order stays `EXPIRED`; the Order Service clears `renewalPending` and records the renewal failure code.
@@ -168,7 +168,7 @@ Order Service declares the Credit Service owned queues that it publishes to, so 
 
 | Published by Order | Exchange | Routing key | Consumer | Queue (declared by both) |
 | --- | --- | --- | --- | --- |
-| `CREDIT_RESERVATION_REQUEST` | `credit.commands` | `credit.reserve.v1` | Credit Service | `credit.reserve.v1` |
+| `RESERVE_CREDITS` | `credit.commands` | `credit.reserve.v1` | Credit Service | `credit.reserve.v1` |
 | `ORDER_RECEIVED` | `order.events` | `order.received.v1` | Credit Service | `credit.order-events.v1` |
 | `ORDER_CANCELED` | `order.events` | `order.canceled.v1` | Credit Service | `credit.order-events.v1` |
 | `ORDER_EXPIRED` | `order.events` | `order.expired.v1` | Credit Service | `credit.order-events.v1` |

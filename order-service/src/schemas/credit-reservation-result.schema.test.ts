@@ -96,7 +96,7 @@ test("creditReservationResultSchema rejects an unsupported result event type", (
 test("reservationRequestPayloadSchema accepts a valid CREATE reservation request payload", () => {
     const result = reservationRequestPayloadSchema.safeParse({
         eventId: ids.eventId,
-        eventType: "CREDIT_RESERVATION_REQUEST",
+        eventType: "RESERVE_CREDITS",
         requestType: "CREATE",
         orderId: ids.orderId,
         requesterId: ids.requesterId,
@@ -110,7 +110,7 @@ test("reservationRequestPayloadSchema accepts a valid CREATE reservation request
 test("reservationRequestPayloadSchema accepts a valid RENEW reservation request payload", () => {
     const result = reservationRequestPayloadSchema.safeParse({
         eventId: ids.eventId,
-        eventType: "CREDIT_RESERVATION_REQUEST",
+        eventType: "RESERVE_CREDITS",
         requestType: "RENEW",
         orderId: ids.orderId,
         requesterId: ids.requesterId,
@@ -126,7 +126,7 @@ test("reservationRequestPayloadSchema accepts a valid RENEW reservation request 
 test("reservationRequestPayloadSchema rejects a CREATE payload with renewal-only fields", () => {
     const result = reservationRequestPayloadSchema.safeParse({
         eventId: ids.eventId,
-        eventType: "CREDIT_RESERVATION_REQUEST",
+        eventType: "RESERVE_CREDITS",
         requestType: "CREATE",
         orderId: ids.orderId,
         requesterId: ids.requesterId,
@@ -141,7 +141,7 @@ test("reservationRequestPayloadSchema rejects a CREATE payload with renewal-only
 test("reservationRequestPayloadSchema rejects a RENEW payload missing required renewal fields", () => {
     const result = reservationRequestPayloadSchema.safeParse({
         eventId: ids.eventId,
-        eventType: "CREDIT_RESERVATION_REQUEST",
+        eventType: "RESERVE_CREDITS",
         requestType: "RENEW",
         orderId: ids.orderId,
         requesterId: ids.requesterId,
@@ -154,7 +154,7 @@ test("reservationRequestPayloadSchema rejects a RENEW payload missing required r
 test("reservationRequestPayloadSchema rejects a request with a non-positive or fractional amount", () => {
     const baseCreateRequest = {
         eventId: ids.eventId,
-        eventType: "CREDIT_RESERVATION_REQUEST",
+        eventType: "RESERVE_CREDITS",
         requestType: "CREATE",
         orderId: ids.orderId,
         requesterId: ids.requesterId,
@@ -181,7 +181,7 @@ test("reservationRequestPayloadSchemarejects malformed UUIDs and invalid renewal
     assert.equal(
         reservationRequestPayloadSchema.safeParse({
             eventId: "bad-id",
-            eventType: "CREDIT_RESERVATION_REQUEST",
+            eventType: "RESERVE_CREDITS",
             requestType: "CREATE",
             orderId: ids.orderId,
             requesterId: ids.requesterId,
@@ -193,7 +193,7 @@ test("reservationRequestPayloadSchemarejects malformed UUIDs and invalid renewal
     assert.equal(
         reservationRequestPayloadSchema.safeParse({
             eventId: ids.eventId,
-            eventType: "CREDIT_RESERVATION_REQUEST",
+            eventType: "RESERVE_CREDITS",
             requestType: "RENEW",
             orderId: ids.orderId,
             requesterId: ids.requesterId,

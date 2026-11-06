@@ -58,7 +58,7 @@ async function redrive(limit: number): Promise<void> {
             await publishConfirmed(
                 channel,
                 RESERVATION_REQUEST_MESSAGING.exchange,
-                RESERVATION_REQUEST_MESSAGING.routingKeys.CREDIT_RESERVATION_REQUEST,
+                RESERVATION_REQUEST_MESSAGING.routingKeys.RESERVE_CREDITS,
                 message.content, // Preserve exact event bytes.
                 {
                     messageId: message.properties.messageId,

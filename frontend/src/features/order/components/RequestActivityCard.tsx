@@ -100,6 +100,15 @@ const RequestActivityCard = ({
         setOpenCreateRequestDialog(true);
     }
 
+    // Feedback for expired requests due to completion deadline
+    const completionDeadlineFeedback =
+        order.status === "FAILED" && order.completedAt === null
+            ? viewerRole === "requester"
+                ? "Courier failed to complete the request by the deadline. Credits have been refunded to you."
+                : "You failed to complete the request by the deadline. Credits have been refunded to the requester."
+            : null;
+
+
     return (
         <>
             <Card
@@ -119,21 +128,21 @@ const RequestActivityCard = ({
                                 {order.name}
                             </span>
                             <Tooltip>
-                                <TooltipTrigger 
-                                render={
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon-xs"
-                                        onClick={(event) => {
-                                            event.stopPropagation();
-                                            handleReorder();
-                                        }}
-                                        hidden={!canReorder}
-                                    >
-                                        <Repeat2 className="size-4 shrink-0 text-slate-500" />
-                                    </Button>
-                                } />
+                                <TooltipTrigger
+                                    render={
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon-xs"
+                                            onClick={(event) => {
+                                                event.stopPropagation();
+                                                handleReorder();
+                                            }}
+                                            hidden={!canReorder}
+                                        >
+                                            <Repeat2 className="size-4 shrink-0 text-slate-500" />
+                                        </Button>
+                                    } />
                                 <TooltipContent>
                                     <p>Reorder</p>
                                 </TooltipContent>
@@ -177,11 +186,20 @@ const RequestActivityCard = ({
                     </div>
                 </div>
 
-                {reservationFeedback && (
+                {reservationFeedback && viewerRole === "requester" && (
                     <div className="flex flex-row items-center gap-1.5 text-sm text-muted-foreground">
                         <InfoIcon className="size-4 shrink-0" />
                         <span className="leading-none text-wrap">
                             {reservationFeedback}
+                        </span>
+                    </div>
+                )}
+
+                {completionDeadlineFeedback && (
+                    <div className="flex flex-row items-center gap-1.5 text-sm text-muted-foreground">
+                        <InfoIcon className="size-4 shrink-0" />
+                        <span className="leading-none text-wrap">
+                            {completionDeadlineFeedback}
                         </span>
                     </div>
                 )}

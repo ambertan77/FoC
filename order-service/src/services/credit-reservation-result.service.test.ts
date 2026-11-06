@@ -21,7 +21,7 @@ const previousReservationId = "66666666-6666-4666-8666-666666666666";
 
 const createPayload = {
     eventId: correlationId,
-    eventType: OrderEventType.CREDIT_RESERVATION_REQUEST,
+    eventType: OrderEventType.RESERVE_CREDITS,
     requestType: "CREATE" as const,
     orderId,
     requesterId,
@@ -30,7 +30,7 @@ const createPayload = {
 
 const renewPayload = {
     eventId: correlationId,
-    eventType: OrderEventType.CREDIT_RESERVATION_REQUEST,
+    eventType: OrderEventType.RESERVE_CREDITS,
     requestType: "RENEW" as const,
     orderId,
     requesterId,
@@ -102,7 +102,7 @@ function createMockPrisma(config: MockConfig = {}) {
             config.requestEvent === undefined
                 ? {
                     orderId,
-                    eventType: OrderEventType.CREDIT_RESERVATION_REQUEST,
+                    eventType: OrderEventType.RESERVE_CREDITS,
                     payload: createPayload,
                 }
                 : config.requestEvent,
@@ -263,7 +263,7 @@ test("creditReservationResultService applies a successful CREATE result", async 
         order: pendingOrder,
         requestEvent: {
             orderId,
-            eventType: OrderEventType.CREDIT_RESERVATION_REQUEST,
+            eventType: OrderEventType.RESERVE_CREDITS,
             payload: createPayload,
         },
     });
@@ -308,7 +308,7 @@ test("creditReservationResultService applies a failed CREATE result", async (t) 
         order: pendingOrder,
         requestEvent: {
             orderId,
-            eventType: OrderEventType.CREDIT_RESERVATION_REQUEST,
+            eventType: OrderEventType.RESERVE_CREDITS,
             payload: createPayload,
         },
     });
@@ -338,7 +338,7 @@ test("creditReservationResultService applies a successful RENEW result", async (
         order: expiredOrder,
         requestEvent: {
             orderId,
-            eventType: OrderEventType.CREDIT_RESERVATION_REQUEST,
+            eventType: OrderEventType.RESERVE_CREDITS,
             payload: renewPayload,
         },
     });
@@ -374,7 +374,7 @@ test("creditReservationResultService applies a failed RENEW result", async (t) =
         order: expiredOrder,
         requestEvent: {
             orderId,
-            eventType: OrderEventType.CREDIT_RESERVATION_REQUEST,
+            eventType: OrderEventType.RESERVE_CREDITS,
             payload: renewPayload,
         },
     });
@@ -457,7 +457,7 @@ test("creditReservationResultService rejects a mismatched request payload", asyn
     useMockPrisma(t, {
         requestEvent: {
             orderId,
-            eventType: OrderEventType.CREDIT_RESERVATION_REQUEST,
+            eventType: OrderEventType.RESERVE_CREDITS,
             payload: {
                 ...createPayload,
                 orderId: previousReservationId,
@@ -483,7 +483,7 @@ test("creditReservationResultService rejects a missing CREATE order", async (t) 
         order: null,
         requestEvent: {
             orderId,
-            eventType: OrderEventType.CREDIT_RESERVATION_REQUEST,
+            eventType: OrderEventType.RESERVE_CREDITS,
             payload: createPayload,
         },
     });
@@ -530,7 +530,7 @@ test("creditReservationResultService rejects a renewal when the order changed", 
         },
         requestEvent: {
             orderId,
-            eventType: OrderEventType.CREDIT_RESERVATION_REQUEST,
+            eventType: OrderEventType.RESERVE_CREDITS,
             payload: renewPayload,
         },
     });
@@ -571,7 +571,7 @@ test("creditReservationResultService rejects a concurrent RENEW update", async (
         order: expiredOrder,
         requestEvent: {
             orderId,
-            eventType: OrderEventType.CREDIT_RESERVATION_REQUEST,
+            eventType: OrderEventType.RESERVE_CREDITS,
             payload: renewPayload,
         },
         updateCount: 0,

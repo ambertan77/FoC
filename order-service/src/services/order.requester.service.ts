@@ -204,10 +204,10 @@ export async function createRequestService(
             data: {
                 id: eventId,
                 orderId: createOrder.id,
-                eventType: OrderEventType.CREDIT_RESERVATION_REQUEST,
+                eventType: OrderEventType.RESERVE_CREDITS,
                 payload: {
                     eventId: eventId,
-                    eventType: OrderEventType.CREDIT_RESERVATION_REQUEST,
+                    eventType: OrderEventType.RESERVE_CREDITS,
                     requestType: "CREATE",
                     orderId: createOrder.id,
                     requesterId: requesterId,
@@ -558,10 +558,10 @@ export async function renewExpiredRequestService(
             data: {
                 id: eventId,
                 orderId: existingOrder.id,
-                eventType: OrderEventType.CREDIT_RESERVATION_REQUEST,
+                eventType: OrderEventType.RESERVE_CREDITS,
                 payload: {
                     eventId: eventId,
-                    eventType: "CREDIT_RESERVATION_REQUEST",
+                    eventType: "RESERVE_CREDITS",
                     requestType: "RENEW",
                     orderId: existingOrder.id,
                     requesterId,

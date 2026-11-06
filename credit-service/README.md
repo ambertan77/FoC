@@ -58,7 +58,7 @@ Order Service owns order status and order IDs. Credit Service owns credit accoun
 Services communicate through RabbitMQ. Every message is one of two kinds:
 
 - **Event**: a fact that already happened, named in the past tense (`USER_REGISTERED`, `ORDER_RECEIVED`). The publisher does not know or care who consumes it. Events go to **topic** exchanges, so more consumers can subscribe later without changing the publisher.
-- **Command**: a request that one specific service must act on (`CREDIT_RESERVATION_REQUEST`). The sender depends on the outcome, so the command goes to a **direct** exchange with exactly one consumer. The outcome comes back as an event.
+- **Command**: a request that one specific service must act on (`RESERVE_CREDITS`). The sender depends on the outcome, so the command goes to a **direct** exchange with exactly one consumer. The outcome comes back as an event.
 
 #### Exchange types used
 
@@ -74,7 +74,7 @@ Fanout and header exchanges are not used.
 | Message | Kind | Flow | Exchange (type) | Routing key | Binding | Consumer queue |
 | --- | --- | --- | --- | --- | --- | --- |
 | `USER_REGISTERED` | Event | User → Credit | `user.events` (topic) | `user.registered.v1` | `user.registered.v1` | `credit.user-registered.v1` |
-| `CREDIT_RESERVATION_REQUEST` | Command | Order → Credit | `credit.commands` (direct) | `credit.reserve.v1` | `credit.reserve.v1` | `credit.reserve.v1` |
+| `RESERVE_CREDITS` | Command | Order → Credit | `credit.commands` (direct) | `credit.reserve.v1` | `credit.reserve.v1` | `credit.reserve.v1` |
 | `ORDER_RECEIVED` | Event | Order → Credit | `order.events` (topic) | `order.received.v1` | `order.*.v1` | `credit.order-events.v1` |
 | `ORDER_CANCELED` | Event | Order → Credit | `order.events` (topic) | `order.canceled.v1` | `order.*.v1` | `credit.order-events.v1` |
 | `ORDER_EXPIRED` | Event | Order → Credit | `order.events` (topic) | `order.expired.v1` | `order.*.v1` | `credit.order-events.v1` |
@@ -229,12 +229,12 @@ These statuses describe errors from the function; there is no public HTTP grant 
 
 ### Order Reservation and Renewal
 
-`CREDIT_RESERVATION_REQUEST` is a **command**. Order Service needs Credit Service specifically to reserve credits, and an order stays `PENDING_RESERVATION` until it gets the answer. It is published to the direct exchange `credit.commands` with routing key `credit.reserve.v1` and is consumed from `credit.reserve.v1` (retry `credit.reserve.retry.v1`, dead `credit.reserve.dead.v1`).
+`RESERVE_CREDITS` is a **command**. Order Service needs Credit Service specifically to reserve credits, and an order stays `PENDING_RESERVATION` until it gets the answer. It is published to the direct exchange `credit.commands` with routing key `credit.reserve.v1` and is consumed from `credit.reserve.v1` (retry `credit.reserve.retry.v1`, dead `credit.reserve.dead.v1`).
 
 Credit Service answers with an **event** on the topic exchange `credit.events`: `CREDIT_RESERVATION_SUCCEEDED` (`credit.reservation.succeeded.v1`) or `CREDIT_RESERVATION_FAILED` (`credit.reservation.failed.v1`). Order Service consumes both from `order.credit-events.v1` (retry `order.credit-events.retry.v1`, dead `order.credit-events.dead.v1`).
 
 ```Text
-Order Service ── CREDIT_RESERVATION_REQUEST (command) ──▶ [credit.commands, direct] ──▶ credit.reserve.v1 ──▶ Credit Service
+Order Service ── RESERVE_CREDITS (command) ──▶ [credit.commands, direct] ──▶ credit.reserve.v1 ──▶ Credit Service
 Order Service ◀── CREDIT_RESERVATION_SUCCEEDED / FAILED (event) ── [credit.events, topic] ◀── Credit Service
 ```
 
@@ -243,7 +243,7 @@ A create request has this shape:
 ```json
 {
   "eventId": "4c32dd25-ae56-4adc-92fb-a8a663b82957",
-  "eventType": "CREDIT_RESERVATION_REQUEST",
+  "eventType": "RESERVE_CREDITS",
   "requestType": "CREATE",
   "orderId": "d0379a4b-657c-4aaf-a2c9-cde57bbb6482",
   "requesterId": "f71dc4c3-af70-47db-adc5-d547c0781a91",
@@ -256,7 +256,7 @@ A renewal request also identifies the previous reservation and carries the order
 ```json
 {
   "eventId": "4c32dd25-ae56-4adc-92fb-a8a663b82958",
-  "eventType": "CREDIT_RESERVATION_REQUEST",
+  "eventType": "RESERVE_CREDITS",
   "requestType": "RENEW",
   "orderId": "d0379a4b-657c-4aaf-a2c9-cde57bbb6482",
   "requesterId": "f71dc4c3-af70-47db-adc5-d547c0781a91",
@@ -444,7 +444,7 @@ Messages can be delivered more than once. Credit Service uses request event IDs 
 
 Exactly-once delivery is not guaranteed. For example, a publisher may receive RabbitMQ confirmation and stop before marking its database row published. The event may then be published again, so consumers must remain idempotent.
 
-Commands and events get the same delivery guarantees: at-least-once delivery with idempotent consumers. A command is not safer than an event. Credit Service recognizes a repeated `CREDIT_RESERVATION_REQUEST` by its event ID and stored request data, and the outcome is published once per request through its outbox.
+Commands and events get the same delivery guarantees: at-least-once delivery with idempotent consumers. A command is not safer than an event. Credit Service recognizes a repeated `RESERVE_CREDITS` by its event ID and stored request data, and the outcome is published once per request through its outbox.
 
 ### Dead-Letter Inspection and Redrive
 

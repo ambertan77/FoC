@@ -86,7 +86,7 @@ function createEvent(
 ): CreateReservationRequest {
     return {
         eventId,
-        eventType: "CREDIT_RESERVATION_REQUEST",
+        eventType: "RESERVE_CREDITS",
         requestType: "CREATE",
         orderId,
         requesterId,
@@ -100,7 +100,7 @@ function createRenewEvent(
 ): RenewReservationRequest {
     return {
         eventId: renewEventId,
-        eventType: "CREDIT_RESERVATION_REQUEST",
+        eventType: "RESERVE_CREDITS",
         requestType: "RENEW",
         orderId,
         requesterId,
