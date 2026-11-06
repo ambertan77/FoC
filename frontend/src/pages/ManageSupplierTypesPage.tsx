@@ -65,9 +65,9 @@ const ManageSupplierTypesPage = () => {
                 )}
 
                 {supplierTypesIsLoading && (
-                    <div className="flex w-full flex-1 items-center justify-center gap-2 py-16">
+                    <div className="flex w-full flex-1 items-center justify-center gap-2 py-16 text-muted-foreground">
                         <Spinner className="size-6" />
-                        <span className="text-muted-foreground">Loading supplier types...</span>
+                        <span>Loading supplier types...</span>
                     </div>
                 )}
 

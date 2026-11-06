@@ -266,9 +266,9 @@ const ManageSuppliersPage = () => {
 
             <div className="px-5 md:px-10 pb-10">
                 {suppliersIsLoading && (
-                    <div className="flex w-full flex-1 items-center justify-center gap-2 py-16">
+                    <div className="flex w-full flex-1 items-center justify-center gap-2 py-16 text-muted-foreground">
                         <Spinner className="size-6" />
-                        <span className="text-muted-foreground">Loading suppliers...</span>
+                        <span>Loading suppliers...</span>
                     </div>
                 )}
 
