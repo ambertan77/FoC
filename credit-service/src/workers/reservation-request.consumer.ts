@@ -85,7 +85,7 @@ export async function processReservationRequestMessage(
     if (
         !parsed.success ||
         message.properties.messageId !== parsed.data.eventId ||
-        routingKey !== RESERVATION_REQUEST_MESSAGING.routingKeys.CREDIT_RESERVATION_REQUEST
+        routingKey !== RESERVATION_REQUEST_MESSAGING.routingKeys.RESERVE_CREDITS
     ) {
         await forwardMessage(
             channel,

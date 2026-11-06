@@ -27,7 +27,7 @@ enum OrderStatus {
 }
 
 enum OrderEventType {
-  CREDIT_RESERVATION_REQUEST // Request credit service to reserve the credits
+  RESERVE_CREDITS // Request credit service to reserve the credits
   ORDER_OPENED // Notify users of new orders
   ORDER_CANCELED // Credit service release the reserved credits
   ORDER_COMPLETED // Notify requester of order completion

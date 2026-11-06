@@ -29,7 +29,7 @@ export type CreditReservationResult = z.infer<typeof creditReservationResultSche
 
 const createRequestPayloadSchema = z.strictObject({
     eventId: uuid,
-    eventType: z.literal("CREDIT_RESERVATION_REQUEST"),
+    eventType: z.literal("RESERVE_CREDITS"),
     requestType: z.literal("CREATE"),
     orderId: uuid,
     requesterId: uuid,
@@ -38,7 +38,7 @@ const createRequestPayloadSchema = z.strictObject({
 
 const renewRequestPayloadSchema = z.strictObject({
     eventId: uuid,
-    eventType: z.literal("CREDIT_RESERVATION_REQUEST"),
+    eventType: z.literal("RESERVE_CREDITS"),
     requestType: z.literal("RENEW"),
     orderId: uuid,
     requesterId: uuid,

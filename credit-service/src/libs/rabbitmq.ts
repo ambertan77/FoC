@@ -105,7 +105,7 @@ export const RESERVATION_REQUEST_MESSAGING = {
   exchange: "credit.commands",
   exchangeType: "direct",
   routingKeys: {
-    CREDIT_RESERVATION_REQUEST: "credit.reserve.v1",
+    RESERVE_CREDITS: "credit.reserve.v1",
   },
   queue: "credit.reserve.v1",
   retryQueue: "credit.reserve.retry.v1",

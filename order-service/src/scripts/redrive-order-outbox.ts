@@ -1,7 +1,7 @@
 import { prisma } from "../libs/prisma.js";
 
 const SUPPORTED_EVENT_TYPES = new Set([
-    "CREDIT_RESERVATION_REQUEST",
+    "RESERVE_CREDITS",
     "ORDER_RECEIVED",
     "ORDER_CANCELED",
     "ORDER_EXPIRED",
