@@ -247,7 +247,7 @@ const ManageSuppliersPage = () => {
                     <p className="text-sm text-muted-foreground">No supplier types yet.</p>
                 )}
 
-                {!supplierTypesIsLoading && (
+                {!supplierTypesIsLoading && !supplierTypesIsError && (
                     <Tabs value={typeFilter} onValueChange={setTypeFilter} className="w-full">
                         <TabsList className="w-fit max-w-full h-full flex flex-nowrap items-center justify-start gap-1 overflow-x-auto overflow-y-hidden">
                             <TabsTrigger value="ALL" onClick={() => handleFilterInput("ALL")}>

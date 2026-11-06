@@ -96,7 +96,7 @@ const SupplierPage = () => {
                     <p className="text-sm text-muted-foreground">No supplier types yet.</p>
                 )}
 
-                {!supplierTypesIsLoading && (
+                {!supplierTypesIsLoading && !supplierTypesIsError && (
                     <Tabs value={typeFilter} onValueChange={setTypeFilter} className="w-full">
                         <TabsList className="w-fit max-w-full h-full flex flex-nowrap items-center justify-start gap-1 overflow-x-auto overflow-y-hidden">
                             <TabsTrigger value="ALL" onClick={() => handleFilterInput("ALL")}>
@@ -140,7 +140,7 @@ const SupplierPage = () => {
                         </div>
                     )}
 
-                    {!suppliersQuery.isLoading && (
+                    {!suppliersQuery.isLoading && totalNumberOfPages > 1 && (
                         <Pagination className="p-2 border rounded-xl w-fit shadow-sm border-slate-200 bg-white">
                             <PaginationContent>
                                 {currentPage > 1 && (
