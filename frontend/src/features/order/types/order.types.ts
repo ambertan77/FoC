@@ -41,6 +41,20 @@ export const COURIER_ORDER_STATUSES = [
 
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 
+export const ORDER_STATUS_CATEGORIES = [
+    "ALL",
+    "LIVE",
+    "PAST"
+] as const;
+
+export type OrderStatusCategory = (typeof ORDER_STATUS_CATEGORIES)[number];
+
+export const STATUS_CATEGORY_MAPPING: Record<OrderStatusCategory, readonly OrderStatus[]> = {
+    ALL: ORDER_STATUSES,
+    LIVE: ["OPEN", "ACCEPTED", "PENDING_RESERVATION", "PICKED_UP", "COMPLETED"],
+    PAST: ["RECEIVED", "CANCELED", "FAILED", "EXPIRED", "RESERVATION_FAILED", "AUTO_RECEIVED"],
+};
+
 export const REORDERABLE_STATUSES = new Set<OrderStatus>([
     "RECEIVED",
     "CANCELED",
@@ -89,11 +103,13 @@ export interface Order {
 
 export type OrderHistoryParams = {
     page: number;
-    status?: OrderStatus;
+    statuses?: readonly OrderStatus[];
     sortBy: SortBy;
     sortOrder: SortOrder;
     filterLocation?: string; // the string passed in here should be the supplierId
     searchString?: string;
+    startDate?: string; // date object converted to YYYY-MM-DD format
+    endDate?: string; // date object converted to YYYY-MM-DD format
 }; // params for admins viewing (live and past) order dashboard
 
 export type OrderHistoryResponse = {

@@ -139,13 +139,18 @@ test("getAllOrders returns open orders with pagination when no filters are given
 });
 
 test("getAllOrders applies the search string, location filter, sorting and page offset", async (t) => {
+    const startDateInput = new Date("2026-11-01T00:00:00.000+08:00");
+    const endDateInput = new Date("2026-11-30T23:59:59.999+08:00");
+
     const input: GetAllOrdersInput = { 
         page: 2, 
-        status: "OPEN", 
+        statuses: ["OPEN"], 
         sortBy: "expiryAt", 
         sortOrder: "asc", 
         filterLocation: "sup_1", 
-        searchString: "coffee"
+        searchString: "coffee",
+        startDate: startDateInput,
+        endDate: endDateInput
     };
     
     const { calls, captured } = useSharedMockPrisma(t, { findManyReturn: [MOCK_OPEN_ORDER], countReturn: 16 });
@@ -155,9 +160,10 @@ test("getAllOrders applies the search string, location filter, sorting and page 
     // check arguments passed into prisma findMany query
     const findManyArgs = captured.findManyArgs as { where: Record<string, unknown>; orderBy: unknown; take: number; skip: number };
     assert.deepEqual(findManyArgs.where.name, { contains: "coffee", mode: "insensitive" });
-    assert.equal(findManyArgs.where.status, "OPEN");
+    assert.deepEqual(findManyArgs.where.status, { in: ["OPEN"]});
     assert.deepEqual(findManyArgs.where.OR, [{ deliverySupplierId: "sup_1" }, { pickupSupplierId: "sup_1" }]);
     assert.deepEqual(findManyArgs.orderBy, { expiryAt: "asc" });
+    assert.deepEqual(findManyArgs.where.createdAt, { gte: startDateInput, lte: endDateInput });
     assert.equal(findManyArgs.take, PAGE_LIMIT);
     assert.equal(findManyArgs.skip, Math.floor(16 / PAGE_LIMIT) * PAGE_LIMIT);
 
