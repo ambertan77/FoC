@@ -13,6 +13,12 @@ export async function getAllOrders(input: GetAllOrdersInput) {
     const sortOrder: string = input.sortOrder; // default set to sorting in descending order (latest to earliest)
     const filterLocation = input.filterLocation ?? null; // supplier id we want to filter by
     const searchString: string = input.searchString ?? "";
+    const startDate: Date | undefined = input.startDate; 
+    // edit time in startDate to 12am SGT 
+    startDate?.setHours(0, 0, 0, 0); 
+    const endDate: Date | undefined = input.endDate; 
+    // edit time in endDate to 11:59:59pm SGT
+
     const now = new Date();
 
     const orders = await prisma.order.findMany({
@@ -30,7 +36,16 @@ export async function getAllOrders(input: GetAllOrdersInput) {
                     ],
                 }
                 : {}),
-            ...(statuses ? { status: { in: statuses } } : {}) // If status is provided, include it in the where clause; otherwise, don't filter by status 
+            ...(statuses ? { status: { in: statuses } } : {}), // If status is provided, include it in the where clause; otherwise, don't filter by status 
+            // if startDate and endDate are provided, filter the orders created between this period (both dates inclusive)
+            ...(startDate && endDate
+                ? {
+                    createdAt: {
+                        ...(startDate ? { gte: startDate } : {}),
+                        ...(endDate ? { lte: endDate } : {}),
+                    },
+                }
+                : {}),
         },
         orderBy: { [sortBy]: sortOrder },
         take: LIMIT,
@@ -52,7 +67,16 @@ export async function getAllOrders(input: GetAllOrdersInput) {
                     ],
                 }
                 : {}),
-            ...(statuses ? { status: { in: statuses } } : {}) // If status is provided, include it in the where clause; otherwise, don't filter by status
+            ...(statuses ? { status: { in: statuses } } : {}), // If status is provided, include it in the where clause; otherwise, don't filter by status
+             // if startDate and endDate are provided, filter the orders created between this period (both dates inclusive)
+            ...(startDate && endDate
+                ? {
+                    createdAt: {
+                        ...(startDate ? { gte: startDate } : {}),
+                        ...(endDate ? { lte: endDate } : {}),
+                    },
+                }
+                : {}),
         }
     });
 

@@ -108,6 +108,8 @@ export type OrderHistoryParams = {
     sortOrder: SortOrder;
     filterLocation?: string; // the string passed in here should be the supplierId
     searchString?: string;
+    startDate?: string; // date object converted to YYYY-MM-DD format
+    endDate?: string; // date object converted to YYYY-MM-DD format
 }; // params for admins viewing (live and past) order dashboard
 
 export type OrderHistoryResponse = {

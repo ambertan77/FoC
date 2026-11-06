@@ -1,5 +1,7 @@
 import { useState } from "react";
+import { format } from "date-fns";
 import { SearchIcon } from 'lucide-react';
+import { DatePickerWithRange } from "@/components/ui/date-range";
 import { Field } from '@/components/ui/field';
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
 import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
@@ -56,6 +58,8 @@ const AdminOrderDashboardCard = ({
     const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
     const [supplierIdFilter, setSupplierIdFilter] = useState<string | undefined>(undefined);
     const [searchString, setSearchString] = useState<string>("");
+    const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+    const [endDate, setEndDate] = useState<Date | undefined>(undefined);
 
     const orderHistoryQuery = useOrderHistory({
         page: page,
@@ -64,6 +68,9 @@ const AdminOrderDashboardCard = ({
         statuses: selectedStatus === "ALL" ? relevantOrderStatuses : [selectedStatus],
         ...(supplierIdFilter && { filterLocation: supplierIdFilter }),
         ...(searchString && { searchString: searchString }),
+        // use format for date-fns to use the actual date that the user picked in the browser
+        ...(startDate && { startDate: format(startDate, "yyyy-MM-dd") }), // only store the dates
+        ...(endDate && { endDate: format(endDate, "yyyy-MM-dd") }), // only store the dates
     });
 
     const requestsData = orderHistoryQuery.data;
@@ -155,7 +162,7 @@ const AdminOrderDashboardCard = ({
                         />
                     </div>
 
-                    <div className="space-y-1">
+                    <div className="flex flex-col gap-1">
                         <label className="text-sm font-medium">Sort by</label>
                         <Select
                             value={sortBy}
@@ -174,7 +181,7 @@ const AdminOrderDashboardCard = ({
                         </Select>
                     </div>
 
-                    <div className="space-y-1">
+                    <div className="flex flex-col gap-1">
                         <label className="text-sm font-medium">Sort order</label>
                         <Select
                             value={sortOrder}
@@ -195,6 +202,19 @@ const AdminOrderDashboardCard = ({
                                 </SelectItem>
                             </SelectContent>
                         </Select>
+                    </div>
+
+                    <div className="flex flex-col gap-1">
+                        <label className="text-sm font-medium">Filter by order creation date</label>
+                        <DatePickerWithRange
+                            startDate={startDate}
+                            endDate={endDate}
+                            onChange={(startDate, endDate) => {
+                                setStartDate(startDate);
+                                setEndDate(endDate);
+                                setPage(1);
+                            }}
+                        />
                     </div>
                 </div>
 
