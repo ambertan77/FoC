@@ -111,6 +111,17 @@ const AdminOrderDashboardCard = ({
         PAST: "Search past orders by name",
     };
 
+    // Sorting labels
+    const SORT_BY_LABELS: Partial<Record<SortBy, string>> = {
+        createdAt: "Creation date",
+        expiryAt: "Completion deadline",
+    };
+
+    const SORT_ORDER_LABELS: Record<SortOrder, string> =
+        sortBy === "expiryAt"
+            ? { desc: "Latest expiry first", asc: "Soonest expiry first" }
+            : { desc: "Newest first", asc: "Oldest first" };
+
     return (
         <>
             <div className="flex flex-col items-start justify-center gap-5 w-full">
@@ -170,11 +181,16 @@ const AdminOrderDashboardCard = ({
                             }}
                         >
                             <SelectTrigger className="w-48 bg-white">
-                                <SelectValue />
+                                <SelectValue placeholder="Sort by">
+                                    {SORT_BY_LABELS[sortBy]}
+                                </SelectValue>
                             </SelectTrigger>
                             <SelectContent alignItemWithTrigger={false}>
-                                <SelectItem value="createdAt">Creation date</SelectItem>
-                                <SelectItem value="expiryAt">Completion deadline</SelectItem>
+                                {Object.entries(SORT_BY_LABELS).map(([value, label]) => (
+                                    <SelectItem key={value} value={value}>
+                                        {label}
+                                    </SelectItem>
+                                ))}
                             </SelectContent>
                         </Select>
                     </div>
@@ -189,15 +205,16 @@ const AdminOrderDashboardCard = ({
                             }}
                         >
                             <SelectTrigger className="w-48 bg-white">
-                                <SelectValue />
+                                <SelectValue placeholder="Sort order">
+                                    {SORT_ORDER_LABELS[sortOrder]}
+                                </SelectValue>
                             </SelectTrigger>
                             <SelectContent alignItemWithTrigger={false}>
-                                <SelectItem value="desc">
-                                    {sortBy === "expiryAt" ? "Latest expiry first" : "Newest first"}
-                                </SelectItem>
-                                <SelectItem value="asc">
-                                    {sortBy === "expiryAt" ? "Soonest expiry first" : "Oldest first"}
-                                </SelectItem>
+                                {Object.entries(SORT_ORDER_LABELS).map(([value, label]) => (
+                                    <SelectItem key={value} value={value}>
+                                        {label}
+                                    </SelectItem>
+                                ))}
                             </SelectContent>
                         </Select>
                     </div>
@@ -217,9 +234,9 @@ const AdminOrderDashboardCard = ({
                 </div>
 
                 {orderHistoryQuery.isLoading && (
-                    <div className="flex w-full flex-1 items-center justify-center gap-2 py-16">
+                    <div className="flex w-full flex-1 items-center justify-center gap-2 py-16 text-muted-foreground">
                         <Spinner className="size-6" />
-                        <span className="text-muted-foreground">Loading order history...</span>
+                        <span>Loading order history...</span>
                     </div>
                 )}
 
