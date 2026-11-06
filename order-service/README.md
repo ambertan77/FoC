@@ -43,6 +43,7 @@ In the Order Service, there are two main roles: Requester (user who created an o
 
 - Expire open requests with no assigned courier when `expiryAt` passes
 - Mark accepted or picked-up requests as failed if they have not reached `COMPLETED` by `expiryAt`
+- Mark completed requests as `AUTO_RECEIVED` if the requester does not advance the order status more than 30 minutes after completion time
 - Publish the corresponding credit event so Credit Service can release or return the reserved credits
 
 ## Order Lifecycle
@@ -63,8 +64,9 @@ In the Order Service, there are two main roles: Requester (user who created an o
 | ACCEPTED | The user is the assigned courier,  order has not expired, order must be in ACCEPTED status. | OPEN | Courier ID | Courier drops the request. No change in credit reservations. |
 | ACCEPTED | The user is the assigned courier,  order has not expired, order must be in ACCEPTED status. | PICKED_UP | Courier ID | Courier picks up the item. No change in credit reservations. |
 | PICKED_UP | The user is the assigned courier,  order has not expired, order must be in PICKED_UP status. | COMPLETED | Courier ID | Courier marks delivery as completed. No change in credit reservations. |
-| COMPLETED | The order belongs to the requester, order must be in COMPLETED status, a courier must be assigned, credit reservationId must exist, expected version matches. | RECEIVED | Requester ID | Requester confirms they received the item. Order Service publishes an `ORDER_RECEIVED` outbox event, triggering the credit service to transfer the reserved credits to the courier. |
-| COMPLETED | The order belongs to the requester, order must be in COMPLETED status, a courier must be assigned, credit reservationId must exist, expected version matches. | FAILED | Requester ID | Requester reports that the delivery failed. Order Service publishes an `ORDER_FAILED` outbox event, triggering the credit service to refund the reservation. |
+| COMPLETED | The order belongs to the requester, order must be in COMPLETED status, a courier must be assigned, credit reservationId must exist, expected version matches. | RECEIVED | Requester ID | Requester confirms they received the item within 30 minutes of completion time. Order Service publishes an `ORDER_RECEIVED` outbox event, triggering the credit service to transfer the reserved credits to the courier. |
+| COMPLETED | The order belongs to the requester, order must be in COMPLETED status, a courier must be assigned, credit reservationId must exist, expected version matches. | FAILED | Requester ID | Requester reports that the delivery failed within 30 minutes of completion time. Order Service publishes an `ORDER_FAILED` outbox event, triggering the credit service to refund the reservation. |
+| COMPLETED | The order belongs to the requester, order must be in COMPLETED status, a courier must be assigned, credit reservationId must exist, expected version matches. | AUTO_RECEIVED | NULL (system) | Requester does not confirm whether an order has been received or failed within 30 minutes of the completion time, thus the system's receipt worker updates the order status to `AUTO_RECEIVED`. Order Service publishes an `ORDER_RECEIVED` outbox event, triggering the credit service to transfer the reserved credits to the courier. |
 | OPEN | The order belongs to the requester, order must be in OPEN status, no courier is assigned, credit reservationId must exist, expected version matches. | CANCELED | Requester ID | Requester cancels the request. Order Service publishes an `ORDER_CANCELED` outbox event, triggering the credit service to release the reservation. |
 | OPEN | The order must be in OPEN status, no courier has accepted it and expiryAt has passed. | EXPIRED | NULL (system) | The system’s expiry worker automatically expires the request. The expiry worker polls every 1 minute to check if any order has expired, and updates the order status accordingly. Order Service publishes an `ORDER_EXPIRED` outbox event, triggering the credit service to release the reservation. |
 | EXPIRED | The order belongs to the requester, order must be in EXPIRED status, credit reservationId must exist, expiry date in the future, expected version matches. | EXPIRED | Requester ID | Requester requests renewal. Order Service set `renewalPending` to true and publishes a new `CREDIT_RESERVATION_REQUEST` outbox event. Credit Service attempts to create a new reservation. The existing expired status is retained while the reservation is pending. |
@@ -81,7 +83,7 @@ For each transition, the order service performs the below in one database transa
   - An outbox event is a message to be sent/that has been sent to RabbitMQ.
   - A message is sent to RabbitMQ only after the transaction is committed. The outbox event is marked as published only after RabbitMQ confirms the message.
 
-We use the expected version which comes from the payload and the current version for optimistic concurrency control.
+We use the expected version which comes from the payload and the current version for optimistic concurrency control. All order status updates, regardless of whether the endpoints are used by requesters or couriers, use optimistic concurrency control. 
 
 ## Asynchronous Workflows with RabbitMQ
 
@@ -236,6 +238,12 @@ For an `OPEN` order with no assigned courier, the worker creates an `ORDER_EXPIR
 
 The worker polls every minute and runs immediately when the service starts. It is stopped during graceful service shutdown. Because status changes use conditional updates, a concurrent acceptance or completion cannot be overwritten by the worker. The acceptance, pickup, completion, and drop actions also check that `expiryAt` has not passed.
 
+### Order Receipt Worker
+
+A requester is expected to confirm the status of his/her order 30 minutes after the courier has marked the order as `COMPLETED`. If no confirmation has been received by the system, order service treats the order as one that was successfully received by the requester. This ensures all orders reach a terminal state and consequently, prevents credits from being held indefinitely in the requester's reserve wallet.
+
+The worker polls every minute and runs immediately when the service starts. At every minute, the worker first finds candidate orders to be updated, i.e. orders that are in the `COMPLETED` stage but more than 30 minutes have passed since the time recorded in the order's `completedAt` field. Then, it updates each order as `AUTO_RECEIVED` and create an `ORDER_RECEIVED` event. The worker also records a status-history entry and creates the corresponding outbox event in the same database transaction. It is stopped during graceful service shutdowns. 
+
 ## Tech Stack
 
 Technology    | Purpose
@@ -250,6 +258,7 @@ RabbitMQ      | Messaging
 CORS          | Cross-origin resource sharing
 Axios         | HTTP client for service-to-service calls
 JWT           | Authentication tokens
+Docker        | Containerization
 
 ## Architecture
 
@@ -381,6 +390,7 @@ order-service/
 | GET    | /api/orders/me/requester          | Authenticated students | Gets all requests made by the authenticated requester  |
 | GET    | /api/orders/me/courier            | Authenticated students | Gets all requests made by the authenticated courier    |
 | PATCH  | /api/orders/:orderId              | Authenticated students | Update an existing order                               |
+| GET    | /api/orders/all                   | Authenticated admins   | Gets all orders posted by any user                     |
 | POST   | /api/orders/:orderId/cancellation | Authenticated students | Requester cancels a specified open order               |
 | POST   | /api/orders/:orderId/receipt      | Authenticated students | Requester marks a specfied completed order as received |
 | POST   | /api/orders/:orderId/failure      | Authenticated students | Requester marks a specified completed order as failed  |
@@ -590,6 +600,59 @@ Authorization: Bearer <access-token>
     "success": true,
     "message": "Order created successfully",
     "data": { <full order information of the updated order> }
+}
+```
+
+#### Possible Responses
+
+Status | Description
+------ | -----------------------------------------------
+`200`  | Orders successfully queried
+`400`  | Invalid request data
+`404`  | Invalid orderId specified
+`500`  | Internal server error
+
+--------------------------------------------------------------------------------
+
+### `GET /api/orders/all`
+
+Gets all orders that have been made by all users. Only authenticated admins can access this endpoint. 
+
+```http
+Authorization: Bearer <access-token>
+```
+
+#### Query Parameters
+
+| Query Parameter | Description | Requirement | Default Value |
+|---|---|---|---|
+| page | Page number we are querying for.  | Required |  |  |
+| statuses | Order statuses that we are filtering by. This field is a string that holds comma-separated order statuses.  | Optional |  |
+| sortBy | Parameter used to sort orders by. This parameter can only be `createdAt` or `expiryAt`.  | Optional | createdAt |
+| sortOrder | Parameter used to determine the sorting order. Only `asc` and `desc` are the allowed options.  | Optional | desc |
+| filterLocation | The supplier ID we want to filter orders by. Orders returned will either have a pickup supplier or delivery supplier with the given supplier ID.  | Optional |  |
+| searchString | Orders returned will have a name that partially (or fully) matches this parameter.  | Optional |  |
+| startDate | Supports filtering with a date range. All orders returned must be created either on or after `startDate`. | Optional |  |
+| endDate | Supports filtering with a date range. All orders returned must be created either on or before `endDate`. | Optional  |  |
+
+```text
+?page=1&statuses="OPEN,ACCEPTED,PICKED_UP,COMPLETED,PENDING_RESERVATION"&sortBy=expiryAt&sortOrder=asc&filterLocation=&searchString=&startDate=&endDate=
+```
+
+#### Successful Response
+
+```json
+{
+    "success": true,
+    "message": "5 orders on page 1 retrieved",
+    "data": {
+        [ <list of orders retrieved> ],
+        "pagination": {
+            "limit": 15,
+            "page": 1,
+            "totalCount": 1,
+            "totalPages": 1,
+    },
 }
 ```
 

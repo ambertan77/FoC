@@ -61,6 +61,7 @@ Argon2        | Password hashing
 Cookie Parser | Cookie handling
 CORS          | Cross-origin resource sharing
 Nodemailer    | Email sending
+Docker        | Containerization
 
 ## Architecture
 

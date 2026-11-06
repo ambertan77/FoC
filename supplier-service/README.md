@@ -42,6 +42,7 @@ PostgreSQL    | Relational database
 Zod           | Request validation
 JWT           | Authentication tokens
 CORS          | Cross-origin resource sharing
+Docker        | Containerization
 
 ## Architecture
 
@@ -69,13 +70,13 @@ The Supplier Service is one of the backend microservices in Aaron.
 │                    └──────┬───────┘          │
 │                           │                  │
 │                    ┌──────▼───────┐          │
-│                    │   Supplier & |          │     
-│                    │  SupplierType|          │
-│                    │   Management │          │
+│                    │  Supplier &  |          │     
+│                    │ SupplierType |          │
+│                    │  Management  │          │
 │                    └──────┬───────┘          │
 │                           │                  │     
 │                    ┌──────▼───────┐          │
-│                    │ Prisma ORM   │          │
+│                    │  Prisma ORM  │          │
 │                    └───────┬──────┘          │
 └────────────────────────────┼─────────────────┘
                              │
@@ -99,9 +100,9 @@ Supplier Service
      ▼
   PostgreSQL
      │
-     ├── SupplierType
-     │
      ├── Supplier
+     │
+     ├── SupplierType
      │
      └── OpeningHours
 ```
@@ -152,14 +153,13 @@ supplier-service/
 
 ### Supplier Service API Endpoints
 
-All routes are protected by JWT authentication (`authenticate`). The
-`POST` / `PATCH` routes require the `admin` role (`requireAdmin`).
+All routes are protected by JWT authentication (`authenticate`). The `authorize` function in the middleware ensures that the caller has the required permissions to access the endpoint. All endpoints use HTTP and are called synchronously.
 
 | Method | Path | Role | Description |
 | --- | --- | --- | --- |
 | `GET` | `/api/suppliers/` | admin | View the suppliers (ALL suppliers regardless of status) based on the current page, search key (case-insensitive) and type filter |
-| `GET` | `/api/suppliers/active` | any | View the ACTIVE suppliers based on the current page, search key (case-insensitive) and type filter |
-| `GET` | `/api/suppliers/by-ids` | any | Get relevant suppliers (id, name, type) information by supplying a list of supplier IDs |
+| `GET` | `/api/suppliers/active` | all | View the ACTIVE suppliers based on the current page, search key (case-insensitive) and type filter |
+| `GET` | `/api/suppliers/by-ids` | all | Get relevant suppliers (id, name, type) information by supplying a list of supplier IDs |
 | `POST` | `/api/suppliers` | admin | Create a supplier (active by default) |
 | `PATCH` | `/api/suppliers/:supplierId` | admin | Update a supplier |
 | `PATCH` | `/api/suppliers/:supplierId/activation` | admin | Activate a supplier |
@@ -334,6 +334,12 @@ Example response for data:
 ```json
 { "success": false, "code": "CONFLICT", "message": "..." }
 ```
+
+## Containerization
+
+Supplier service makes use of Docker for containerization. A multi-stage build is used. 
+
+During the build stage, the database seeding script (`prisma/seed.ts`) always runs. The script checks whether the `supplier` table is empty; if it is empty (i.e. no rows in the table exist), then the script will seed the `supplier` table with data from `foc/data/csv/supplier-seed-data.csv`. The `supplierType` and `openingHours` table will also be populated based on the data provided in the CSV file. Effectively, the database seeding will only occur once, unless the database is reset.
 
 ## Getting Started
 
