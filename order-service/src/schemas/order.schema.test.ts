@@ -6,7 +6,7 @@ import {
 
 const validAllOrdersInput = {
     page: "1", 
-    status: "OPEN",
+    statuses: ["OPEN"],
     sortBy: "createdAt",
     sortOrder: "desc",
     filterLocation: "supplier-id",
@@ -17,7 +17,7 @@ test("getAllOrdersSchema accepts a complete valid payload", () => {
     const result = getAllOrdersSchema.parse(validAllOrdersInput);
 
     assert.equal(result.page, 1);
-    assert.equal(result.status, "OPEN");
+    assert.equal(result.statuses, ["OPEN"]);
     assert.equal(result.sortBy, "createdAt");
     assert.equal(result.sortOrder, "desc");
     assert.equal(result.filterLocation, "supplier-id");
@@ -29,7 +29,7 @@ test("getAllOrdersSchema uses defaults for the relevant optional fields", () => 
     const result = getAllOrdersSchema.parse(input);
 
     assert.equal(result.page, 1);
-    assert.equal(result.status, undefined);
+    assert.equal(result.statuses, undefined);
     assert.equal(result.sortBy, "createdAt");
     assert.equal(result.sortOrder, "desc");
     assert.equal(result.filterLocation, undefined);

@@ -12,7 +12,7 @@ export const getOrderHistoryService = async (
 
         Object.entries(params).forEach(([key, value]) => {
             if (value !== undefined) {
-                queryParams.set(key, String(value));
+                queryParams.set(key, String(value)); // statuses array will be turned into string with comma-seperated values
             }
         });
 

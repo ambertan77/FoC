@@ -8,7 +8,7 @@ const LIMIT: number = 15;
 
 export async function getAllOrders(input: GetAllOrdersInput) {
     const page: number = input.page;
-    const status: OrderStatus | undefined = input.status;
+    const statuses: OrderStatus[] | undefined = input.statuses;
     const sortBy: string = input.sortBy; // default set to sorting by created time
     const sortOrder: string = input.sortOrder; // default set to sorting in descending order (latest to earliest)
     const filterLocation = input.filterLocation ?? null; // supplier id we want to filter by
@@ -30,7 +30,7 @@ export async function getAllOrders(input: GetAllOrdersInput) {
                     ],
                 }
                 : {}),
-            ...(status ? { status: status } : {}) // If status is provided, include it in the where clause; otherwise, don't filter by status 
+            ...(statuses ? { status: { in: statuses } } : {}) // If status is provided, include it in the where clause; otherwise, don't filter by status 
         },
         orderBy: { [sortBy]: sortOrder },
         take: LIMIT,
@@ -52,7 +52,7 @@ export async function getAllOrders(input: GetAllOrdersInput) {
                     ],
                 }
                 : {}),
-            ...(status ? { status: status } : {}) // If status is provided, include it in the where clause; otherwise, don't filter by status
+            ...(statuses ? { status: { in: statuses } } : {}) // If status is provided, include it in the where clause; otherwise, don't filter by status
         }
     });
 

@@ -141,7 +141,7 @@ test("getAllOrders returns open orders with pagination when no filters are given
 test("getAllOrders applies the search string, location filter, sorting and page offset", async (t) => {
     const input: GetAllOrdersInput = { 
         page: 2, 
-        status: "OPEN", 
+        statuses: ["OPEN"], 
         sortBy: "expiryAt", 
         sortOrder: "asc", 
         filterLocation: "sup_1", 
