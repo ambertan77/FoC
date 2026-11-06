@@ -25,18 +25,21 @@ export function DatePickerWithRange({ startDate, endDate, onChange, className }:
     return (
         <Field className={cn("w-60", className)}>
             <Popover>
-                <PopoverTrigger render={<Button variant="outline" className="justify-start px-2.5 font-normal bg-white"><CalendarIcon data-icon="inline-start" />{startDate ? (
-                    endDate ? (
-                    <>
-                        {format(startDate, "LLL dd, y")} -{" "}
-                        {format(endDate, "LLL dd, y")}
-                    </>
+                <PopoverTrigger render={<Button variant="outline" className="justify-start px-2.5 font-normal bg-white">
+                    <CalendarIcon className={cn((!startDate || !endDate) && "text-muted-foreground", className)} data-icon="inline-start" />
+                        {startDate ? (
+                        endDate ? (
+                        <>
+                            {format(startDate, "LLL dd, y")} -{" "}
+                            {format(endDate, "LLL dd, y")}
+                        </>
+                        ) : (
+                        format(startDate, "LLL dd, y")
+                        )
                     ) : (
-                    format(startDate, "LLL dd, y")
-                    )
-                ) : (
-                    <span>Pick a date</span>
-                )}</Button>} />
+                        <span className={cn((!startDate || !endDate) && "text-muted-foreground", className)}>Pick a date range</span>
+                    )}
+                </Button>} />
                 <PopoverContent className="w-auto p-3" align="start">
                     <Calendar
                         mode="range"
