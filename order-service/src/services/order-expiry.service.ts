@@ -13,9 +13,9 @@ The requester can renew the order by setting a new expiryAt timestamp, and the o
 the order will be marked as failed and the credits will be released back to the requester. 
 */
 
-const COMPLETION_FAILURE_REASON = "The courier did not complete the delivery before the request expiry time";
+const COMPLETION_FAILURE_REASON = "The courier did not complete the delivery before the request completion deadline.";
 
-const OPEN_EXPIRY_REASON = "No courier accepted the request before its expiry time";
+const OPEN_EXPIRY_REASON = "No courier accepted the request before its completion deadline.";
 
 export async function updateExpiredOrders(): Promise<number> {
     const now: Date = new Date();
