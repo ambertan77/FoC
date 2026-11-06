@@ -1,5 +1,6 @@
 import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import RequestActivityCard from "@/features/order/components/RequestActivityCard";
 import { useCourierOrderHistory } from "@/features/order/hooks/useCourierOrderHistory";
@@ -39,12 +40,10 @@ const CourierActivityPage = () => {
     ];
     const suppliersQuery = useSuppliersByIds(supplierIds);
 
-    const supplierNameById = new Map(
-        (suppliersQuery.data ?? []).map((supplier) => [
-            supplier.id,
-            supplier.name,
-        ]),
+    const supplierById = new Map(
+        (suppliersQuery.data ?? []).map((supplier) => [supplier.id, supplier]),
     );
+
     const isSuppliersLoading =
         supplierIds.length > 0 && suppliersQuery.isPending;
 
@@ -117,7 +116,12 @@ const CourierActivityPage = () => {
                     </div>
                 </div>
 
-                {courierOrderHistoryQuery.isLoading && <p>Loading...</p>}
+                {courierOrderHistoryQuery.isLoading && (
+                     <div className="flex w-full flex-1 items-center justify-center gap-2 py-16">
+                        <Spinner className="size-6" />
+                        <span className="text-muted-foreground">Loading activities...</span>
+                    </div>
+                )}
 
                 {courierOrderHistoryQuery.isError && (
                     <p className="text-red-500">
@@ -139,8 +143,8 @@ const CourierActivityPage = () => {
                                     key={order.id}
                                     order={order}
                                     viewerRole="courier"
-                                    pickupSupplierName={supplierNameById.get(order.pickupSupplierId)}
-                                    deliverySupplierName={supplierNameById.get(order.deliverySupplierId)}
+                                    pickupSupplier={supplierById.get(order.pickupSupplierId)}
+                                    deliverySupplier={supplierById.get(order.deliverySupplierId)}
                                     isSuppliersLoading={isSuppliersLoading}
                                 />
                             ))}

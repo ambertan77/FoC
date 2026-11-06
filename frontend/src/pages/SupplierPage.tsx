@@ -10,6 +10,8 @@ import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/in
 import { SearchIcon } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { formatStringToTitleCase } from '@/utils/formatText';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Spinner } from '@/components/ui/spinner';
 
 const SupplierPage = () => {
     // does not use URL-based page number, similar to ManageSuppliersPage.tsx
@@ -80,34 +82,53 @@ const SupplierPage = () => {
                     </Field>
                 </div>
 
-                {supplierTypesIsLoading && <p>Loading supplier types...</p>}
-                {supplierTypesIsError && <p>Failed to load supplier types: {supplierTypesQuery.error.message}</p>}
+                {supplierTypesIsLoading && (
+                    <Skeleton className="h-8 w-full md:w-1/2 border border-slate-200 rounded-lg" />
+                )}
+
+                {supplierTypesIsError && (
+                    <p className="text-red-500">
+                        Failed to load supplier types: {supplierTypesQuery.error.message}
+                    </p>
+                )}
 
                 {!supplierTypesIsLoading && !supplierTypesIsError && supplierTypes.length === 0 && (
                     <p className="text-sm text-muted-foreground">No supplier types yet.</p>
                 )}
 
-                <Tabs value={typeFilter} onValueChange={setTypeFilter} className="w-full">
-                    <TabsList className="w-fit max-w-full h-full flex flex-nowrap items-center justify-start gap-1 overflow-x-auto overflow-y-hidden">
-                        <TabsTrigger value="ALL" onClick={() => handleFilterInput("ALL")}>
-                            All
-                        </TabsTrigger>
-
-                        {supplierTypes.map((type) => (
-                            <TabsTrigger key={type.id} value={type.type} onClick={() => handleFilterInput(type.type)}>
-                                {formatStringToTitleCase(type.type)}
+                {!supplierTypesIsLoading && (
+                    <Tabs value={typeFilter} onValueChange={setTypeFilter} className="w-full">
+                        <TabsList className="w-fit max-w-full h-full flex flex-nowrap items-center justify-start gap-1 overflow-x-auto overflow-y-hidden">
+                            <TabsTrigger value="ALL" onClick={() => handleFilterInput("ALL")}>
+                                All
                             </TabsTrigger>
-                        ))}
-                    </TabsList>
-                </Tabs>
+
+                            {supplierTypes.map((type) => (
+                                <TabsTrigger key={type.id} value={type.type} onClick={() => handleFilterInput(type.type)}>
+                                    {formatStringToTitleCase(type.type)}
+                                </TabsTrigger>
+                            ))}
+                        </TabsList>
+                    </Tabs>
+                )}
             </div>
 
             <div className="px-5 md:px-10 pb-10">
-                {suppliersIsLoading && <p>Loading suppliers...</p>}
-                {suppliersIsError && <p>Failed to load suppliers: {suppliersQuery.error.message}</p>}
+                {suppliersIsLoading && (
+                    <div className="flex w-full flex-1 items-center justify-center gap-2 py-16">
+                        <Spinner className="size-6" />
+                        <span className="text-muted-foreground">Loading suppliers...</span>
+                    </div>
+                )}
+
+                {suppliersIsError && (
+                    <p className="text-red-500">
+                        Failed to load suppliers: {suppliersQuery.error.message}
+                    </p>
+                )}
 
                 {!suppliersIsLoading && !suppliersIsError && suppliers.length === 0 && (
-                    <p className="text-sm text-muted-foreground">No suppliers yet.</p>
+                    <p className="text-muted-foreground">No suppliers yet.</p>
                 )}
 
                 <div className="w-full flex flex-col gap-6">
@@ -119,37 +140,39 @@ const SupplierPage = () => {
                         </div>
                     )}
 
-                    <Pagination className="p-2 border rounded-xl w-fit shadow-sm border-slate-200 bg-white">
-                        <PaginationContent>
-                            {currentPage > 1 && (
-                                <PaginationItem>
-                                    <PaginationPrevious
-                                        href="#"
-                                        onClick={(e) => { e.preventDefault(); setCurrentPage(Math.max(currentPage - 1, 1)); }}
-                                    />
-                                </PaginationItem>
-                            )}
-                            {Array.from({ length: totalNumberOfPages }, (_, i) => (
-                                <PaginationItem key={i}>
-                                    <PaginationLink
-                                        href="#"
-                                        isActive={currentPage === i + 1}
-                                        onClick={(e) => { e.preventDefault(); setCurrentPage(i + 1); }}
-                                    >
-                                        {i + 1}
-                                    </PaginationLink>
-                                </PaginationItem>
-                            ))}
-                            {currentPage < totalNumberOfPages && (
-                                <PaginationItem>
-                                    <PaginationNext
-                                        href="#"
-                                        onClick={(e) => { e.preventDefault(); setCurrentPage(Math.min(currentPage + 1, totalNumberOfPages)); }}
-                                    />
-                                </PaginationItem>
-                            )}
-                        </PaginationContent>
-                    </Pagination>
+                    {!suppliersQuery.isLoading && (
+                        <Pagination className="p-2 border rounded-xl w-fit shadow-sm border-slate-200 bg-white">
+                            <PaginationContent>
+                                {currentPage > 1 && (
+                                    <PaginationItem>
+                                        <PaginationPrevious
+                                            href="#"
+                                            onClick={(e) => { e.preventDefault(); setCurrentPage(Math.max(currentPage - 1, 1)); }}
+                                        />
+                                    </PaginationItem>
+                                )}
+                                {Array.from({ length: totalNumberOfPages }, (_, i) => (
+                                    <PaginationItem key={i}>
+                                        <PaginationLink
+                                            href="#"
+                                            isActive={currentPage === i + 1}
+                                            onClick={(e) => { e.preventDefault(); setCurrentPage(i + 1); }}
+                                        >
+                                            {i + 1}
+                                        </PaginationLink>
+                                    </PaginationItem>
+                                ))}
+                                {currentPage < totalNumberOfPages && (
+                                    <PaginationItem>
+                                        <PaginationNext
+                                            href="#"
+                                            onClick={(e) => { e.preventDefault(); setCurrentPage(Math.min(currentPage + 1, totalNumberOfPages)); }}
+                                        />
+                                    </PaginationItem>
+                                )}
+                            </PaginationContent>
+                        </Pagination>
+                    )}
                 </div>
             </div>
         </>

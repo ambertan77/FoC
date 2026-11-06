@@ -11,7 +11,7 @@ import RequestActivityCard from "@/features/order/components/RequestActivityCard
 import SupplierSelect from "@/features/order/components/SupplierSelect";
 import { useOrderHistory } from "@/features/order/hooks/useOrderHistory";
 import { useSuppliersByIds } from "@/features/order/hooks/useSuppliersByIds";
-import { 
+import {
     STATUS_CATEGORY_MAPPING,
     type OrderStatus,
     type OrderStatusCategory,
@@ -19,6 +19,7 @@ import {
     type SortOrder
 } from "@/features/order/types/order.types";
 import { formatStringToTitleCase } from "@/utils/formatText";
+import { Spinner } from "@/components/ui/spinner";
 
 type AdminOrderDashboardProps = {
     selectedCategory: OrderStatusCategory;
@@ -89,11 +90,8 @@ const AdminOrderDashboardCard = ({
     ];
     const suppliersQuery = useSuppliersByIds(supplierIds);
 
-    const supplierNameById = new Map(
-        (suppliersQuery.data ?? []).map((supplier) => [
-            supplier.id,
-            supplier.name,
-        ]),
+    const supplierById = new Map(
+        (suppliersQuery.data ?? []).map((supplier) => [supplier.id, supplier]),
     );
     const isSuppliersLoading =
         supplierIds.length > 0 && suppliersQuery.isPending;
@@ -218,18 +216,23 @@ const AdminOrderDashboardCard = ({
                     </div>
                 </div>
 
-                {orderHistoryQuery.isLoading && <p>Loading...</p>}
+                {orderHistoryQuery.isLoading && (
+                    <div className="flex w-full flex-1 items-center justify-center gap-2 py-16">
+                        <Spinner className="size-6" />
+                        <span className="text-muted-foreground">Loading order history...</span>
+                    </div>
+                )}
 
                 {orderHistoryQuery.isError && (
                     <p className="text-red-500">
-                        Failed to load activities: {orderHistoryQuery.error.message}
+                        Failed to load order history: {orderHistoryQuery.error.message}
                     </p>
                 )}
 
                 {!orderHistoryQuery.isLoading &&
                     !orderHistoryQuery.isError &&
                     requests.length === 0 && (
-                        <p className="text-muted-foreground">No activities yet.</p>
+                        <p className="text-muted-foreground">No order history yet.</p>
                     )}
 
                 {requests.length > 0 && (
@@ -240,8 +243,8 @@ const AdminOrderDashboardCard = ({
                                     key={order.id}
                                     order={order}
                                     viewerRole="admin"
-                                    pickupSupplierName={supplierNameById.get(order.pickupSupplierId)}
-                                    deliverySupplierName={supplierNameById.get(order.deliverySupplierId)}
+                                    pickupSupplier={supplierById.get(order.pickupSupplierId)}
+                                    deliverySupplier={supplierById.get(order.deliverySupplierId)}
                                     isSuppliersLoading={isSuppliersLoading}
                                 />
                             ))}

@@ -12,6 +12,7 @@ import { useState } from "react";
 import CreateRequestDialog from "@/features/order/components/CreateRequestDialog";
 import useAuth from "@/hooks/useAuth";
 import { ROLES } from "@/features/auth/types/auth.types";
+import { Spinner } from "@/components/ui/spinner";
 
 const LIMIT = 15;
 
@@ -51,11 +52,8 @@ const HomePage = () => {
     ];
     const suppliersQuery = useSuppliersByIds(supplierIds);
 
-    const supplierNameById = new Map(
-        (suppliersQuery.data ?? []).map((supplier) => [
-            supplier.id,
-            supplier.name,
-        ]),
+    const supplierById = new Map(
+        (suppliersQuery.data ?? []).map((supplier) => [supplier.id, supplier]),
     );
 
     const isSuppliersLoading = supplierIds.length > 0 && suppliersQuery.isPending;
@@ -153,18 +151,23 @@ const HomePage = () => {
                     </div>
                 </div>
 
-                {openOrdersQuery.isLoading && <p>Loading...</p>}
+                {openOrdersQuery.isLoading && (
+                    <div className="flex w-full flex-1 items-center justify-center gap-2 py-16">
+                        <Spinner className="size-6" />
+                        <span className="text-muted-foreground">Loading requests...</span>
+                    </div>
+                )}
 
                 {openOrdersQuery.isError && (
                     <p className="text-red-500">
-                        Failed to load activities: {openOrdersQuery.error.message}
+                        Failed to load requests: {openOrdersQuery.error.message}
                     </p>
                 )}
 
                 {!openOrdersQuery.isLoading &&
                     !openOrdersQuery.isError &&
                     requests.length === 0 && (
-                        <p className="text-muted-foreground">No activities yet.</p>
+                        <p className="text-muted-foreground">No requests yet.</p>
                     )}
 
                 {requests.length > 0 && (
@@ -177,8 +180,8 @@ const HomePage = () => {
                                     viewerRole="courier"
                                     isEditable={false}
                                     isAcceptable={true}
-                                    pickupSupplierName={supplierNameById.get(order.pickupSupplierId)}
-                                    deliverySupplierName={supplierNameById.get(order.deliverySupplierId)}
+                                    pickupSupplier={supplierById.get(order.pickupSupplierId)}
+                                    deliverySupplier={supplierById.get(order.deliverySupplierId)}
                                     isSuppliersLoading={isSuppliersLoading}
                                 />
                             ))}
