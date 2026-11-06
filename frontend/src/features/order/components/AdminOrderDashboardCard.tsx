@@ -122,11 +122,11 @@ const AdminOrderDashboardCard = ({
                 </div>
 
                 <Tabs value={selectedStatus} onValueChange={handleStatusChange} className="w-full">
-                    <TabsList className="w-fit max-w-full h-full flex flex-nowrap items-center justify-start gap-1 overflow-x-auto overflow-y-hidden">
-                        <TabsTrigger value="ALL">All</TabsTrigger>
+                    <TabsList className="w-fit max-w-full h-full flex flex-nowrap items-center justify-start gap-1 overflow-x-auto overflow-y-hidden bg-blue-50">
+                        <TabsTrigger value="ALL" className="data-active:bg-white">All</TabsTrigger>
 
                         {STATUS_CATEGORY_MAPPING[selectedCategory].map((status) => (
-                            <TabsTrigger key={status} value={status}>
+                            <TabsTrigger key={status} value={status} className="data-active:bg-white">
                                 {formatStringToTitleCase(status)}
                             </TabsTrigger>
                         ))}
