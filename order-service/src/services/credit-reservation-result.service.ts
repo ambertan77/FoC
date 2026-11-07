@@ -199,7 +199,7 @@ export async function creditReservationResultService(
                 !requestEvent ||
                 requestEvent.orderId !== event.orderId ||
                 requestEvent.eventType !==
-                OrderEventType.CREDIT_RESERVATION_REQUEST
+                OrderEventType.RESERVE_CREDITS
             ) {
                 throw new AppError(
                     "Credit result does not match a reservation request",

@@ -617,7 +617,7 @@ test("createRequestService creates the order, history, and outbox event", async 
 
     assert.equal(
         outboxArgs.data.eventType,
-        OrderEventType.CREDIT_RESERVATION_REQUEST,
+        OrderEventType.RESERVE_CREDITS,
     );
 
     assert.equal(outboxArgs.data.payload?.requestType, "CREATE");

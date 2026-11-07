@@ -1,5 +1,6 @@
 import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import RequestActivityCard from "@/features/order/components/RequestActivityCard";
 import { useCourierOrderHistory } from "@/features/order/hooks/useCourierOrderHistory";
@@ -39,12 +40,10 @@ const CourierActivityPage = () => {
     ];
     const suppliersQuery = useSuppliersByIds(supplierIds);
 
-    const supplierNameById = new Map(
-        (suppliersQuery.data ?? []).map((supplier) => [
-            supplier.id,
-            supplier.name,
-        ]),
+    const supplierById = new Map(
+        (suppliersQuery.data ?? []).map((supplier) => [supplier.id, supplier]),
     );
+
     const isSuppliersLoading =
         supplierIds.length > 0 && suppliersQuery.isPending;
 
@@ -52,6 +51,17 @@ const CourierActivityPage = () => {
         setSelectedStatus(value as OrderStatus | "ALL");
         setPage(1);
     };
+
+    // Sorting labels
+    const SORT_BY_LABELS: Partial<Record<SortBy, string>> = {
+        acceptedAt: "Accepted date",
+        expiryAt: "Completion deadline",
+    };
+
+    const SORT_ORDER_LABELS: Record<SortOrder, string> =
+        sortBy === "expiryAt"
+            ? { desc: "Latest expiry first", asc: "Soonest expiry first" }
+            : { desc: "Newest first", asc: "Oldest first" };
 
     return (
         <>
@@ -84,11 +94,16 @@ const CourierActivityPage = () => {
                             }}
                         >
                             <SelectTrigger className="w-48 bg-white">
-                                <SelectValue />
+                                <SelectValue placeholder="Sort by">
+                                    {SORT_BY_LABELS[sortBy]}
+                                </SelectValue>
                             </SelectTrigger>
                             <SelectContent alignItemWithTrigger={false}>
-                                <SelectItem value="acceptedAt">Accepted date</SelectItem>
-                                <SelectItem value="expiryAt">Completion deadline</SelectItem>
+                                {Object.entries(SORT_BY_LABELS).map(([value, label]) => (
+                                    <SelectItem key={value} value={value}>
+                                        {label}
+                                    </SelectItem>
+                                ))}
                             </SelectContent>
                         </Select>
                     </div>
@@ -103,21 +118,27 @@ const CourierActivityPage = () => {
                             }}
                         >
                             <SelectTrigger className="w-48 bg-white">
-                                <SelectValue />
+                                <SelectValue placeholder="Sort order">
+                                    {SORT_ORDER_LABELS[sortOrder]}
+                                </SelectValue>
                             </SelectTrigger>
                             <SelectContent alignItemWithTrigger={false}>
-                                <SelectItem value="desc">
-                                    {sortBy === "expiryAt" ? "Latest expiry first" : "Newest first"}
-                                </SelectItem>
-                                <SelectItem value="asc">
-                                    {sortBy === "expiryAt" ? "Soonest expiry first" : "Oldest first"}
-                                </SelectItem>
+                                {Object.entries(SORT_ORDER_LABELS).map(([value, label]) => (
+                                    <SelectItem key={value} value={value}>
+                                        {label}
+                                    </SelectItem>
+                                ))}
                             </SelectContent>
                         </Select>
                     </div>
                 </div>
 
-                {courierOrderHistoryQuery.isLoading && <p>Loading...</p>}
+                {courierOrderHistoryQuery.isLoading && (
+                    <div className="flex w-full flex-1 items-center justify-center gap-2 py-16 text-muted-foreground">
+                        <Spinner className="size-6" />
+                        <span>Loading activities...</span>
+                    </div>
+                )}
 
                 {courierOrderHistoryQuery.isError && (
                     <p className="text-red-500">
@@ -139,8 +160,8 @@ const CourierActivityPage = () => {
                                     key={order.id}
                                     order={order}
                                     viewerRole="courier"
-                                    pickupSupplierName={supplierNameById.get(order.pickupSupplierId)}
-                                    deliverySupplierName={supplierNameById.get(order.deliverySupplierId)}
+                                    pickupSupplier={supplierById.get(order.pickupSupplierId)}
+                                    deliverySupplier={supplierById.get(order.deliverySupplierId)}
                                     isSuppliersLoading={isSuppliersLoading}
                                 />
                             ))}

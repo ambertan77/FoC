@@ -1,4 +1,4 @@
-import { ClockIcon, LogOutIcon, MapIcon, MapPinIcon, PencilIcon } from "lucide-react";
+import { ClockIcon, LogOutIcon, MapIcon, MapPinIcon, PencilIcon, RotateCcwIcon, StoreIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import type { Supplier, SupplierDay } from "../types/supplier.types";
@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import useAuth from "@/hooks/useAuth";
 import { useLocation } from "react-router-dom";
 import { ROUTES } from "@/routes/routes";
+import { formatStringToTitleCase } from "@/utils/formatText";
 
 const DAY_ORDER: SupplierDay[] = [
     "MONDAY",
@@ -99,89 +100,102 @@ const SupplierCard = ({ supplier, onEdit, onDeactivate, onActivate }: SupplierCa
     const location = useLocation();
 
     return (
-        <Card className={`p-4 w-full h-full ${isDeactivated ? "opacity-60" : ""}`}>
-            <div className="aspect-video md:aspect-square w-full overflow-hidden rounded-lg">
-                <img
-                    src={supplier.imageUrl!}
-                    alt={supplier.name}
-                    className="h-full w-full object-cover object-center"
-                />
-            </div>
-
-            <div className="flex flex-col gap-2.5 w-full">
-                <div className="flex flex-row items-start justify-between gap-2">
-                    <Badge variant="gray">{supplier.type}</Badge>
-                    <Badge variant={isDeactivated ? "muted" : "indigo900"}>
-                        {isDeactivated ? "Deactivated" : "Active"}
-                    </Badge>
-                </div>
-
-                <div className="flex flex-col gap-1">
-                    <span className="text-lg lg:text-xl leading-none font-bold text-wrap">
-                        {supplier.name}
-                    </span>
-                    {supplier.description && (
-                        <span className="text-sm leading-none text-slate-500 text-wrap">
-                            {supplier.description}
-                        </span>
+        <Card className={`flex flex-col gap-4 p-4 w-full h-full justify-between ${isDeactivated ? "bg-slate-50" : ""}`}>
+            <div className="flex flex-col gap-4 w-full h-full">
+                <div className={`aspect-[16/9] w-full overflow-hidden rounded-lg bg-slate-100 ${isDeactivated ? "grayscale opacity-50" : ""}`}>
+                    {supplier.imageUrl ? (
+                        <img
+                            src={supplier.imageUrl}
+                            alt={supplier.name}
+                            loading="lazy"
+                            decoding="async"
+                            className="h-full w-full object-cover object-center"
+                            onError={(e) => { e.currentTarget.style.display = "none"; }}
+                        />
+                    ) : (
+                        <div className="flex h-full w-full items-center justify-center text-slate-400">
+                            <StoreIcon className="size-8" />
+                        </div>
                     )}
                 </div>
 
-                <div className="flex items-center gap-1.5 text-sm text-slate-500">
-                    <MapIcon className="size-4 shrink-0" />
-                    <span className="text-wrap leading-none">
-                        {supplier.building}, Floor {supplier.floor}
-                    </span>
+                <div className="flex flex-col gap-2.5 w-full">
+                    <div className="flex items-start justify-between gap-2">
+                        <Badge variant="gray">{formatStringToTitleCase(supplier.type)}</Badge>
+                        <Badge variant={isDeactivated ? "muted" : "indigo900"} className="gap-1.5">
+                            <span className={`size-1.5 rounded-full ${isDeactivated ? "bg-slate-400" : "bg-emerald-500"}`} />
+                            {isDeactivated ? "Deactivated" : "Active"}
+                        </Badge>
+                    </div>
+
+
+                    <div className="flex flex-col gap-1">
+                        <span className="text-lg leading-none font-bold text-wrap">
+                            {supplier.name}
+                        </span>
+                        {supplier.description && (
+                            <span className="text-sm leading-none text-slate-500 text-wrap">
+                                {supplier.description}
+                            </span>
+                        )}
+                    </div>
+
+                    <div className="flex items-center gap-1.5 text-sm text-slate-500">
+                        <MapIcon className="size-4 shrink-0" />
+                        <span className="text-wrap leading-none">
+                            {supplier.building}, Floor {supplier.floor}
+                        </span>
+                    </div>
+
+                    {supplier.address && (
+                        <div className="flex items-center gap-1.5 text-sm text-slate-500">
+                            <MapPinIcon className="size-4 shrink-0" />
+                            <span className="text-sm leading-none text-wrap">{supplier.address}</span>
+                        </div>
+                    )}
+
+                    {supplier.openingHours && supplier.openingHours.length > 0 && (
+                        <div className="flex items-center gap-1.5 text-sm text-slate-500">
+                            <ClockIcon className="size-4 shrink-0" />
+                            <span className="text-wrap leading-none">{formatHoursSummary(supplier.openingHours)}</span>
+                        </div>
+                    )}
                 </div>
-
-                {supplier.address && (
-                    <div className="flex items-center gap-1.5 text-sm text-slate-500">
-                        <MapPinIcon className="size-4 shrink-0" />
-                        <span className="text-sm leading-none text-wrap">{supplier.address}</span>
-                    </div>
-                )}
-
-                {supplier.openingHours && supplier.openingHours.length > 0 && (
-                    <div className="flex items-center gap-1.5 text-sm text-slate-500">
-                        <ClockIcon className="size-4 shrink-0" />
-                        <span className="text-wrap leading-none">{formatHoursSummary(supplier.openingHours)}</span>
-                    </div>
-                )}
-
-                {isAdmin && !isDeactivated && location.pathname === ROUTES.ADMIN.MANAGE_SUPPLIERS && (
-                    <div className="flex items-end justify-end gap-2 border-t border-slate-200 pt-3">
-                        {onEdit && (
-                            <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={onEdit}
-                            >
-                                <PencilIcon className="size-4" />
-                                Edit
-                            </Button>
-                        )}
-                        {onDeactivate && (
-                            <Button
-                                type="button"
-                                variant="destructive"
-                                size="sm"
-                                onClick={onDeactivate}
-                            >
-                                <LogOutIcon className="size-4" />
-                                Deactivate
-                            </Button>
-                        )}
-                    </div>
-                )}
-                {isAdmin && isDeactivated && onActivate && location.pathname === ROUTES.ADMIN.MANAGE_SUPPLIERS && (
-                    <div className="flex justify-end border-t border-slate-200 pt-3">
-                        <Button type="button" variant="green" size="sm" onClick={onActivate}>
-                            Activate
-                        </Button>
-                    </div>
-                )}
             </div>
+            
+            {isAdmin && !isDeactivated && location.pathname === ROUTES.ADMIN.MANAGE_SUPPLIERS && (
+                <div className="flex items-end justify-end gap-2 border-t border-slate-200 pt-3">
+                    {onEdit && (
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={onEdit}
+                        >
+                            <PencilIcon className="size-4" />
+                            Edit
+                        </Button>
+                    )}
+                    {onDeactivate && (
+                        <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            onClick={onDeactivate}
+                        >
+                            <LogOutIcon className="size-4" />
+                            Deactivate
+                        </Button>
+                    )}
+                </div>
+            )}
+            {isAdmin && isDeactivated && onActivate && location.pathname === ROUTES.ADMIN.MANAGE_SUPPLIERS && (
+                <div className="flex justify-end border-t border-slate-200 pt-3">
+                    <Button type="button" variant="green" size="sm" onClick={onActivate}>
+                        <RotateCcwIcon className="size-4" /> Activate
+                    </Button>
+                </div>
+            )}
         </Card>
     );
 };

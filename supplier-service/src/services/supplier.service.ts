@@ -210,6 +210,7 @@ export async function getSuppliersByIdsService(ids: string[]) {
             id: true,
             name: true,
             type: true,
+            status: true,
         },
     });
 }

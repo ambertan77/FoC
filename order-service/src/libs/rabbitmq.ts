@@ -62,7 +62,7 @@ export const RESERVATION_REQUEST_MESSAGING = {
     exchange: "credit.commands",
     exchangeType: "direct",
     routingKeys: {
-        CREDIT_RESERVATION_REQUEST: "credit.reserve.v1",
+        RESERVE_CREDITS: "credit.reserve.v1",
     },
     bindingKeys: ["credit.reserve.v1"],
     queue: "credit.reserve.v1",
@@ -122,7 +122,7 @@ export async function declareOrderPublishingTopology(channel: Channel): Promise<
 // ---------- Which exchange + routing key each outbox event uses ----------
 export type PublishableOrderEventType = Extract<
     OrderEventType,
-    | "CREDIT_RESERVATION_REQUEST"
+    | "RESERVE_CREDITS"
     | "ORDER_RECEIVED"
     | "ORDER_CANCELED"
     | "ORDER_EXPIRED"
@@ -130,9 +130,9 @@ export type PublishableOrderEventType = Extract<
 >;
 
 export const ORDER_PUBLISH_ROUTES = {
-    [OrderEventType.CREDIT_RESERVATION_REQUEST]: {
+    [OrderEventType.RESERVE_CREDITS]: {
         exchange: RESERVATION_REQUEST_MESSAGING.exchange,
-        routingKey: RESERVATION_REQUEST_MESSAGING.routingKeys.CREDIT_RESERVATION_REQUEST,
+        routingKey: RESERVATION_REQUEST_MESSAGING.routingKeys.RESERVE_CREDITS,
     },
     [OrderEventType.ORDER_RECEIVED]: {
         exchange: SETTLEMENT_MESSAGING.exchange,

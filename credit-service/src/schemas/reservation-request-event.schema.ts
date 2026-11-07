@@ -3,7 +3,7 @@ import { reservationIdSchema } from "./reservation.schema.js";
 
 const reservationRequestFields = {
     eventId: reservationIdSchema,
-    eventType: z.literal("CREDIT_RESERVATION_REQUEST"),
+    eventType: z.literal("RESERVE_CREDITS"),
     orderId: reservationIdSchema,
     requesterId: reservationIdSchema,
     amount: z.number().int().min(1).max(2_147_483_647),

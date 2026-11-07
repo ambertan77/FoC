@@ -43,18 +43,17 @@ const ProfilePage = () => {
         </CardHeader>
         <CardContent>
           {isPending && (
-            <div className="flex min-h-48 items-center justify-center gap-2 text-slate-600">
-              <Spinner />
-              <span>Loading profile…</span>
+            <div className="flex w-full flex-1 items-center justify-center gap-2 py-16 text-muted-foreground">
+              <Spinner className="size-6" />
+              <span>Loading profile...</span>
             </div>
           )}
 
           {isError && !profile && (
             <div className="flex min-h-48 flex-col items-center justify-center gap-3 text-center">
-              <p className="font-medium text-slate-900">
-                Unable to load your profile
+              <p className="max-w-md text-red-500">
+                Unable to load your profile: {error.message}
               </p>
-              <p className="max-w-md text-sm text-slate-600">{error.message}</p>
               <Button
                 variant="outline"
                 onClick={() => void refetch()}>

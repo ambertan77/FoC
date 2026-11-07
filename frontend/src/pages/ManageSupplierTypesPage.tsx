@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PlusIcon, Trash2 } from "lucide-react";
 import CreateSupplierTypeForm from '@/features/supplier/components/CreateSupplierTypeForm';
+import { Spinner } from '@/components/ui/spinner';
 
 const ManageSupplierTypesPage = () => {
     const queryClient = useQueryClient();
@@ -63,11 +64,21 @@ const ManageSupplierTypesPage = () => {
                     />
                 )}
 
-                {supplierTypesIsLoading && <p>Loading supplier types...</p>}
-                {supplierTypesIsError && <p>Failed to load supplier types: {countsForEachSupplierTypeQuery.error.message}</p>}
+                {supplierTypesIsLoading && (
+                    <div className="flex w-full flex-1 items-center justify-center gap-2 py-16 text-muted-foreground">
+                        <Spinner className="size-6" />
+                        <span>Loading supplier types...</span>
+                    </div>
+                )}
+
+                {supplierTypesIsError && (
+                    <p className="text-red-500">
+                        Failed to load supplier types: {countsForEachSupplierTypeQuery.error.message}
+                    </p>
+                )}
 
                 {!supplierTypesIsLoading && !supplierTypesIsError && supplierTypes.length === 0 && (
-                    <p className="text-sm text-muted-foreground">No supplier types yet.</p>
+                    <p className="text-muted-foreground">No supplier types yet.</p>
                 )}
 
                 <div className="w-full grid grid-cols-2 gap-6 sm:grid-cols-4 lg:grid-cols-6">

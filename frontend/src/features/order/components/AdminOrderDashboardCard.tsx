@@ -11,7 +11,7 @@ import RequestActivityCard from "@/features/order/components/RequestActivityCard
 import SupplierSelect from "@/features/order/components/SupplierSelect";
 import { useOrderHistory } from "@/features/order/hooks/useOrderHistory";
 import { useSuppliersByIds } from "@/features/order/hooks/useSuppliersByIds";
-import { 
+import {
     STATUS_CATEGORY_MAPPING,
     type OrderStatus,
     type OrderStatusCategory,
@@ -19,6 +19,7 @@ import {
     type SortOrder
 } from "@/features/order/types/order.types";
 import { formatStringToTitleCase } from "@/utils/formatText";
+import { Spinner } from "@/components/ui/spinner";
 
 type AdminOrderDashboardProps = {
     selectedCategory: OrderStatusCategory;
@@ -89,11 +90,8 @@ const AdminOrderDashboardCard = ({
     ];
     const suppliersQuery = useSuppliersByIds(supplierIds);
 
-    const supplierNameById = new Map(
-        (suppliersQuery.data ?? []).map((supplier) => [
-            supplier.id,
-            supplier.name,
-        ]),
+    const supplierById = new Map(
+        (suppliersQuery.data ?? []).map((supplier) => [supplier.id, supplier]),
     );
     const isSuppliersLoading =
         supplierIds.length > 0 && suppliersQuery.isPending;
@@ -112,6 +110,17 @@ const AdminOrderDashboardCard = ({
         LIVE: "Search live orders by name",
         PAST: "Search past orders by name",
     };
+
+    // Sorting labels
+    const SORT_BY_LABELS: Partial<Record<SortBy, string>> = {
+        createdAt: "Creation date",
+        expiryAt: "Completion deadline",
+    };
+
+    const SORT_ORDER_LABELS: Record<SortOrder, string> =
+        sortBy === "expiryAt"
+            ? { desc: "Latest expiry first", asc: "Soonest expiry first" }
+            : { desc: "Newest first", asc: "Oldest first" };
 
     return (
         <>
@@ -172,11 +181,16 @@ const AdminOrderDashboardCard = ({
                             }}
                         >
                             <SelectTrigger className="w-48 bg-white">
-                                <SelectValue />
+                                <SelectValue placeholder="Sort by">
+                                    {SORT_BY_LABELS[sortBy]}
+                                </SelectValue>
                             </SelectTrigger>
                             <SelectContent alignItemWithTrigger={false}>
-                                <SelectItem value="createdAt">Creation date</SelectItem>
-                                <SelectItem value="expiryAt">Completion deadline</SelectItem>
+                                {Object.entries(SORT_BY_LABELS).map(([value, label]) => (
+                                    <SelectItem key={value} value={value}>
+                                        {label}
+                                    </SelectItem>
+                                ))}
                             </SelectContent>
                         </Select>
                     </div>
@@ -191,15 +205,16 @@ const AdminOrderDashboardCard = ({
                             }}
                         >
                             <SelectTrigger className="w-48 bg-white">
-                                <SelectValue />
+                                <SelectValue placeholder="Sort order">
+                                    {SORT_ORDER_LABELS[sortOrder]}
+                                </SelectValue>
                             </SelectTrigger>
                             <SelectContent alignItemWithTrigger={false}>
-                                <SelectItem value="desc">
-                                    {sortBy === "expiryAt" ? "Latest expiry first" : "Newest first"}
-                                </SelectItem>
-                                <SelectItem value="asc">
-                                    {sortBy === "expiryAt" ? "Soonest expiry first" : "Oldest first"}
-                                </SelectItem>
+                                {Object.entries(SORT_ORDER_LABELS).map(([value, label]) => (
+                                    <SelectItem key={value} value={value}>
+                                        {label}
+                                    </SelectItem>
+                                ))}
                             </SelectContent>
                         </Select>
                     </div>
@@ -218,18 +233,23 @@ const AdminOrderDashboardCard = ({
                     </div>
                 </div>
 
-                {orderHistoryQuery.isLoading && <p>Loading...</p>}
+                {orderHistoryQuery.isLoading && (
+                    <div className="flex w-full flex-1 items-center justify-center gap-2 py-16 text-muted-foreground">
+                        <Spinner className="size-6" />
+                        <span>Loading order history...</span>
+                    </div>
+                )}
 
                 {orderHistoryQuery.isError && (
                     <p className="text-red-500">
-                        Failed to load activities: {orderHistoryQuery.error.message}
+                        Failed to load order history: {orderHistoryQuery.error.message}
                     </p>
                 )}
 
                 {!orderHistoryQuery.isLoading &&
                     !orderHistoryQuery.isError &&
                     requests.length === 0 && (
-                        <p className="text-muted-foreground">No activities yet.</p>
+                        <p className="text-muted-foreground">No order history yet.</p>
                     )}
 
                 {requests.length > 0 && (
@@ -240,8 +260,8 @@ const AdminOrderDashboardCard = ({
                                     key={order.id}
                                     order={order}
                                     viewerRole="admin"
-                                    pickupSupplierName={supplierNameById.get(order.pickupSupplierId)}
-                                    deliverySupplierName={supplierNameById.get(order.deliverySupplierId)}
+                                    pickupSupplier={supplierById.get(order.pickupSupplierId)}
+                                    deliverySupplier={supplierById.get(order.deliverySupplierId)}
                                     isSuppliersLoading={isSuppliersLoading}
                                 />
                             ))}
