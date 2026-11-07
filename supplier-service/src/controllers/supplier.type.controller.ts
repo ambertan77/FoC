@@ -8,7 +8,7 @@ export async function getAllSupplierTypes(req: Request, res: Response) {
 
     return res.status(200).json({
         success: true,
-        message: "All active suppliers counted successfully",
+        message: "All supplier types queried successfully",
         data: types,
     });
 }

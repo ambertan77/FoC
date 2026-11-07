@@ -59,7 +59,7 @@ export async function deleteType(typeId: string) {
 
     if (!typeToDelete) {
         // could not find the type to be deleted, it does not exist
-        throw new AppError("This type does not exist", 400, "BAD_REQUEST");
+        throw new AppError("This type does not exist", 404, "NOT_FOUND");
     }
 
     const associatedSuppliers = await prisma.supplier.findMany({
