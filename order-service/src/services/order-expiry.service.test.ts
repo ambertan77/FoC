@@ -212,7 +212,7 @@ test("updateExpiredOrders expires an open order without a courier", async (t) =>
         fromStatus: OrderStatus.OPEN,
         toStatus: OrderStatus.EXPIRED,
         changedBy: null,
-        reason: "No courier accepted the request before its expiry time",
+        reason: "No courier accepted the request before its completion deadline.",
     });
 
     const outboxArgs = firstArgument<{
@@ -254,7 +254,7 @@ test("updateExpiredOrders fails an accepted order", async (t) => {
     assert.deepEqual(updateArgs.data.version, { increment: 1 });
     assert.equal(
         updateArgs.data.failureReason,
-        "The courier did not complete the delivery before the request expiry time",
+        "The courier did not complete the delivery before the request completion deadline.",
     );
 
     assert.ok(updateArgs.data.failedAt instanceof Date);
