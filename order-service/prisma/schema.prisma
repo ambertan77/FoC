@@ -24,6 +24,7 @@ enum OrderStatus {
   PENDING_RESERVATION // Credit service is reserving the credits
   RESERVATION_FAILED // Credit service failed to reserve the credits, so the order creation fails.
   AUTO_RECEIVED // System automatically marked order as received 30 minutes after courier completion
+  AUTO_FAILED // System automatically marked order as failed when expiryAt is reached and the order is not completed yet.
 }
 
 enum OrderEventType {

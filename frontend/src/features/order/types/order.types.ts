@@ -15,6 +15,7 @@ export const statusVariant: Record<OrderStatus, ButtonProps["variant"]> = {
     PENDING_RESERVATION: "cyan",
     RESERVATION_FAILED: "pink",
     AUTO_RECEIVED: "darkGreen",
+    AUTO_FAILED: "darkRed"
 };
 
 export const ORDER_STATUSES = [
@@ -28,7 +29,8 @@ export const ORDER_STATUSES = [
     "EXPIRED",
     "PENDING_RESERVATION",
     "RESERVATION_FAILED",
-    "AUTO_RECEIVED"
+    "AUTO_RECEIVED",
+    "AUTO_FAILED"
 ] as const;
 
 export const COURIER_ORDER_STATUSES = [
@@ -37,7 +39,8 @@ export const COURIER_ORDER_STATUSES = [
     "COMPLETED",
     "RECEIVED",
     "FAILED",
-    "AUTO_RECEIVED"
+    "AUTO_RECEIVED",
+    "AUTO_FAILED"
 ] as const;
 
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
@@ -53,7 +56,7 @@ export type OrderStatusCategory = (typeof ORDER_STATUS_CATEGORIES)[number];
 export const STATUS_CATEGORY_MAPPING: Record<OrderStatusCategory, readonly OrderStatus[]> = {
     ALL: ORDER_STATUSES,
     LIVE: ["OPEN", "ACCEPTED", "PENDING_RESERVATION", "PICKED_UP", "COMPLETED"],
-    PAST: ["RECEIVED", "CANCELED", "FAILED", "EXPIRED", "RESERVATION_FAILED", "AUTO_RECEIVED"],
+    PAST: ["RECEIVED", "CANCELED", "FAILED", "EXPIRED", "RESERVATION_FAILED", "AUTO_RECEIVED", "AUTO_FAILED"],
 };
 
 export const REORDERABLE_STATUSES = new Set<OrderStatus>([
@@ -63,6 +66,7 @@ export const REORDERABLE_STATUSES = new Set<OrderStatus>([
     "EXPIRED",
     "RESERVATION_FAILED",
     "AUTO_RECEIVED",
+    "AUTO_FAILED"
 ]);
 
 export interface Order {

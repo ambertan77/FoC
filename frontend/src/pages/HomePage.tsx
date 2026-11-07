@@ -107,7 +107,7 @@ const HomePage = () => {
 
                 <div className="flex flex-wrap items-end gap-4">
                     <div className="flex flex-col gap-1">
-                        <label className="text-sm font-medium">Filter Location</label>
+                        <label className="text-sm font-medium">Filter location</label>
                         <SupplierSelect
                             className="w-48 bg-white"
                             value={supplierIdFilter ?? ""}

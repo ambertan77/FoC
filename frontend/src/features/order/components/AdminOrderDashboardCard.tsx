@@ -6,7 +6,6 @@ import { Field } from '@/components/ui/field';
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
 import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import RequestActivityCard from "@/features/order/components/RequestActivityCard";
 import SupplierSelect from "@/features/order/components/SupplierSelect";
 import { useOrderHistory } from "@/features/order/hooks/useOrderHistory";
@@ -18,7 +17,7 @@ import {
     type SortBy,
     type SortOrder
 } from "@/features/order/types/order.types";
-import { formatStringToTitleCase } from "@/utils/formatText";
+import { formatStringToSentenceCase, formatStringToTitleCase } from "@/utils/formatText";
 import { Spinner } from "@/components/ui/spinner";
 
 type AdminOrderDashboardProps = {
@@ -96,8 +95,8 @@ const AdminOrderDashboardCard = ({
     const isSuppliersLoading =
         supplierIds.length > 0 && suppliersQuery.isPending;
 
-    const handleStatusChange = (value: string) => {
-        setSelectedStatus(value as OrderStatus | "ALL");
+    const handleStatusChange = (value: OrderStatus | "ALL") => {
+        setSelectedStatus(value);
         setPage(1);
     };
 
@@ -109,6 +108,17 @@ const AdminOrderDashboardCard = ({
         ALL: "Search all orders by name",
         LIVE: "Search live orders by name",
         PAST: "Search past orders by name",
+    };
+
+    // Status labals
+    const STATUS_LABELS: Record<string, string> = {
+        ALL: "All",
+        ...Object.fromEntries(
+            relevantOrderStatuses.map((status) => [
+                status,
+                formatStringToSentenceCase(status),
+            ]),
+        ),
     };
 
     // Sorting labels
@@ -130,18 +140,6 @@ const AdminOrderDashboardCard = ({
                     <p className="text-sm text-muted-foreground">Showing a maximum of 15 orders per page. Click on any order to view its full details.</p>
                 </div>
 
-                <Tabs value={selectedStatus} onValueChange={handleStatusChange} className="w-full">
-                    <TabsList className="w-fit max-w-full h-full flex flex-nowrap items-center justify-start gap-1 overflow-x-auto overflow-y-hidden bg-blue-50">
-                        <TabsTrigger value="ALL" className="data-active:bg-white">All</TabsTrigger>
-
-                        {STATUS_CATEGORY_MAPPING[selectedCategory].map((status) => (
-                            <TabsTrigger key={status} value={status} className="data-active:bg-white">
-                                {formatStringToTitleCase(status)}
-                            </TabsTrigger>
-                        ))}
-                    </TabsList>
-                </Tabs>
-
                 <div className="flex flex-col gap-1 w-full md:w-1/2">
                     <Field className="w-full">
                         <InputGroup className="bg-white">
@@ -159,16 +157,26 @@ const AdminOrderDashboardCard = ({
 
                 <div className="flex flex-wrap items-end gap-4">
                     <div className="flex flex-col gap-1">
-                        <label className="text-sm font-medium">Filter Location</label>
-                        <SupplierSelect
-                            className="w-48 bg-white"
-                            value={supplierIdFilter ?? ""}
-                            onChange={(id) => {
-                                setSupplierIdFilter(id);
-                                setPage(1);
-                            }}
-                            placeholder="No location selected"
-                        />
+                        <label className="text-sm font-medium">Status</label>
+                        <Select
+                            value={selectedStatus}
+                            onValueChange={(value) => {
+                                handleStatusChange(value as OrderStatus | "ALL");
+                            }}>
+                            <SelectTrigger className="w-48 bg-white">
+                                <SelectValue placeholder="Status">
+                                    {STATUS_LABELS[selectedStatus]}
+                                </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent alignItemWithTrigger={false}>
+                                <SelectItem value="ALL">All</SelectItem>
+                                {relevantOrderStatuses.map((status) => (
+                                    <SelectItem key={status} value={status}>
+                                        {formatStringToTitleCase(status)}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </div>
 
                     <div className="flex flex-col gap-1">
@@ -217,6 +225,19 @@ const AdminOrderDashboardCard = ({
                                 ))}
                             </SelectContent>
                         </Select>
+                    </div>
+
+                    <div className="flex flex-col gap-1">
+                        <label className="text-sm font-medium">Filter location</label>
+                        <SupplierSelect
+                            className="w-48 bg-white"
+                            value={supplierIdFilter ?? ""}
+                            onChange={(id) => {
+                                setSupplierIdFilter(id);
+                                setPage(1);
+                            }}
+                            placeholder="No location selected"
+                        />
                     </div>
 
                     <div className="flex flex-col gap-1">

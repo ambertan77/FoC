@@ -22,6 +22,7 @@ import useUpdateRequest from "../hooks/useUpdateRequest";
 import useAcceptRequest from "../hooks/useAcceptRequest";
 import { formatStringToSentenceCase, formatStringToTitleCase } from "@/utils/formatText";
 import { Repeat2 } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
 
 type RequestActivityDetailsDialogProps = {
     order: Order;
@@ -400,9 +401,10 @@ const RequestActivityDetailsDialog = ({
                             <p className="font-medium text-base">Requester Details</p>
 
                             {requesterDetailsQuery.isPending ? (
-                                <p className="text-sm text-muted-foreground">
-                                    Loading requester details…
-                                </p>
+                                <div className="flex w-full flex-1 items-center justify-start gap-2 text-sm text-muted-foreground">
+                                    <Spinner className="size-4" />
+                                    <span>Loading requester details...</span>
+                                </div>
                             ) : requesterDetailsQuery.isError ? (
                                 <p role="alert" className="text-sm text-destructive">
                                     Could not load requester details.
@@ -427,9 +429,10 @@ const RequestActivityDetailsDialog = ({
                                     No courier has accepted this request yet.
                                 </p>
                             ) : courierDetailsQuery.isPending ? (
-                                <p className="text-sm text-muted-foreground">
-                                    Loading courier details…
-                                </p>
+                                <div className="flex w-full flex-1 items-center justify-start gap-2 text-sm text-muted-foreground">
+                                    <Spinner className="size-4" />
+                                    <span>Loading courier details...</span>
+                                </div>
                             ) : courierDetailsQuery.isError ? (
                                 <p role="alert" className="text-sm text-destructive">
                                     Could not load courier details.

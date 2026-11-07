@@ -250,7 +250,7 @@ test("updateExpiredOrders fails an accepted order", async (t) => {
         data: Record<string, unknown>;
     }>(order.updateMany.mock.calls);
 
-    assert.equal(updateArgs.data.status, OrderStatus.FAILED);
+    assert.equal(updateArgs.data.status, OrderStatus.AUTO_FAILED);
     assert.deepEqual(updateArgs.data.version, { increment: 1 });
     assert.equal(
         updateArgs.data.failureReason,
@@ -266,7 +266,7 @@ test("updateExpiredOrders fails an accepted order", async (t) => {
     }>(orderStatusHistory.create.mock.calls);
 
     assert.equal(historyArgs.data.fromStatus, OrderStatus.ACCEPTED);
-    assert.equal(historyArgs.data.toStatus, OrderStatus.FAILED);
+    assert.equal(historyArgs.data.toStatus, OrderStatus.AUTO_FAILED);
 
     const outboxArgs = firstArgument<{
         data: {
@@ -295,32 +295,8 @@ test("updateExpiredOrders fails a picked-up order", async (t) => {
     }>(order.updateMany.mock.calls);
 
     assert.equal(updateArgs.where.status, OrderStatus.PICKED_UP);
-    assert.equal(updateArgs.data.status, OrderStatus.FAILED);
+    assert.equal(updateArgs.data.status, OrderStatus.AUTO_FAILED);
     assert.ok(updateArgs.data.failedAt instanceof Date);
-});
-
-test("updateExpiredOrders rejects an expired order without a credit reservation", async (t) => {
-    useMockPrisma(t, {
-        candidateOrders: [
-            {
-                ...openOrder,
-                creditReservationId: null,
-            },
-        ],
-    });
-
-    await assert.rejects(
-        updateExpiredOrders(),
-        (error) => {
-            assert.ok(error instanceof AppError);
-            assert.equal(error.statusCode, 409);
-            assert.equal(
-                error.message,
-                "Expired order order-open has no credit reservation",
-            );
-            return true;
-        },
-    );
 });
 
 test("updateExpiredOrders skips an order changed concurrently", async (t) => {

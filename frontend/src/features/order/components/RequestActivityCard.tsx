@@ -108,12 +108,13 @@ const RequestActivityCard = ({
 
     // Feedback for expired requests due to completion deadline
     const completionDeadlineFeedback =
-        order.status === "FAILED" && order.completedAt === null
+        order.status === "AUTO_FAILED" && order.completedAt === null
             ? viewerRole === "requester"
                 ? "Courier failed to complete the request by the deadline. Credits have been refunded to you."
-                : "You failed to complete the request by the deadline. Credits have been refunded to the requester."
+                : viewerRole === "courier"
+                    ? "You failed to complete the request by the deadline. Credits have been refunded to the requester."
+                    : null
             : null;
-
 
     return (
         <>

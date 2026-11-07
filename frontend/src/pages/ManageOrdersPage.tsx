@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ORDER_STATUS_CATEGORIES, type OrderStatusCategory } from "@/features/order/types/order.types";
 import AdminOrderDashboardCard from "@/features/order/components/AdminOrderDashboardCard";
@@ -26,9 +25,9 @@ const ManageOrdersPage = () => {
                     </TabsList>
                 </Tabs>
 
-                <Card className="flex flex-col items-start justify-center gap-5 px-5 md:px-10 py-5 w-full">
+                <div className="flex flex-col items-start justify-center gap-5">
                     <AdminOrderDashboardCard selectedCategory={selectedCategory} />
-                </Card>
+                </div>
             </div>
         </>
     );
