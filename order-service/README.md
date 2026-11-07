@@ -42,7 +42,7 @@ In the Order Service, there are two main roles: Requester (user who created an o
 ### Automatic Order Handling
 
 - Expire open requests with no assigned courier when `expiryAt` passes
-- Mark accepted or picked-up requests as failed if they have not reached `COMPLETED` by `expiryAt`
+- Mark accepted or picked-up requests as `AUTO_FAILED` if they have not reached `COMPLETED` by `expiryAt`
 - Mark completed requests as `AUTO_RECEIVED` if the requester does not advance the order status more than 30 minutes after completion time
 - Publish the corresponding credit event so Credit Service can release or return the reserved credits
 
@@ -229,7 +229,7 @@ A crash after forwarding but before acknowledgment can create a duplicate delive
 | Current status | Condition | Result |
 | --- | --- | --- |
 | `OPEN` | No courier is assigned | `EXPIRED`; the requester can renew the order |
-| `ACCEPTED` or `PICKED_UP` | Delivery has not reached `COMPLETED` | `FAILED`; the reserved credits are returned to the requester |
+| `ACCEPTED` or `PICKED_UP` | Delivery has not reached `COMPLETED` | `AUTO_FAILED`; the reserved credits are returned to the requester |
 | `COMPLETED` | Delivery was completed by the deadline | No deadline transition |
 
 For each matching order, the worker updates its status, sets `expiredAt` or `failedAt`, records the reason when it fails an order, and increments the order version. It also records a status-history entry and creates the corresponding outbox event in the same database transaction.

@@ -49,15 +49,13 @@ export async function updateExpiredOrders(): Promise<number> {
 
     for (const order of candidateOrders) {
         const expiredBeforeAcceptance = order.status === OrderStatus.OPEN && (!order.courierId || order.courierId === null);
-        const nextStatus = expiredBeforeAcceptance ? OrderStatus.EXPIRED : OrderStatus.FAILED;
+        const nextStatus = expiredBeforeAcceptance ? OrderStatus.EXPIRED : OrderStatus.AUTO_FAILED;
         const eventType = expiredBeforeAcceptance ? OrderEventType.ORDER_EXPIRED : OrderEventType.ORDER_FAILED;
         const reason = expiredBeforeAcceptance ? OPEN_EXPIRY_REASON : COMPLETION_FAILURE_REASON;
 
         if (!order.creditReservationId) {
-            throw new AppError(
-                `Expired order ${order.id} has no credit reservation`,
-                409,
-            );
+            console.error(`Expired order ${order.id} has no credit reservation; skipping`);
+            continue;
         }
 
         const eventId = randomUUID();
