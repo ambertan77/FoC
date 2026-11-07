@@ -340,8 +340,8 @@ test("deleteType fails when the typeId passed in does not exist", async (t) => {
         () => deleteType("t67"),
         (error: unknown) => {
             assert.ok(error instanceof AppError);
-            assert.equal(error.statusCode, 400);
-            assert.equal(error.code, "BAD_REQUEST");
+            assert.equal(error.statusCode, 404);
+            assert.equal(error.code, "NOT_FOUND");
             return true;
         },
     );
