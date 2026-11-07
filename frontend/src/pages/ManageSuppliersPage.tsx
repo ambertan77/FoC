@@ -82,7 +82,7 @@ const ManageSuppliersPage = () => {
 
     // keep the search string and type filter across navigations, matching the /suppliers page
     const [searchString, setSearchString] = useState(() => sessionStorage.getItem("searchString") ?? "");
-    const [typeFilter, setTypeFilter] = useState(() => sessionStorage.getItem("typeFilter") ?? "all");
+    const [typeFilter, setTypeFilter] = useState(() => sessionStorage.getItem("typeFilter") ?? "ALL");
     useEffect(() => {
         sessionStorage.setItem("searchString", searchString);
         sessionStorage.setItem("typeFilter", typeFilter);

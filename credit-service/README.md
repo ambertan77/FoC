@@ -509,6 +509,7 @@ Zod           | Request validation
 RabbitMQ      | Messaging
 CORS          | Cross-origin resource sharing
 JWT           | Authentication tokens
+Docker        | Containerization
 
 ## Architecture
 

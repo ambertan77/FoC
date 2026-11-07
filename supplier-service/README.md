@@ -42,6 +42,7 @@ PostgreSQL    | Relational database
 Zod           | Request validation
 JWT           | Authentication tokens
 CORS          | Cross-origin resource sharing
+Docker        | Containerization
 
 ## Architecture
 
@@ -69,13 +70,13 @@ The Supplier Service is one of the backend microservices in Aaron.
 │                    └──────┬───────┘          │
 │                           │                  │
 │                    ┌──────▼───────┐          │
-│                    │   Supplier & |          │     
-│                    │  SupplierType|          │
-│                    │   Management │          │
+│                    │  Supplier &  |          │     
+│                    │ SupplierType |          │
+│                    │  Management  │          │
 │                    └──────┬───────┘          │
 │                           │                  │     
 │                    ┌──────▼───────┐          │
-│                    │ Prisma ORM   │          │
+│                    │  Prisma ORM  │          │
 │                    └───────┬──────┘          │
 └────────────────────────────┼─────────────────┘
                              │
@@ -99,9 +100,9 @@ Supplier Service
      ▼
   PostgreSQL
      │
-     ├── SupplierType
-     │
      ├── Supplier
+     │
+     ├── SupplierType
      │
      └── OpeningHours
 ```
@@ -152,14 +153,13 @@ supplier-service/
 
 ### Supplier Service API Endpoints
 
-All routes are protected by JWT authentication (`authenticate`). The
-`POST` / `PATCH` routes require the `admin` role (`requireAdmin`).
+All routes are protected by JWT authentication (`authenticate`). The `authorize` function in the middleware ensures that the caller has the required permissions to access the endpoint. All endpoints use HTTP and are called synchronously.
 
 | Method | Path | Role | Description |
 | --- | --- | --- | --- |
 | `GET` | `/api/suppliers/` | admin | View the suppliers (ALL suppliers regardless of status) based on the current page, search key (case-insensitive) and type filter |
-| `GET` | `/api/suppliers/active` | any | View the ACTIVE suppliers based on the current page, search key (case-insensitive) and type filter |
-| `GET` | `/api/suppliers/by-ids` | any | Get relevant suppliers (id, name, type) information by supplying a list of supplier IDs |
+| `GET` | `/api/suppliers/active` | all | View the ACTIVE suppliers based on the current page, search key (case-insensitive) and type filter |
+| `GET` | `/api/suppliers/by-ids` | all | Get relevant suppliers (id, name, type) information by supplying a list of supplier IDs |
 | `POST` | `/api/suppliers` | admin | Create a supplier (active by default) |
 | `PATCH` | `/api/suppliers/:supplierId` | admin | Update a supplier |
 | `PATCH` | `/api/suppliers/:supplierId/activation` | admin | Activate a supplier |
@@ -168,7 +168,7 @@ All routes are protected by JWT authentication (`authenticate`). The
 | `GET` | `/api/suppliers/types/count` | admin | For each supplier type, count the number of supplier records associated to it |
 | `POST` | `/api/suppliers/types` | admin | Create a new supplier type |
 | `DELETE` | `/api/suppliers/types/:typeId` | admin | Delete an existing supplier type with no supplier records associated to it |
-| `POST` | `/api/suppliers/assets/images/` | admin | Upload image of a supplier |
+| `POST` | `/api/suppliers/assets/images` | admin | Upload image of a supplier |
 
 ### Query suppliers (`GET /api/suppliers/`)
 
@@ -197,6 +197,13 @@ Example response for data:
 }
 ```
 
+#### Possible Responses
+
+Status | Description
+------ | --------------------------------------------------------------
+`200`  | Suppliers successfully queried
+`400`  | Invalid request data or no records found for the given page
+
 ### Query active suppliers (`GET /api/suppliers/active`)
 
 From the outside world, the way this endpoint is called and its response is exactly the same as the above (query all suppliers) endpoint, but within the `supplier-service`, only `ACTIVE` suppliers are filtered out and returned.
@@ -217,6 +224,13 @@ Example response for data:
     }
 }
 ```
+
+#### Possible Responses
+
+Status | Description
+------ | --------------------------------
+`200`  | Suppliers successfully queried
+`400`  | Invalid request data
 
 ### Create supplier (`POST /api/suppliers/`)
 
@@ -245,17 +259,42 @@ Request body:
 - `latitude`, `longitude`, `imageUrl`, and `openingHours` are optional.
 - New suppliers are stored with `status = ACTIVATED` (F2.1.5).
 
+#### Possible Responses
+
+Status | Description
+------ | ----------------------------------------------------------------
+`201`  | Supplier successfully created
+`400`  | Invalid request data
+`409`  | Supplier with the same (case-insensitive) name already exists
+
 ### Update supplier (`PATCH /api/suppliers/:supplierId`)
 
 Partial body using the same fields as create. Only provided fields are
 changed. If `openingHours` is provided, the supplier's existing hours are
 replaced. An empty body is rejected (`400`).
 
+#### Possible Responses
+
+Status | Description
+------ | ----------------------------------------------------------------------
+`200`  | Supplier successfully updated
+`400`  | Invalid request data 
+`404`  | Supplier with the specified supplierId not found
+`409`  | New supplier name given conflicts with an existing supplier's name 
+
 ### Deactivate supplier (`PATCH /api/suppliers/:supplierId/deactivation`)
 
 Sets `status = DEACTIVATED`. The record is kept so historical orders remain
 viewable. Rejects unknown suppliers (`404`) and already-deactivated suppliers
 (`409`). Deactivated suppliers no longer appear as available for new errands.
+
+#### Possible Responses
+
+Status | Description
+------ | ----------------------------------------------------------------------
+`200`  | Supplier successfully deactivated
+`400`  | Invalid request data 
+`404`  | Supplier with the specified supplierId not found
 
 ### Activate supplier (`PATCH /api/suppliers/:supplierId/activation`)
 
@@ -264,21 +303,47 @@ is available for new errands again, preserving its details and historical orders
 Returns `200` with the supplier, including opening hours. An already-active supplier
 returns `200` without a database update. Unknown suppliers return `404`.
 
+#### Possible Responses
+
+Status | Description
+------ | ----------------------------------------------------------------------
+`200`  | Supplier successfully activated
+`400`  | Invalid request data 
+`404`  | Supplier with the specified supplierId not found
+
 ### Fetch all the current supplier types (`GET /api/suppliers/types`)
 
 A simple function that returns all the supplier types in ascending alphabetical order. No query parameters are required for this endpoint.
+HTTP status code `200` will be returned for successful queries.
+
+Example response:
+```json
+{
+    "success": true,
+    "message": "All supplier types queried successfully",
+    "data": <types returned by prisma>,
+}
+```
 
 ### Count the number of associated suppliers for each supplier type (`GET /api/suppliers/types/count`)
 
-For each supplier type in the SupplierType table, count the number of supplier records that is associated to this type. The structure of data that is returned for a successful query is as follows:
+For each supplier type in the SupplierType table, count the number of supplier records that is associated to this type. The structure and types of data that is returned for a successful query is as follows:
 
 ```json
 { 
-  id: uuid, 
-  type: string, 
-  count: int 
+    "success": true,
+    "message": "Data fetched successfully",
+    "data": [
+        {
+            "id": uuid, 
+            "type": string, 
+            "count": int
+        }, ...
+    ]
 }
 ```
+
+HTTP status code `200` will be returned for successful queries. 
 
 ### Create a new supplier type (`POST /api/suppliers/types`)
 
@@ -292,9 +357,24 @@ Request body:
 }
 ```
 
+#### Possible Responses
+
+Status | Description
+------ | ----------------------------------------------------------------------
+`200`  | New supplier type successfully created
+`400`  | Invalid request data, or if the type to be created already exists
+
 ### Delete an existing supplier type (`DELETE /api/suppliers/types/:typeId`)
 
-The supplier type to be deleted must be an existing supplier type, if not, the app will return an error code 400. The existing supplier type must also have no associated supplier records, if not, the app will return an error code 403.
+The supplier type to be deleted must be an existing supplier type, if not, the app will return an error code 404. The existing supplier type must also have no associated supplier records, if not, the app will return an error code 403.
+
+#### Possible Responses
+
+Status | Description
+------ | ----------------------------------------------------------------------
+`200`  | New supplier type successfully created
+`403`  | Supplier type to be deleted has associated supplier records
+`404`  | No supplier type with the given typeId exists
 
 ### Internal Supplier Service API Endpoints
 
@@ -316,10 +396,18 @@ Example response for data:
 ```json
 {
     "data": {
-        "suppliers": [ <supplier data> ]
+        "supplier": [ <supplier data> ]
     }
 }
 ```
+
+#### Possible Responses
+
+Status | Description
+------ | -----------------------------------------------
+`200`  | Supplier information successfully queried
+`400`  | Invalid request data
+`404`  | Supplier with specified ID not found
 
 ### Response Shape
 
@@ -334,6 +422,14 @@ Example response for data:
 ```json
 { "success": false, "code": "CONFLICT", "message": "..." }
 ```
+
+## Containerization
+
+Supplier service makes use of Docker for containerization. A multi-stage build is used. 
+
+During the build stage, the database seeding script (`prisma/seed.ts`) always runs. The script checks whether the `supplier` table is empty; if it is empty (i.e. no rows in the table exist), then the script will seed the `supplier` table with data from `foc/data/csv/supplier-seed-data.csv`. Effectively, the database seeding will only occur once, unless the database is reset.
+
+The `supplierType` and `openingHours` table will also be populated based on the data provided in the CSV file. On initial startup, the `supplierType` table will be populated with 3 types: `RETAIL`, `FOOD` and `FACILITIES`. 
 
 ## Getting Started
 

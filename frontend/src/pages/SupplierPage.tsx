@@ -20,7 +20,7 @@ const SupplierPage = () => {
     // ensure the search string and type filters are saved to session storage
     // so that filters are still present when navigating between pages
     const [searchString, setSearchString] = useState(() => sessionStorage.getItem("searchString") ?? "");
-    const [typeFilter, setTypeFilter] = useState(() => sessionStorage.getItem("typeFilter") ?? "all"); // default to viewing all types of suppliers
+    const [typeFilter, setTypeFilter] = useState(() => sessionStorage.getItem("typeFilter") ?? "ALL"); // default to viewing all types of suppliers
     useEffect(() => {
         sessionStorage.setItem("searchString", searchString);
         sessionStorage.setItem("typeFilter", typeFilter);
