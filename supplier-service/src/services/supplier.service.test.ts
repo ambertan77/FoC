@@ -64,7 +64,7 @@ const validCreateInput: CreateSupplierInput = {
 };
 
 type FindManyArgs = {
-    where: { status?: string; name: { contains: string }; type: { contains: string } };
+    where: { status?: string; name: { contains: string }; type: { contains: string }};
     take?: number;
     skip?: number;
 };
@@ -382,8 +382,8 @@ test("getSupplierByIdService does not return a supplier if none match the given 
 
 test("getSuppliersByIdsService returns a supplier with a matching id", async (t) => {
     const expectedResult = [
-        { id: "sup_1", name: "Starbucks", type: "FOOD" },
-        { id: "sup_2", name: "A Hot Hideout", type: "FOOD" },
+        { id: "sup_1", name: "Starbucks", type: "FOOD", status: "ACTIVATED" },
+        { id: "sup_2", name: "A Hot Hideout", type: "FOOD", status: "ACTIVATED" },
     ];
     const { calls, captured } = useSharedMockPrisma(t, {
         findManyReturn: expectedResult
@@ -397,7 +397,7 @@ test("getSuppliersByIdsService returns a supplier with a matching id", async (t)
         select: Record<string, boolean>; 
     };
     assert.deepEqual(args.where.id.in, ["sup_1", "sup_2"]);
-    assert.deepEqual(args.select, { id: true, name: true, type: true });
+    assert.deepEqual(args.select, { id: true, name: true, type: true, status: true });
 
     assert.equal(calls.findMany, 1);
 });
@@ -416,13 +416,13 @@ test("getSuppliersByIdsService does not return a supplier if none match the give
         select: Record<string, boolean>; 
     };
     assert.deepEqual(args.where.id.in, ["sup_10"]);
-    assert.deepEqual(args.select, { id: true, name: true, type: true });
+    assert.deepEqual(args.select, { id: true, name: true, type: true, status: true });
 
     assert.equal(calls.findMany, 1);
 });
 
 test("getSuppliersByIdsService returns one supplier when duplicate ids are passed in", async (t) => {
-    const expectedResult = [{ id: "sup_1", "name": "Starbucks", type: "FOOD" }];
+    const expectedResult = [{ id: "sup_1", "name": "Starbucks", type: "FOOD", status: "ACTIVATED" }];
     
     const { calls, captured } = useSharedMockPrisma(t, {
         findManyReturn: expectedResult 
