@@ -39,6 +39,8 @@ import SupplierModal from "@/features/supplier/components/SupplierModal";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatStringToTitleCase } from "@/utils/formatText";
+import { Spinner } from "@/components/ui/spinner";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface OpeningHourRow {
     day: SupplierDay;
@@ -231,36 +233,54 @@ const ManageSuppliersPage = () => {
                     </Field>
                 </div>
 
-                {supplierTypesIsLoading && <p>Loading supplier types...</p>}
-                {supplierTypesIsError && <p>Failed to load supplier types: {supplierTypesQuery.error?.message}</p>}
+                {supplierTypesIsLoading && (
+                    <Skeleton className="h-8 w-full md:w-1/2 border border-slate-200 rounded-lg" />
+                )}
+
+                {supplierTypesIsError && (
+                    <p className="text-red-500">
+                        Failed to load supplier types: {supplierTypesQuery.error?.message}
+                    </p>
+                )}
+
                 {!supplierTypesIsLoading && !supplierTypesIsError && supplierTypes.length === 0 && (
                     <p className="text-sm text-muted-foreground">No supplier types yet.</p>
                 )}
 
-                <Tabs value={typeFilter} onValueChange={setTypeFilter} className="w-full">
-                    <TabsList className="w-fit max-w-full h-full flex flex-nowrap items-center justify-start gap-1 overflow-x-auto overflow-y-hidden">
-                        <TabsTrigger value="ALL" onClick={() => handleFilterInput("ALL")}>
-                            All
-                        </TabsTrigger>
-
-                        {supplierTypes.map((type) => (
-                            <TabsTrigger key={type.id} value={type.type} onClick={() => handleFilterInput(type.type)}>
-                                {formatStringToTitleCase(type.type)}
+                {!supplierTypesIsLoading && !supplierTypesIsError && (
+                    <Tabs value={typeFilter} onValueChange={setTypeFilter} className="w-full">
+                        <TabsList className="w-fit max-w-full h-full flex flex-nowrap items-center justify-start gap-1 overflow-x-auto overflow-y-hidden">
+                            <TabsTrigger value="ALL" onClick={() => handleFilterInput("ALL")}>
+                                All
                             </TabsTrigger>
-                        ))}
-                    </TabsList>
-                </Tabs>
+
+                            {supplierTypes.map((type) => (
+                                <TabsTrigger key={type.id} value={type.type} onClick={() => handleFilterInput(type.type)}>
+                                    {formatStringToTitleCase(type.type)}
+                                </TabsTrigger>
+                            ))}
+                        </TabsList>
+                    </Tabs>
+                )}
             </div>
 
             <div className="px-5 md:px-10 pb-10">
-                {suppliersIsLoading && <p>Loading suppliers...</p>}
+                {suppliersIsLoading && (
+                    <div className="flex w-full flex-1 items-center justify-center gap-2 py-16 text-muted-foreground">
+                        <Spinner className="size-6" />
+                        <span>Loading suppliers...</span>
+                    </div>
+                )}
+
                 {suppliersIsError && !isNoRecords && (
-                    <p>Failed to load suppliers: {suppliersQuery.error.message}</p>
+                    <p className="text-red-500">
+                        Failed to load suppliers: {suppliersQuery.error.message}
+                    </p>
                 )}
 
                 {!suppliersIsLoading &&
                     (isNoRecords || (!suppliersIsError && suppliers.length === 0)) && (
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-muted-foreground">
                             {searchString || typeFilter !== "all"
                                 ? "No suppliers match the current search and filter."
                                 : (

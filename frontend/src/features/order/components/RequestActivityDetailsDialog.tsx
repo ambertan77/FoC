@@ -15,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 import SupplierSelect from "./SupplierSelect";
 import DateTimePicker from "./DateTimePicker";
-import { statusVariant, type Order, type ViewerRole } from "../types/order.types";
+import { statusVariant, type Order, type OrderRelatedSupplierDetails, type ViewerRole } from "../types/order.types";
 import { useOrderCourierDetails, useOrderRequesterDetails } from "../hooks/useOrderRelatedUserDetails";
 import { createRequestSchema } from "../schemas/create-request.schema";
 import useUpdateRequest from "../hooks/useUpdateRequest";
@@ -30,8 +30,8 @@ type RequestActivityDetailsDialogProps = {
     canEditRequest: boolean;
     canAccept: boolean;
     viewerRole: ViewerRole;
-    pickupSupplierName?: string;
-    deliverySupplierName?: string;
+    pickupSupplier?: OrderRelatedSupplierDetails;
+    deliverySupplier?: OrderRelatedSupplierDetails;
     isSuppliersLoading: boolean;
     canReorder: boolean;
     handleReorder: () => void;
@@ -40,13 +40,19 @@ type RequestActivityDetailsDialogProps = {
 const DetailText = ({
     label,
     value,
+    isSupplierActive = true
 }: {
     label: string;
     value: string;
+    isSupplierActive?: boolean;
 }) => (
     <div className="flex flex-col gap-0.5">
         <p className="text-sm font-medium">{label}</p>
-        <p className="text-sm text-muted-foreground text-wrap">{value || "—"}</p>
+        <p className="text-sm text-muted-foreground text-wrap">{value || "—"}
+            <span className="text-amber-800">
+                {isSupplierActive ? "" : " (Inactive)"}
+            </span>
+        </p>
     </div>
 );
 
@@ -57,8 +63,8 @@ const RequestActivityDetailsDialog = ({
     canEditRequest,
     canAccept,
     viewerRole,
-    pickupSupplierName,
-    deliverySupplierName,
+    pickupSupplier,
+    deliverySupplier,
     isSuppliersLoading,
     canReorder,
     handleReorder,
@@ -143,16 +149,18 @@ const RequestActivityDetailsDialog = ({
                                 value={
                                     isSuppliersLoading
                                         ? "Loading pickup location…"
-                                        : pickupSupplierName ?? "Pickup location unavailable"
+                                        : pickupSupplier?.name ?? "Pickup location unavailable"
                                 }
+                                isSupplierActive={pickupSupplier?.status !== "DEACTIVATED"}
                             />
                             <DetailText
                                 label="Delivery location"
                                 value={
                                     isSuppliersLoading
                                         ? "Loading delivery location…"
-                                        : deliverySupplierName ?? "Delivery location unavailable"
+                                        : deliverySupplier?.name ?? "Delivery location unavailable"
                                 }
+                                isSupplierActive={deliverySupplier?.status !== "DEACTIVATED"}
                             />
                             <DetailText
                                 label="Offered credits"
@@ -228,7 +236,7 @@ const RequestActivityDetailsDialog = ({
                                                     displayName={
                                                         isSuppliersLoading
                                                             ? "Loading pickup location…"
-                                                            : pickupSupplierName ?? "Pickup location unavailable"
+                                                            : pickupSupplier?.name ?? "Pickup location unavailable"
                                                     }
                                                     disabled={!isEditing}
                                                 />
@@ -263,7 +271,7 @@ const RequestActivityDetailsDialog = ({
                                                     displayName={
                                                         isSuppliersLoading
                                                             ? "Loading delivery location…"
-                                                            : deliverySupplierName ?? "Delivery location unavailable"
+                                                            : deliverySupplier?.name ?? "Delivery location unavailable"
                                                     }
                                                     disabled={!isEditing}
                                                 />

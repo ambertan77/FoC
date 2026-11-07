@@ -12,6 +12,7 @@ import { useState } from "react";
 import CreateRequestDialog from "@/features/order/components/CreateRequestDialog";
 import useAuth from "@/hooks/useAuth";
 import { ROLES } from "@/features/auth/types/auth.types";
+import { Spinner } from "@/components/ui/spinner";
 
 const LIMIT = 15;
 
@@ -51,11 +52,8 @@ const HomePage = () => {
     ];
     const suppliersQuery = useSuppliersByIds(supplierIds);
 
-    const supplierNameById = new Map(
-        (suppliersQuery.data ?? []).map((supplier) => [
-            supplier.id,
-            supplier.name,
-        ]),
+    const supplierById = new Map(
+        (suppliersQuery.data ?? []).map((supplier) => [supplier.id, supplier]),
     );
 
     const isSuppliersLoading = supplierIds.length > 0 && suppliersQuery.isPending;
@@ -64,6 +62,17 @@ const HomePage = () => {
         console.log(searchString)
         setSearchString(event.target.value);
     }
+
+    // Sorting labels
+    const SORT_BY_LABELS: Partial<Record<SortBy, string>> = {
+        offeredCredits: "Offered Credits",
+        expiryAt: "Completion deadline",
+    };
+
+    const SORT_ORDER_LABELS: Record<SortOrder, string> =
+        sortBy === "expiryAt"
+            ? { desc: "Latest expiry first", asc: "Soonest expiry first" }
+            : { desc: "Newest first", asc: "Oldest first" };
 
     return (
         <>
@@ -120,11 +129,16 @@ const HomePage = () => {
                             }}
                         >
                             <SelectTrigger className="w-48 bg-white">
-                                <SelectValue />
+                                <SelectValue placeholder="Sort by">
+                                    {SORT_BY_LABELS[sortBy]}
+                                </SelectValue>
                             </SelectTrigger>
                             <SelectContent alignItemWithTrigger={false}>
-                                <SelectItem value="offeredCredits">Offered Credits</SelectItem>
-                                <SelectItem value="expiryAt">Completion deadline</SelectItem>
+                                {Object.entries(SORT_BY_LABELS).map(([value, label]) => (
+                                    <SelectItem key={value} value={value}>
+                                        {label}
+                                    </SelectItem>
+                                ))}
                             </SelectContent>
                         </Select>
                     </div>
@@ -139,32 +153,38 @@ const HomePage = () => {
                             }}
                         >
                             <SelectTrigger className="w-48 bg-white">
-                                <SelectValue />
+                                <SelectValue placeholder="Sort order">
+                                    {SORT_ORDER_LABELS[sortOrder]}
+                                </SelectValue>
                             </SelectTrigger>
                             <SelectContent alignItemWithTrigger={false}>
-                                <SelectItem value="desc">
-                                    {sortBy === "expiryAt" ? "Latest expiry first" : "Most credits first"}
-                                </SelectItem>
-                                <SelectItem value="asc">
-                                    {sortBy === "expiryAt" ? "Soonest expiry first" : "Least credits first"}
-                                </SelectItem>
+                                {Object.entries(SORT_ORDER_LABELS).map(([value, label]) => (
+                                    <SelectItem key={value} value={value}>
+                                        {label}
+                                    </SelectItem>
+                                ))}
                             </SelectContent>
                         </Select>
                     </div>
                 </div>
 
-                {openOrdersQuery.isLoading && <p>Loading...</p>}
+                {openOrdersQuery.isLoading && (
+                    <div className="flex w-full flex-1 items-center justify-center gap-2 py-16 text-muted-foreground">
+                        <Spinner className="size-6" />
+                        <span>Loading requests...</span>
+                    </div>
+                )}
 
                 {openOrdersQuery.isError && (
                     <p className="text-red-500">
-                        Failed to load activities: {openOrdersQuery.error.message}
+                        Failed to load requests: {openOrdersQuery.error.message}
                     </p>
                 )}
 
                 {!openOrdersQuery.isLoading &&
                     !openOrdersQuery.isError &&
                     requests.length === 0 && (
-                        <p className="text-muted-foreground">No activities yet.</p>
+                        <p className="text-muted-foreground">No requests yet.</p>
                     )}
 
                 {requests.length > 0 && (
@@ -177,8 +197,8 @@ const HomePage = () => {
                                     viewerRole="courier"
                                     isEditable={false}
                                     isAcceptable={true}
-                                    pickupSupplierName={supplierNameById.get(order.pickupSupplierId)}
-                                    deliverySupplierName={supplierNameById.get(order.deliverySupplierId)}
+                                    pickupSupplier={supplierById.get(order.pickupSupplierId)}
+                                    deliverySupplier={supplierById.get(order.deliverySupplierId)}
                                     isSuppliersLoading={isSuppliersLoading}
                                 />
                             ))}

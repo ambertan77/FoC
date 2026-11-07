@@ -1,5 +1,6 @@
 import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import CreateRequestDialog from "@/features/order/components/CreateRequestDialog";
 import RequestActivityCard from "@/features/order/components/RequestActivityCard";
@@ -41,12 +42,10 @@ const RequesterActivtyPage = () => {
     ];
     const suppliersQuery = useSuppliersByIds(supplierIds);
 
-    const supplierNameById = new Map(
-        (suppliersQuery.data ?? []).map((supplier) => [
-            supplier.id,
-            supplier.name,
-        ]),
+    const supplierById = new Map(
+        (suppliersQuery.data ?? []).map((supplier) => [supplier.id, supplier]),
     );
+
     const isSuppliersLoading =
         supplierIds.length > 0 && suppliersQuery.isPending;
 
@@ -54,6 +53,17 @@ const RequesterActivtyPage = () => {
         setSelectedStatus(value as OrderStatus | "ALL");
         setPage(1);
     };
+
+    // Sorting labels
+    const SORT_BY_LABELS: Partial<Record<SortBy, string>> = {
+        createdAt: "Created date",
+        expiryAt: "Completion deadline",
+    };
+
+    const SORT_ORDER_LABELS: Record<SortOrder, string> =
+        sortBy === "expiryAt"
+            ? { desc: "Latest expiry first", asc: "Soonest expiry first" }
+            : { desc: "Newest first", asc: "Oldest first" };
 
     return (
         <>
@@ -92,11 +102,16 @@ const RequesterActivtyPage = () => {
                             }}
                         >
                             <SelectTrigger className="w-48 bg-white">
-                                <SelectValue />
+                                <SelectValue placeholder="Sort by">
+                                    {SORT_BY_LABELS[sortBy]}
+                                </SelectValue>
                             </SelectTrigger>
                             <SelectContent alignItemWithTrigger={false}>
-                                <SelectItem value="createdAt">Created date</SelectItem>
-                                <SelectItem value="expiryAt">Completion deadline</SelectItem>
+                                {Object.entries(SORT_BY_LABELS).map(([value, label]) => (
+                                    <SelectItem key={value} value={value}>
+                                        {label}
+                                    </SelectItem>
+                                ))}
                             </SelectContent>
                         </Select>
                     </div>
@@ -111,21 +126,27 @@ const RequesterActivtyPage = () => {
                             }}
                         >
                             <SelectTrigger className="w-48 bg-white">
-                                <SelectValue />
+                                <SelectValue placeholder="Sort order">
+                                    {SORT_ORDER_LABELS[sortOrder]}
+                                </SelectValue>
                             </SelectTrigger>
                             <SelectContent alignItemWithTrigger={false}>
-                                <SelectItem value="desc">
-                                    {sortBy === "expiryAt" ? "Latest expiry first" : "Newest first"}
-                                </SelectItem>
-                                <SelectItem value="asc">
-                                    {sortBy === "expiryAt" ? "Soonest expiry first" : "Oldest first"}
-                                </SelectItem>
+                                {Object.entries(SORT_ORDER_LABELS).map(([value, label]) => (
+                                    <SelectItem key={value} value={value}>
+                                        {label}
+                                    </SelectItem>
+                                ))}
                             </SelectContent>
                         </Select>
                     </div>
                 </div>
 
-                {requesterOrderHistoryQuery.isLoading && <p>Loading...</p>}
+                {requesterOrderHistoryQuery.isLoading && (
+                    <div className="flex w-full flex-1 items-center justify-center gap-2 py-16 text-muted-foreground">
+                        <Spinner className="size-6" />
+                        <span>Loading activities...</span>
+                    </div>
+                )}
 
                 {requesterOrderHistoryQuery.isError && (
                     <p className="text-red-500">
@@ -147,8 +168,8 @@ const RequesterActivtyPage = () => {
                                     key={order.id}
                                     order={order}
                                     viewerRole="requester"
-                                    pickupSupplierName={supplierNameById.get(order.pickupSupplierId)}
-                                    deliverySupplierName={supplierNameById.get(order.deliverySupplierId)}
+                                    pickupSupplier={supplierById.get(order.pickupSupplierId)}
+                                    deliverySupplier={supplierById.get(order.deliverySupplierId)}
                                     isSuppliersLoading={isSuppliersLoading}
                                 />
                             ))}

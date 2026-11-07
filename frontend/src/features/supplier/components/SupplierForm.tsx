@@ -18,6 +18,8 @@ import type { Supplier, SupplierDay, SupplierType } from "../types/supplier.type
 import { useQuery } from "@tanstack/react-query";
 import type { ParsedError } from "@/utils/errorHandler";
 import { getAllSupplierTypes } from "../services/supplier.service";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { formatStringToSentenceCase } from "@/utils/formatText";
 
 interface OpeningHourRow {
   day: SupplierDay;
@@ -59,10 +61,10 @@ const SupplierForm = ({
   const [openHours, setOpenHours] = useState<OpeningHourRow[]>(
     initialData?.openingHours && initialData.openingHours.length > 0
       ? initialData.openingHours.map((hour) => ({
-          day: hour.day,
-          openingTime: formatTime(hour.openingTime),
-          closingTime: formatTime(hour.closingTime),
-        }))
+        day: hour.day,
+        openingTime: formatTime(hour.openingTime),
+        closingTime: formatTime(hour.closingTime),
+      }))
       : [],
   );
 
@@ -153,26 +155,33 @@ const SupplierForm = ({
           <form.Field name="type">
             {(field) => {
               const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+              const selectedSupplierType = supplierTypes.find(
+                (t) => t.type === field.state.value,
+              );
+
               return (
                 <Field data-invalid={isInvalid}>
                   <FieldLabel htmlFor={field.name}>Supplier Type</FieldLabel>
                   <FieldContent>
-                    <select
-                      id={field.name}
-                      name={field.name}
+                    <Select
                       value={field.state.value}
-                      onBlur={field.handleBlur}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                      aria-invalid={isInvalid}
-                      className={`${inputBaseClass} cursor-pointer appearance-none pr-8`}
+                      onValueChange={(value) => field.handleChange(value!)}
                     >
-                      <option value="">Select a supplier type</option>
-                      {supplierTypes.map((type) => (
-                        <option key={type.id} value={type.type}>
-                          {type.type}
-                        </option>
-                      ))}
-                    </select>
+                      <SelectTrigger className="w-full min-w-0 bg-white" aria-invalid={isInvalid}>
+                        <SelectValue placeholder="Select a supplier type">
+                          {selectedSupplierType
+                            ? formatStringToSentenceCase(selectedSupplierType.type)
+                            : undefined}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent alignItemWithTrigger={false}>
+                        {supplierTypes.map((type) => (
+                          <SelectItem key={type.id} value={type.type}>
+                            {formatStringToSentenceCase(type.type)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     {isInvalid && <FieldError errors={field.state.meta.errors} />}
                   </FieldContent>
                 </Field>

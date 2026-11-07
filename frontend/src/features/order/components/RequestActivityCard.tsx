@@ -1,5 +1,5 @@
 import { Card } from "@/components/ui/card";
-import { REORDERABLE_STATUSES, statusVariant, type Order, type OrderStatus, type ReorderFormInput, type ViewerRole } from "../types/order.types";
+import { REORDERABLE_STATUSES, statusVariant, type Order, type OrderRelatedSupplierDetails, type OrderStatus, type ReorderFormInput, type ViewerRole } from "../types/order.types";
 import { AlarmClockIcon, CoinsIcon, FlagIcon, InfoIcon, MapPinIcon, PencilIcon, Repeat2 } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -19,14 +19,14 @@ type RequestActivityCardProps = {
     isEditable?: boolean;
     isAcceptable?: boolean;
     viewerRole: ViewerRole;
-    pickupSupplierName?: string;
-    deliverySupplierName?: string;
+    pickupSupplier?: OrderRelatedSupplierDetails;
+    deliverySupplier?: OrderRelatedSupplierDetails;
     isSuppliersLoading: boolean;
 }
 
 const RequestActivityCard = ({
     order, isEditable, isAcceptable, viewerRole,
-    pickupSupplierName, deliverySupplierName, isSuppliersLoading
+    pickupSupplier, deliverySupplier, isSuppliersLoading
 }: RequestActivityCardProps) => {
     const { user } = useAuth();
     const userRole = user?.role;
@@ -62,16 +62,22 @@ const RequestActivityCard = ({
         !order.renewalPending;
     const [openRenewRequestDialog, setOpenRenewRequestDialog] = useState(false);
 
-    const reservationFeedback =
+    const rawFeedback =
         order.status === "PENDING_RESERVATION"
-            ? "Request submitted. Confirming credit reservation…"
+            ? "Request submitted. Confirming credit reservation..."
             : order.status === "RESERVATION_FAILED"
                 ? "Credit reservation failed. Please try creating the request again."
                 : order.status === "EXPIRED" && order.renewalPending
-                    ? "Renewal submitted. Confirming credit reservation…"
+                    ? "Renewal submitted. Confirming credit reservation..."
                     : order.status === "EXPIRED" && order.renewalFailureCode
                         ? "Renewal failed. Your request is still expired. Please try again."
                         : null;
+
+    // Detect if the message ends with "..." or "…" (single Unicode ellipsis)
+    const isPending = rawFeedback?.trim().endsWith("...");
+
+    // Remove the trailing ellipsis so we don't show "…" PLUS animated dots
+    const reservationFeedback = rawFeedback?.replace(/(\.\.\.|…)\s*$/, "") ?? null;
 
     // Re-Ordering
     const canReorder =
@@ -92,8 +98,8 @@ const RequestActivityCard = ({
             offeredCredits: String(order.offeredCredits),
             remarks: order.remarks ?? "",
             isSuppliersLoading: isSuppliersLoading,
-            pickupSupplierName: pickupSupplierName,
-            deliverySupplierName: deliverySupplierName,
+            pickupSupplierName: pickupSupplier?.name,
+            deliverySupplierName: deliverySupplier?.name,
         });
 
         setOpen(false); // close the RequestActivityDetailsDialog
@@ -124,7 +130,7 @@ const RequestActivityCard = ({
                 <div className="flex flex-col gap-2.5">
                     <div className="flex flex-col gap-1.5">
                         <div className="flex flex-row items-center justify-between">
-                            <span className="text-lg lg:text-xl leading-none font-bold text-wrap">
+                            <span className="text-lg leading-none font-bold text-wrap">
                                 {order.name}
                             </span>
                             <Tooltip>
@@ -161,7 +167,12 @@ const RequestActivityCard = ({
                     ) : (
                         <div className="flex items-center gap-1.5 text-sm text-slate-500">
                             <FlagIcon className="size-4 shrink-0" />
-                            <span>{pickupSupplierName ?? "Pickup location unavailable"}</span>
+                            <span>{pickupSupplier?.name ?? "Pickup location unavailable"}</span>
+                            {pickupSupplier?.status === "DEACTIVATED" && (
+                                <span className="text-amber-800">
+                                    (Inactive)
+                                </span>
+                            )}
                         </div>
                     )}
 
@@ -173,10 +184,14 @@ const RequestActivityCard = ({
                     ) : (
                         <div className="flex items-center gap-1.5 text-sm text-slate-500">
                             <MapPinIcon className="size-4 shrink-0" />
-                            <span>{deliverySupplierName ?? "Delivery location unavailable"}</span>
+                            <span>{deliverySupplier?.name ?? "Delivery location unavailable"}</span>
+                            {deliverySupplier?.status === "DEACTIVATED" && (
+                                <span className="text-amber-800">
+                                    (Inactive)
+                                </span>
+                            )}
                         </div>
                     )}
-
 
                     <div className="flex flex-row items-center gap-1.5 text-sm text-slate-500">
                         <AlarmClockIcon className="size-4 shrink-0" />
@@ -184,25 +199,34 @@ const RequestActivityCard = ({
                             {format(new Date(order.expiryAt), "MMM d, yyyy, h:mm a")}
                         </span>
                     </div>
+
+                    {reservationFeedback && viewerRole === "requester" && (
+                        <div className="inline-flex flex-row items-center gap-1.5 text-sm text-indigo-800">
+                            <InfoIcon className="size-4 shrink-0" />
+                            <div className="text-sm">
+                                <span className="leading-none">{reservationFeedback}</span>
+
+                                {/* Dots appear only when the message is pending (ended with ... or …) */}
+                                {isPending && (
+                                    <span className="inline-flex items-center gap-1 ml-1 align-middle">
+                                        <span className="dot animate-dot-bounce" style={{ animationDelay: "0ms" }} />
+                                        <span className="dot animate-dot-bounce" style={{ animationDelay: "150ms" }} />
+                                        <span className="dot animate-dot-bounce" style={{ animationDelay: "300ms" }} />
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {completionDeadlineFeedback && (
+                        <div className="flex flex-row items-center gap-1.5 text-sm text-indigo-800">
+                            <InfoIcon className="size-4 shrink-0" />
+                            <span className="leading-none text-wrap">
+                                {completionDeadlineFeedback}
+                            </span>
+                        </div>
+                    )}
                 </div>
-
-                {reservationFeedback && viewerRole === "requester" && (
-                    <div className="flex flex-row items-center gap-1.5 text-sm text-muted-foreground">
-                        <InfoIcon className="size-4 shrink-0" />
-                        <span className="leading-none text-wrap">
-                            {reservationFeedback}
-                        </span>
-                    </div>
-                )}
-
-                {completionDeadlineFeedback && (
-                    <div className="flex flex-row items-center gap-1.5 text-sm text-muted-foreground">
-                        <InfoIcon className="size-4 shrink-0" />
-                        <span className="leading-none text-wrap">
-                            {completionDeadlineFeedback}
-                        </span>
-                    </div>
-                )}
 
                 <div className="flex flex-row items-center justify-between border-t-2 border-slate-200 pt-2.5">
                     <div className="flex flex-row items-center gap-1.5 text-sm font-semibold">
@@ -259,8 +283,8 @@ const RequestActivityCard = ({
                 canEditRequest={canEditRequest}
                 canAccept={canAccept && userRole == ROLES.STUDENT}
                 viewerRole={viewerRole}
-                pickupSupplierName={pickupSupplierName}
-                deliverySupplierName={deliverySupplierName}
+                pickupSupplier={pickupSupplier}
+                deliverySupplier={deliverySupplier}
                 isSuppliersLoading={isSuppliersLoading}
                 canReorder={canReorder}
                 handleReorder={handleReorder}

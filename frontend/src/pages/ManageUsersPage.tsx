@@ -11,6 +11,7 @@ import useAdminUsers from '@/features/user/hooks/useAdminUsers';
 import useCreateAdminInvitation from '@/features/user/hooks/useCreateAdminInvitation';
 import usePromoteUser from '@/features/user/hooks/usePromoteUser';
 import { Dialog, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const PAGE_SIZE = 20;
 
@@ -52,6 +53,12 @@ const ManageUsersPage = () => {
             setSearch('');
             setPage(1);
         }
+    };
+
+    const ROLE_LABELS: Record<Role | "ALL", string> = {
+        ALL: "All roles",
+        [ROLES.STUDENT]: "Student",
+        [ROLES.ADMIN]: "Admin",
     };
 
     return (
@@ -104,26 +111,31 @@ const ManageUsersPage = () => {
 
                     <div className="flex flex-col gap-2 md:w-48">
                         <Label htmlFor="role-filter">Role</Label>
-                        <select
-                            id="role-filter"
-                            className="h-8 rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                            value={role}
-                            onChange={event => {
-                                setRole(event.target.value as Role | '');
+                        <Select
+                            value={role === "" ? "ALL" : role}
+                            onValueChange={(value) => {
+                                setRole(value === "ALL" ? "" : (value as Role));
                                 setPage(1);
                             }}
                         >
-                            <option value="">All roles</option>
-                            <option value={ROLES.STUDENT}>Student</option>
-                            <option value={ROLES.ADMIN}>Admin</option>
-                        </select>
+                            <SelectTrigger id="role-filter" className="w-full bg-white">
+                                <SelectValue placeholder="All roles">
+                                    {ROLE_LABELS[role === "" ? "ALL" : role]}
+                                </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent alignItemWithTrigger={false}>
+                                <SelectItem value="ALL">All roles</SelectItem>
+                                <SelectItem value={ROLES.STUDENT}>Student</SelectItem>
+                                <SelectItem value={ROLES.ADMIN}>Admin</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
                 </div>
 
                 {usersQuery.isLoading && (
-                    <div className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground">
-                        <Spinner />
-                        Loading users...
+                    <div className="flex w-full flex-1 items-center justify-center gap-2 py-16 text-muted-foreground">
+                        <Spinner className="size-6" />
+                        <span>Loading users...</span>
                     </div>
                 )}
 

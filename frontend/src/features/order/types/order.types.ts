@@ -1,6 +1,7 @@
 import type { ButtonProps } from "@/components/ui/button";
 import type { CreateRequestFormData } from "../schemas/create-request.schema";
 import type { RenewRequestFormData } from "../schemas/renew-request.schema";
+import type { SupplierStatus } from "@/features/supplier/types/supplier.types";
 
 export const statusVariant: Record<OrderStatus, ButtonProps["variant"]> = {
     OPEN: "teal",
@@ -188,6 +189,7 @@ export type OrderRelatedSupplierDetails = {
     id: string;
     name: string;
     type: string;
+    status: SupplierStatus;
 };
 
 export type ViewerRole = "requester" | "courier" | "admin";
