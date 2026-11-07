@@ -130,7 +130,7 @@ const RequestActivityCard = ({
                 <div className="flex flex-col gap-2.5">
                     <div className="flex flex-col gap-1.5">
                         <div className="flex flex-row items-center justify-between">
-                            <span className="text-lg lg:text-xl leading-none font-bold text-wrap">
+                            <span className="text-lg leading-none font-bold text-wrap">
                                 {order.name}
                             </span>
                             <Tooltip>
@@ -193,41 +193,40 @@ const RequestActivityCard = ({
                         </div>
                     )}
 
-
                     <div className="flex flex-row items-center gap-1.5 text-sm text-slate-500">
                         <AlarmClockIcon className="size-4 shrink-0" />
                         <span className="leading-none text-wrap">
                             {format(new Date(order.expiryAt), "MMM d, yyyy, h:mm a")}
                         </span>
                     </div>
-                </div>
 
-                {reservationFeedback && viewerRole === "requester" && (
-                    <div className="inline-flex flex-row items-center gap-1.5 text-sm text-muted-foreground">
-                        <InfoIcon className="size-4 shrink-0" />
-                        <div className="text-sm">
-                            <span className="leading-none">{reservationFeedback}</span>
+                    {reservationFeedback && viewerRole === "requester" && (
+                        <div className="inline-flex flex-row items-center gap-1.5 text-sm text-indigo-800">
+                            <InfoIcon className="size-4 shrink-0" />
+                            <div className="text-sm">
+                                <span className="leading-none">{reservationFeedback}</span>
 
-                            {/* Dots appear only when the message is pending (ended with ... or …) */}
-                            {isPending && (
-                                <span className="inline-flex items-center gap-1 ml-1 align-middle">
-                                    <span className="dot animate-dot-bounce" style={{ animationDelay: "0ms" }} />
-                                    <span className="dot animate-dot-bounce" style={{ animationDelay: "150ms" }} />
-                                    <span className="dot animate-dot-bounce" style={{ animationDelay: "300ms" }} />
-                                </span>
-                            )}
+                                {/* Dots appear only when the message is pending (ended with ... or …) */}
+                                {isPending && (
+                                    <span className="inline-flex items-center gap-1 ml-1 align-middle">
+                                        <span className="dot animate-dot-bounce" style={{ animationDelay: "0ms" }} />
+                                        <span className="dot animate-dot-bounce" style={{ animationDelay: "150ms" }} />
+                                        <span className="dot animate-dot-bounce" style={{ animationDelay: "300ms" }} />
+                                    </span>
+                                )}
+                            </div>
                         </div>
-                    </div>
-                )}
+                    )}
 
-                {completionDeadlineFeedback && (
-                    <div className="flex flex-row items-center gap-1.5 text-sm text-muted-foreground">
-                        <InfoIcon className="size-4 shrink-0" />
-                        <span className="leading-none text-wrap">
-                            {completionDeadlineFeedback}
-                        </span>
-                    </div>
-                )}
+                    {completionDeadlineFeedback && (
+                        <div className="flex flex-row items-center gap-1.5 text-sm text-indigo-800">
+                            <InfoIcon className="size-4 shrink-0" />
+                            <span className="leading-none text-wrap">
+                                {completionDeadlineFeedback}
+                            </span>
+                        </div>
+                    )}
+                </div>
 
                 <div className="flex flex-row items-center justify-between border-t-2 border-slate-200 pt-2.5">
                     <div className="flex flex-row items-center gap-1.5 text-sm font-semibold">
