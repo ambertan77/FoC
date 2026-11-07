@@ -1,16 +1,27 @@
 import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import CreateRequestDialog from "@/features/order/components/CreateRequestDialog";
 import RequestActivityCard from "@/features/order/components/RequestActivityCard";
 import { useRequesterOrderHistory } from "@/features/order/hooks/useRequesterOrderHistory";
 import { useSuppliersByIds } from "@/features/order/hooks/useSuppliersByIds";
 import { ORDER_STATUSES, type OrderStatus, type SortBy, type SortOrder } from "@/features/order/types/order.types";
-import { formatStringToTitleCase } from "@/utils/formatText";
+import { formatStringToSentenceCase } from "@/utils/formatText";
 import { useState } from "react";
 
 const PAGE_SIZE = 15;
+
+const STATUS_LABELS: Record<string, string> = {
+    ALL: "All",
+    ...Object.fromEntries(
+        ORDER_STATUSES.map((status) => [status, formatStringToSentenceCase(status)]),
+    ),
+};
+
+const SORT_BY_LABELS: Partial<Record<SortBy, string>> = {
+    createdAt: "Created date",
+    expiryAt: "Completion deadline",
+};
 
 const RequesterActivtyPage = () => {
     const [openCreateRequestDialog, setOpenCreateRequestDialog] = useState(false);
@@ -49,15 +60,9 @@ const RequesterActivtyPage = () => {
     const isSuppliersLoading =
         supplierIds.length > 0 && suppliersQuery.isPending;
 
-    const handleStatusChange = (value: string) => {
-        setSelectedStatus(value as OrderStatus | "ALL");
+    const handleStatusChange = (value: OrderStatus | "ALL") => {
+        setSelectedStatus(value);
         setPage(1);
-    };
-
-    // Sorting labels
-    const SORT_BY_LABELS: Partial<Record<SortBy, string>> = {
-        createdAt: "Created date",
-        expiryAt: "Completion deadline",
     };
 
     const SORT_ORDER_LABELS: Record<SortOrder, string> =
@@ -79,19 +84,30 @@ const RequesterActivtyPage = () => {
                     />
                 </div>
 
-                <Tabs value={selectedStatus} onValueChange={handleStatusChange} className="w-full">
-                    <TabsList className="w-fit max-w-full h-full flex flex-nowrap items-center justify-start gap-1 overflow-x-auto overflow-y-hidden">
-                        <TabsTrigger value="ALL">All</TabsTrigger>
-
-                        {ORDER_STATUSES.map((status) => (
-                            <TabsTrigger key={status} value={status}>
-                                {formatStringToTitleCase(status)}
-                            </TabsTrigger>
-                        ))}
-                    </TabsList>
-                </Tabs>
-
                 <div className="flex flex-wrap items-end gap-4">
+                    <div className="space-y-1">
+                        <label className="text-sm font-medium">Status</label>
+                        <Select
+                            value={selectedStatus}
+                            onValueChange={(value) => {
+                                handleStatusChange(value as OrderStatus | "ALL");
+                            }}>
+                            <SelectTrigger className="w-48 bg-white">
+                                <SelectValue placeholder="Status">
+                                    {STATUS_LABELS[selectedStatus]}
+                                </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent alignItemWithTrigger={false}>
+                                <SelectItem value="ALL">All</SelectItem>
+                                {ORDER_STATUSES.map((status) => (
+                                    <SelectItem key={status} value={status}>
+                                        {formatStringToSentenceCase(status)}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
                     <div className="space-y-1">
                         <label className="text-sm font-medium">Sort by</label>
                         <Select
