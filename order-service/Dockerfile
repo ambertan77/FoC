@@ -1,3 +1,4 @@
+# Source: Docker Hub Official Node.js Image — https://hub.docker.com/_/node
 FROM node:22-alpine AS build
 WORKDIR /app
 

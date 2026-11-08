@@ -1,4 +1,5 @@
 services:
+  # Source: Docker Hub Official Postgres Image — https://hub.docker.com/_/postgres
   order-postgres:
     image: postgres:17
     restart: unless-stopped

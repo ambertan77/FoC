@@ -1,3 +1,4 @@
+# Source: Docker Hub Official Node.js Image — https://hub.docker.com/_/node
 # Build with Node.js 22 on the small Alpine Linux base; npm is included.
 FROM node:22-alpine AS builder
 # Set the working directory for all subsequent commands to /app.
