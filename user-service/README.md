@@ -2,7 +2,7 @@
 AI Assistance Disclosure:
 Tool: Claude Code (Claude Opus 5.5)
 Date: 2026-11-08
-Scope: Audited against the code; rewrote the API reference to match the current routes, request schemas, response shapes and error codes.
+Scope: Audited against the code; rewrote the API reference to match the current routes, request schemas, response shapes and error codes, and documented the error codes and the token and OTP rules.
 Author review: Reviewed and edited by Lim Shao Qi.
 -->
 
@@ -883,21 +883,54 @@ All API errors follow the same response format:
 ```json
 {
     "success": false,
-    "code": "FORBIDDEN",
-    "message": "You do not have permission to access this resource"
+    "code": "USERNAME_TAKEN",
+    "message": "Username is already taken"
 }
 ```
 
-Common error codes include:
+`code` is stable and safe to branch on. `message` is meant for people
+and may change. Errors that have no specific code use the default for
+their status (`BAD_REQUEST`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`,
+`CONFLICT`, `UNPROCESSABLE_ENTITY`). Unexpected errors return `500`
+`INTERNAL_SERVER_ERROR` with a generic message.
 
-Code                    | HTTP Status | Description
------------------------ | ----------: | ----------------------------------
-`BAD_REQUEST`           |       `400` | Invalid request
-`UNAUTHORIZED`          |       `401` | Authentication required or invalid
-`FORBIDDEN`             |       `403` | Insufficient permissions
-`NOT_FOUND`             |       `404` | Resource not found
-`CONFLICT`              |       `409` | Resource already exists
-`INTERNAL_SERVER_ERROR` |       `500` | Unexpected server error
+#### Error codes
+
+Code                               | Status | Returned when
+---------------------------------- | -----: | ------------------------------------------------------------
+`BAD_REQUEST`                      | `400`  | The body, query or path parameters fail validation
+`INVALID_OTP`                      | `400`  | The OTP is wrong (counts towards the attempt limit)
+`EMAIL_UNCHANGED`                  | `400`  | An email change targets the current email
+`PASSWORD_UNCHANGED`               | `400`  | The new password equals the current one
+`ADMIN_ACTIVATION_INVALID`         | `400`  | The invitation link is unknown, already used or replaced
+`AUTHENTICATION_REQUIRED`          | `401`  | No `Authorization: Bearer` header
+`INVALID_ACCESS_TOKEN`             | `401`  | The access token is invalid or expired
+`INVALID_CREDENTIALS`              | `401`  | Login email or password is wrong
+`INVALID_CURRENT_PASSWORD`         | `401`  | Password change: the current password is wrong
+`UNAUTHORIZED`                     | `401`  | The refresh cookie is missing, invalid, expired or revoked
+`FORBIDDEN`                        | `403`  | The caller's role isn't allowed
+`USER_NOT_FOUND`                   | `404`  | The user (or the caller's own account) doesn't exist
+`NOT_FOUND`                        | `404`  | Unknown route
+`EMAIL_ALREADY_REGISTERED`         | `409`  | The email belongs to an existing account
+`USERNAME_TAKEN`                   | `409`  | The username is in use
+`PHONE_NUMBER_TAKEN`               | `409`  | The phone number is in use
+`PROFILE_CONFLICT`                 | `409`  | A profile value was taken while saving
+`REGISTRATION_NOT_ACTIVE`          | `409`  | No active registration for the challenge
+`REGISTRATION_CONFLICT`            | `409`  | Registration details were taken while verifying
+`EMAIL_CHANGE_NOT_ACTIVE`          | `409`  | No active email change for the challenge
+`OTP_NO_LONGER_VALID`              | `409`  | The OTP was replaced or used by a concurrent request
+`USER_ALREADY_ADMIN`               | `409`  | Promotion target is already an admin
+`ROLE_UPDATE_CONFLICT`             | `409`  | The role changed while promoting
+`ADMIN_ACTIVATION_NO_LONGER_VALID` | `409`  | The invitation was used by a concurrent request
+`ADMIN_ACTIVATION_CONFLICT`        | `409`  | Activation details were taken while activating
+`OTP_EXPIRED`                      | `410`  | The OTP has expired
+`ADMIN_ACTIVATION_EXPIRED`         | `410`  | The invitation has expired
+`OTP_REQUEST_LIMIT_EXCEEDED`       | `429`  | Too many OTPs requested in the last hour
+`OTP_ATTEMPTS_EXCEEDED`            | `429`  | Too many wrong OTP attempts
+`ADMIN_INVITATION_COOLDOWN`        | `429`  | The same email was invited less than 60 seconds ago
+`INTERNAL_SERVER_ERROR`            | `500`  | Unexpected error, or an OTP could not be issued
+`EMAIL_DELIVERY_FAILED`            | `502`  | The SMTP provider rejected or failed the email
+`EMAIL_NOT_CONFIGURED`             | `503`  | `BREVO_SMTP_USER`, `BREVO_SMTP_KEY` or `EMAIL_FROM` is not set
 
 ## Getting Started
 
@@ -1093,7 +1126,10 @@ Passwords are **not** normalized. Password verification remains case-sensitive.
 
 ### Access Tokens
 
-Access tokens use the RS256 algorithm.
+Access tokens use the RS256 algorithm and expire after **60 minutes**.
+Their payload holds `userId`, `email` and `role` (`STUDENT` or `ADMIN`).
+Tokens with any other role are rejected. Clients send them as
+`Authorization: Bearer <token>`.
 
 The User Service signs access tokens using its private key:
 
@@ -1118,12 +1154,32 @@ This allows other services to verify authentication locally without making a req
 
 Refresh tokens:
 
-- Are stored in an HttpOnly cookie.
+- Are stored in a cookie named `refreshToken`. The cookie is `HttpOnly`,
+  `SameSite=Strict`, signed with `COOKIE_SECRET`, and `Secure` when
+  `NODE_ENV=production`.
 - Are stored as Argon2 hashes in the database.
-- Have an expiration time.
+- Expire after **7 days**.
 - Are revoked after successful use.
 - Are rotated when a new access token is issued.
 - Cannot be reused after being revoked.
+- Are all revoked when the user changes their password. The current
+  session gets a new one.
+
+### One-Time Passwords (OTP)
+
+Registration and email changes are confirmed with a 6-digit code sent by
+email (Brevo SMTP):
+
+- Each code expires after **10 minutes**.
+- At most **3 codes per hour** can be requested for an email address. An
+  email change is also limited to 3 per hour for the requesting user. The
+  4th request returns `429 OTP_REQUEST_LIMIT_EXCEEDED`.
+- After **5 wrong attempts**, the code is locked
+  (`429 OTP_ATTEMPTS_EXCEEDED`), and the user must request a new one.
+- Requesting a new code replaces the previous one.
+- Codes are stored as Argon2 hashes, never in plain text.
+
+These limits are defined in `src/constants/auth.constants.ts`.
 
 ## Docker (local demo)
 
