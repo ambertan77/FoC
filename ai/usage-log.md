@@ -334,7 +334,7 @@ Tool for entries 1–27: **ChatGPT (Astra 6)**. Tool for entry 28: **Claude Code
 - **Timestamp:** 2026-11-08
 - **Tool & model:** Claude Code (Claude Opus 5.5)
 - **Mode:** docs
-- **Files:** `.env.example`, `ai/usage-log.md`, `README.md`, `frontend/README.md`, `user-service/README.md`
+- **Files:** `.env.example`, `ai/usage-log.md`, `README.md`, `frontend/README.md`, `user-service/README.md`, `credit-service/README.md`
 - **Prompt:** "can you help me check the repo docs needs any updating, api docs, readmes."
 - **Key response:** Audited the root, frontend and service READMEs and the root `.env.example` against the code (routes, schemas, config, Compose files, workflows, gateway). Produced a list of stale and missing items and a commit-by-commit update plan. The order-service and supplier-service findings were handed to their owners instead of being edited.
 - **Kept/changed:** _To fill in after review._

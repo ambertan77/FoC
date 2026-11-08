@@ -1,3 +1,11 @@
+<!--
+AI Assistance Disclosure:
+Tool: Claude Code (Claude Opus 5.5)
+Date: 2026-11-08
+Scope: Audited against the code; documented reservation processing, result events, reason codes, the reservation consumer and outbox publisher, and the disabled internal API, and corrected stale messaging claims.
+Author review: Reviewed and edited by Lim Shao Qi.
+-->
+
 # Credit service
 
 ## Table of Contents
@@ -46,6 +54,11 @@ A reservation follows this lifecycle:
 | Order is received | `RESERVED` → `TRANSFERRED` | Requester’s reserved credits decrease; courier’s available credits increase |
 | Order is canceled or expires | `RESERVED` → `RELEASED` | Requester’s reserved credits decrease; available credits increase |
 | Order fails | `RESERVED` → `REFUNDED` | Requester’s reserved credits decrease; available credits increase |
+| Creation aborted (internal HTTP API only, [currently disabled](#internal-reservation-api-disabled)) | `RESERVED` → `ABORTED`, reason `CREATION_ABORTED` | Requester’s reserved credits decrease; available credits increase |
+
+A renewal can only use a previous reservation for the same order,
+requester and amount, and only if that reservation is `RELEASED` with
+reason `EXPIRED`. See [Order Reservation and Renewal](#order-reservation-and-renewal).
 
 The reservation and its balance and ledger changes are committed together in a database transaction. A reservation can be settled only once. Repeated delivery of the same event does not apply the balance change again, and conflicting settlement attempts are rejected.
 
@@ -96,11 +109,11 @@ Each consumer has three durable quorum queues:
 
 All queues use `reject-publish` when full and `x-delivery-limit: -1`. The retry queue uses `x-dead-letter-strategy: at-least-once`, so a retry can be delivered more than once.
 
-Retries return to the main queue by queue name, not through the topic exchange. This stops other queues bound to the same key from receiving duplicates. A retried message therefore arrives with the queue name as its routing key. When a consumer forwards a message to theretry or dead queue, it stores the original key in the `x-original-routing-key` header, and on a delayed retry it validates that header against the event type.
+Retries return to the main queue by queue name, not through the topic exchange. This stops other queues bound to the same key from receiving duplicates. A retried message therefore arrives with the queue name as its routing key. The registration and settlement consumers store the original key in the `x-original-routing-key` header when they forward a message to the retry or dead queue. On a delayed retry, they check that header against the event type. The reservation-request consumer does not set this header: its queue name and routing key are both `credit.reserve.v1`, so a retried message still matches.
 
 Publishers and consumers both declare the topology of every queue they publish to or read from, so a `mandatory` publish is never returned as unroutable because the other service has not started yet. Keep these definitions identical in all services. A mismatch fails at startup with `PRECONDITION_FAILED`.
 
-The DLQ is a consumer-side concept: it holds messages that reached the broker but could not be processed. The publisher-side equivalent is an outbox row with status `DEAD`.
+The DLQ is a consumer-side concept: it holds messages that reached the broker but could not be processed. In Credit Service's and Order Service's outboxes, the publisher-side equivalent is a row with status `DEAD`. User Service's outbox has no `DEAD` state. It keeps retrying unpublished rows indefinitely.
 
 ### Registration and Initial Credit Grant
 
@@ -269,6 +282,95 @@ A renewal request also identifies the previous reservation and carries the order
 
 Credit Service processes the request and publishes either `CREDIT_RESERVATION_SUCCEEDED` with the new reservation ID, or `CREDIT_RESERVATION_FAILED` with a reason code. The result includes a `correlationId` linking it to the request.
 
+#### How a request is processed
+
+In one database transaction, Credit Service:
+
+1. Stores the request by `eventId` with outcome `PENDING`. If that
+   `eventId` was already processed, it returns the stored outcome without
+   doing anything else. A repeat whose `requestType`, `orderId`,
+   `requesterId`, `amount` or `previousReservationId` differs is rejected
+   as a conflict.
+2. For `RENEW`, checks the previous reservation. It must exist, match the
+   request's order, requester and amount, and be `RELEASED` with reason
+   `EXPIRED`. `expectedVersion` and `expiryAt` are validated but not stored
+   or returned. Only Order Service uses them.
+3. Moves `amount` from the requester's available to reserved credits,
+   creates a `RESERVED` reservation and writes a `RESERVATION` ledger
+   entry.
+4. Sets the outcome to `SUCCEEDED` or `FAILED`, and writes the result
+   event to the `CreditOutboxEvent` table.
+
+A failed request changes no balances. The possible `reasonCode` values:
+
+| `reasonCode` | Meaning |
+| --- | --- |
+| `PREVIOUS_RESERVATION_NOT_FOUND` | `RENEW`: `previousReservationId` does not exist |
+| `PREVIOUS_RESERVATION_MISMATCH` | `RENEW`: the previous reservation has a different order, requester or amount |
+| `PREVIOUS_RESERVATION_NOT_RENEWABLE` | `RENEW`: the previous reservation is not `RELEASED` with reason `EXPIRED` |
+| `CREDIT_ACCOUNT_NOT_FOUND` | The requester has no credit account |
+| `INSUFFICIENT_AVAILABLE_CREDITS` | Available credits are below `amount`, or the reserved balance would overflow |
+
+#### Result events
+
+```json
+{
+  "eventId": "9a1d7c52-3f0e-4b8a-9c61-2e5f4d3b1a70",
+  "correlationId": "4c32dd25-ae56-4adc-92fb-a8a663b82957",
+  "orderId": "d0379a4b-657c-4aaf-a2c9-cde57bbb6482",
+  "requestType": "CREATE",
+  "eventType": "CREDIT_RESERVATION_SUCCEEDED",
+  "reservationId": "5b0e2f4c-8d17-4a39-b6e2-0c9a7d1f3e84"
+}
+```
+
+```json
+{
+  "eventId": "9a1d7c52-3f0e-4b8a-9c61-2e5f4d3b1a71",
+  "correlationId": "4c32dd25-ae56-4adc-92fb-a8a663b82958",
+  "orderId": "d0379a4b-657c-4aaf-a2c9-cde57bbb6482",
+  "requestType": "RENEW",
+  "eventType": "CREDIT_RESERVATION_FAILED",
+  "reasonCode": "PREVIOUS_RESERVATION_NOT_RENEWABLE"
+}
+```
+
+- `eventId` is a new UUID for the result. It is also the AMQP `messageId`.
+- `correlationId` is the request's `eventId`. It is also sent as the AMQP
+  `correlationId`.
+
+#### Reservation-request consumer rules
+
+The consumer of `credit.reserve.v1` processes one message at a time
+(prefetch 1):
+
+- Bodies over 64 KiB, invalid JSON, invalid fields, a `messageId` that
+  differs from `eventId`, or an unexpected routing key go straight to
+  `credit.reserve.dead.v1` with `x-credit-failure: INVALID_EVENT`. An
+  invalid `x-retry-count` header goes there as `INVALID_RETRY_COUNT`.
+- A temporary database outage closes the consumer session. The consumer
+  then reconnects without using up the message's retries.
+- **Any other processing error** is retried through
+  `credit.reserve.retry.v1` (10-second delay) up to 5 times. After that,
+  the message is dead-lettered with `RETRIES_EXHAUSTED`. This includes an
+  `eventId` reused with different data, which will not succeed on retry.
+
+#### Result outbox publisher
+
+Result events are written to the `CreditOutboxEvent` table and published
+by a background publisher in the same process:
+
+- It claims up to 30 due rows at a time with `FOR UPDATE SKIP LOCKED`
+  and a 30-second lease. When there is nothing to publish, it waits 30
+  seconds before polling again.
+- Each event is published to `credit.events` and waits for broker
+  confirmation. Only then is the row marked `PUBLISHED`.
+- A failed publish is retried with exponential backoff and jitter (1 s,
+  2 s, 4 s …, up to 60 s). After 5 failures the row becomes `DEAD`. A row
+  whose stored payload is invalid fails the same way.
+- To publish `DEAD` rows again, use `npm run redrive:credit-outbox` (see
+  [Dead-Letter Inspection and Redrive](#dead-letter-inspection-and-redrive)).
+
 Order Service consumes the result and updates its order. A successful create makes the order available as `OPEN`; a failed create is recorded as a reservation failure. A successful renewal reopens the expired order, updates its expiry time, and saves the new reservation ID. A failed renewal leaves the order expired.
 
 The renewal’s `expectedVersion` lets Order Service reject a result if the order changed after the renewal request was made. Duplicate results are checked against the previously processed result so they cannot apply the same order update twice.
@@ -344,10 +446,10 @@ The same duplicate-event and balance checks as F6 apply. No courier account is n
 
 #### Order Service responsibilities
 
-The Order producers are still pending. Order must:
+Order Service publishes all four settlement events through its outbox. For each one, it:
 
-- Authorize cancellation or expiry, then save OPEN → CANCELED/EXPIRED together with its version, status history and outbox event.
-- Protect COMPLETED → FAILED against competing manual or automatic receipt, then save the failure change and outbox event together.
+- Authorizes the cancellation or expiry, then saves OPEN → CANCELED/EXPIRED together with its version, status history and outbox event.
+- Protects COMPLETED → FAILED against a competing manual or automatic receipt, then saves the failure change and outbox event together.
 
 Credit's consumer does not complete Order's lifecycle workflow. After cancellation, expiry or failure, credits may remain unavailable until the event is delivered and processed.
 
@@ -434,9 +536,9 @@ Order failure producers, outbox and recovery, full Order/browser workflows, brok
 
 ### Reliability, Retries, and Duplicate Handling
 
-Outbox publishers claim events in a database transaction using `FOR UPDATE SKIP LOCKED`. This lets multiple publishers claim different rows without claiming the same row at the same time. A lease allows another publisher to reclaim a row if its original publisher stops before completing the work.
+Credit Service's and Order Service's outbox publishers claim events in a database transaction using `FOR UPDATE SKIP LOCKED`. This lets multiple publishers claim different rows without claiming the same row at the same time. A lease allows another publisher to reclaim a row if its original publisher stops before completing the work.
 
-Publishers send persistent messages and wait for RabbitMQ publisher confirmation. They mark an outbox row as published only after confirmation. Failed publishes are retried with backoff; events that exceed the configured retry limit are marked `DEAD` for inspection and redrive.
+Publishers send persistent messages and wait for RabbitMQ publisher confirmation. They mark an outbox row as published only after confirmation. Failed publishes are retried with backoff; events that exceed the configured retry limit are marked `DEAD` for inspection and redrive. User Service's registration outbox is simpler: a single publisher handles one row at a time and retries until it succeeds.
 
 A publisher confirmation means RabbitMQ accepted the message. It does not mean the consumer finished processing it. Consumers acknowledge a message only after their database work succeeds. If processing fails, the consumer retries or forwards the message to its dead-letter queue according to that workflow’s retry policy.
 
@@ -863,6 +965,34 @@ Example HTTP 400:
 - Show 403 and 500 as errors, not as provisioning, zero balance or empty history.
 - On a cursor error, offer to restart from the first page.
 - Show READY with no items, PROVISIONING, and request errors as separate states. Ignore stale page responses after the user changes filters or sort.
+
+### Internal reservation API (disabled)
+
+`src/routes/internal-credit.route.ts` defines a synchronous HTTP API
+that Order Service used to call to reserve credits. **It is not mounted.**
+The line `app.use("/api/internal/credits", internalCreditRouter)` is
+commented out in `src/index.ts`. Order Service now reserves credits only
+through the `RESERVE_CREDITS` command (see
+[Order Reservation and Renewal](#order-reservation-and-renewal)). Only
+the integration tests mount this router, at `/internal/credits`.
+
+For reference, if it were mounted:
+
+Method | Path | Body | Success
+------ | ---- | ---- | -------
+`POST` | `/reservations` | `{ orderId, requesterId, amount }` | `201` new reservation (each call creates another hold)
+`GET`  | `/reservations/:reservationId` | | `200` reservation
+`POST` | `/reservations/:reservationId/abort` | `{ reservationId, orderId, requesterId, amount }` | `200`. Sets `ABORTED` / `CREATION_ABORTED` and returns the hold
+
+Every request needs the header `X-Order-Credit-Service-Secret`. The
+service compares it in constant time with `ORDER_CREDIT_SERVICE_TOKEN`
+and returns `401` "Service authentication required" on a mismatch.
+Malformed JSON returns `400` "Invalid JSON body".
+
+`ORDER_CREDIT_SERVICE_TOKEN` is still **required at startup**
+(`src/config/config.ts`), even though nothing in the running service uses
+it. `ABORTED` and `CREATION_ABORTED` can't be reached in production
+while this API is disabled.
 
 ## Getting Started
 
