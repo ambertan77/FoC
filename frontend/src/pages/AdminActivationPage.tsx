@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-09-26
+// Scope: Generated the admin activation page that validates the token from the URL hash and shows an error for missing or invalid links.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import { useMemo, useState } from 'react';
 import { CircleAlertIcon, CircleCheckBigIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';

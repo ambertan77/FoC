@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-10-12
+// Scope: Generated the transaction list rendering labels, descriptions, signed deltas and timestamps.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import {
   formatCreditDelta,
   formatCredits,

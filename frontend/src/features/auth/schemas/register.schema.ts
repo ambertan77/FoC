@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-09-25
+// Scope: Generated Zod schemas for the registration form (password rules, confirm-password match) and the OTP input.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import { z } from 'zod';
 
 export const usernameSchema = z.string()

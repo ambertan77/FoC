@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-09-26
+// Scope: Generated the TanStack Query mutation hook that starts registration and issues the OTP.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "react-toastify";
 import { registerService } from "../services/auth.service";

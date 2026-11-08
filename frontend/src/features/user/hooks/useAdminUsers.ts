@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-09-26
+// Scope: Generated the paginated, searchable admin users query hook.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import { useQuery } from '@tanstack/react-query';
 import { parseError, type ParsedError } from '@/utils/errorHandler';
 import { listUsersService } from '../services/user.service';

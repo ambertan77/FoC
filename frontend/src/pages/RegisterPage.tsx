@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-09-25
+// Scope: Generated the registration page that switches between the details form and the OTP step.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import { useState } from 'react';
 import Logo from '@/assets/logo.png';
 import { Card } from '@/components/ui/card';

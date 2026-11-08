@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-09-26
+// Scope: Generated the profile form for username, phone and email change with OTP verification; helped debug the +65 phone prefix display.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import { useState } from 'react';
 import { useForm } from '@tanstack/react-form';
 import { MailIcon, PhoneIcon, UserIcon } from 'lucide-react';

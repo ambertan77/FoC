@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-09-26
+// Scope: Generated a reusable controlled search input component with an icon and onValueChange callback.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import { SearchIcon } from 'lucide-react';
 import { Button } from './button';
 import { Input } from './input';

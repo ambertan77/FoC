@@ -1,3 +1,11 @@
+<!--
+AI Assistance Disclosure:
+Tool: ChatGPT (Astra 6)
+Date: approx. 2026-10-21
+Scope: Helped draft the Docker and Credits page sections.
+Author review: Reviewed, tested, and edited by Lim Shao Qi.
+-->
+
 # React + TypeScript + Vite
 
 ## Docker

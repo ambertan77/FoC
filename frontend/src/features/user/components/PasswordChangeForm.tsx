@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-09-26
+// Scope: Generated the change-password form (current, new, confirm) with field errors for a wrong current password.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import { useForm } from '@tanstack/react-form';
 import { Button } from '@/components/ui/button';
 import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field';

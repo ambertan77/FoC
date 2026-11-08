@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-10-12
+// Scope: Generated the navbar badge showing available and reserved credits, with provisioning, delayed and retry states.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import { Button } from "@/components/ui/button";
 import type { CreditBalanceState } from "@/features/credit/hooks/useCreditBalance";
 

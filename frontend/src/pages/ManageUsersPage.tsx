@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-09-26
+// Scope: Generated the admin users table with search, pagination, promotion dialog and invite-admin action.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import { useState } from 'react';
 import { MailPlusIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';

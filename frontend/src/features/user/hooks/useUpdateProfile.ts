@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-09-26
+// Scope: Generated the profile update mutation hook with conflict error handling.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
 import type { ApiUser } from '@/features/auth/types/auth.types';

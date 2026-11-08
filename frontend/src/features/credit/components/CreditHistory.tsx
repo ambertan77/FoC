@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-10-12
+// Scope: Generated the credit history view with type filter, sort control and load-more pagination; later refactored to compact controls and a single footer.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
