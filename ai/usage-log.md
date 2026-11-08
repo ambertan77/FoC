@@ -3,7 +3,7 @@
 1. Lim Shao Qi
    > Logged on 2026-11-08 for work done 2026-09-25 to 2026-11-05; dates and prompts are approximate.
 
-Tool for all entries: **ChatGPT (Astra 6)**. Every AI output was reviewed, edited and tested by Lim Shao Qi before it was committed.
+Tool for entries 1–27: **ChatGPT (Astra 6)**. Tool for entry 28: **Claude Code (Claude Opus 5.5)**. Every AI output was reviewed, edited and tested by Lim Shao Qi before it was committed.
 
 2.
 
@@ -328,3 +328,14 @@ Tool for all entries: **ChatGPT (Astra 6)**. Every AI output was reviewed, edite
 - **Key response:** Added the test steps to the matrix. Explained that the unquoted glob is expanded by the shell (without globstar) instead of by node, so it should be quoted.
 - **Kept/changed:** Quoted the order-service test glob in its `package.json`. Removed `continue-on-error` from the integration job.
 - **Verification:** GitHub Actions run on the PR showing all test jobs passing.
+
+## 28. Documentation audit and refresh
+
+- **Timestamp:** 2026-11-08
+- **Tool & model:** Claude Code (Claude Opus 5.5)
+- **Mode:** docs
+- **Files:** `.env.example`, `ai/usage-log.md`
+- **Prompt:** "can you help me check the repo docs needs any updating, api docs, readmes."
+- **Key response:** Audited the root, frontend and service READMEs and the root `.env.example` against the code (routes, schemas, config, Compose files, workflows, gateway). Produced a list of stale and missing items and a commit-by-commit update plan. The order-service and supplier-service findings were handed to their owners instead of being edited.
+- **Kept/changed:** _To fill in after review._
+- **Verification:** _To fill in after review._
