@@ -2,7 +2,7 @@
 AI Assistance Disclosure:
 Tool: Claude Code (Claude Opus 5.5)
 Date: 2026-11-08
-Scope: Audited against the code; rewrote the API reference to match the current routes, request schemas, response shapes and error codes, and documented the error codes and the token and OTP rules.
+Scope: Audited against the code; rewrote the API reference to match the current routes, request schemas, response shapes and error codes, documented the error codes and the token and OTP rules, and updated the features, data model, project structure, environment, startup, outbox and Docker sections.
 Author review: Reviewed and edited by Lim Shao Qi.
 -->
 
@@ -32,7 +32,8 @@ It manages user accounts and provides authentication services to the other micro
 
 ### Authentication & Authorization
 
-- User registration and login
+- Student registration with email OTP verification
+- Login, logout and session refresh
 - JWT-based authentication
 - RS256 access tokens
 - Refresh token rotation
@@ -43,8 +44,18 @@ It manages user accounts and provides authentication services to the other micro
 
 ### User Management
 
-- User account management
-- User profile management
+- Profile updates (username, phone number)
+- Email change confirmed by an OTP sent to the new address
+- Password change, which signs out other sessions
+- Admin user listing and search
+- Admin invitations by email, and admin account activation
+- Promotion of students to admin
+- First-admin bootstrap from environment variables
+
+### Integration
+
+- Publishes a `USER_REGISTERED` event through a transactional outbox, so
+  credit-service grants each new student their initial credits
 
 ### Security & Validation
 
@@ -145,6 +156,8 @@ User Service
     │
     ├── User
     │
+    ├── BootstrapState
+    │
     ├── RefreshToken
     │
     ├── OutboxEvent
@@ -161,7 +174,7 @@ User Service
 
 ```
 
-Alongside these tables, enums `Role` and `BootstrapState` are created.
+`Role` (`STUDENT`, `ADMIN`) is the only enum. `BootstrapState` is a table that records that the first admin was created (see [First Administrator Setup](#first-administrator-setup)).
 
 Other microservices do not directly access the User Service database. Cross-service references use the user's user id.
 
@@ -172,31 +185,33 @@ user-service/
 ├── prisma/
 │   ├── migrations/
 │   └── schema.prisma
-│
 ├── src/
-│   ├── config/
-│   ├── constants/
+│   ├── config/          # Required environment variables (config.ts)
+│   ├── constants/       # Token lifetimes, OTP and invitation limits
 │   ├── controllers/
-│   ├── errors/
-│   ├── libs/
-│   ├── middlewares/
+│   ├── errors/          # AppError and default error codes
+│   ├── generated/       # Prisma client (generated, git-ignored)
+│   ├── libs/            # Tokens, cookies, email, Prisma, RabbitMQ
+│   ├── middlewares/     # authenticate, authorize, error handler
 │   ├── routes/
-│   ├── services/
+│   ├── schemas/         # Zod request schemas
+│   ├── services/        # Business logic, outbox publisher, admin bootstrap
 │   ├── types/
-│   └── index.ts
-│
-├── keys/
-├── .env
+│   └── index.ts         # Express app, startup and graceful shutdown
+├── test/
+│   └── setup.ts         # Test environment and throwaway keys
+├── keys/                # RS256 key pair (*.pem files are git-ignored)
+├── .dockerignore
 ├── .env.example
-├── .gitignore
-|── AGENTS.md
-|── Dockerfile
-|── package-lock.json
+├── compose.yaml
+├── docker-entrypoint.sh # Runs migrations, then starts the app
+├── Dockerfile
 ├── package.json
 ├── prisma.config.ts
-|── README.md
 └── tsconfig.json
 ```
+
+Unit tests sit next to the code they test (`src/**/*.test.ts`).
 
 ## API Reference
 
@@ -938,36 +953,41 @@ Code                               | Status | Returned when
 
 Make sure the following are installed:
 
-- Node.js compatible with the project’s installed Prisma version.
-- npm.
-- PostgreSQL.
-- Docker Desktop or another Docker Engine for local RabbitMQ.
+- Node.js 22 and npm. The Docker image uses `node:22-alpine`.
+- Docker Desktop or another Docker Engine, for PostgreSQL and RabbitMQ.
+- A Brevo SMTP account, to send OTP and invitation emails.
+
+The quickest way to run everything is the full Docker stack. See
+[Run Locally with Docker](../README.md#run-locally-with-docker).
 
 ### Environment Variables
 
 Create a `.env` file in the root of the User Service and fill in the required environment variables. You can use the provided `.env.example` as a template.
 
-Variable                | Description
------------------------ | ------------------------------------------------------
-`PORT`                  | Port used by the User Service
-`NODE_ENV`              | Node environment (development, production, etc.)
-`FRONTEND_URL`          | Frontend URL allowed by CORS
-`DATABASE_URL`          | PostgreSQL connection string
-`USER_POSTGRES_DB` | Name of the PostgreSQL database for the User Service
-`USER_POSTGRES_USER` | Username for the PostgreSQL database
-`USER_POSTGRES_PASSWORD` | Password for the PostgreSQL database
-`RABBITMQ_URL`          | Broker connection URL for the background outbox publisher
-`JWT_PRIVATE_KEY_PATH`  | Path to the RSA private key used to sign access tokens
-`JWT_PUBLIC_KEY_PATH`   | Path to the RSA public key used to verify access tokens
-`JWT_REFRESH_TOKEN_KEY` | Secret used to sign refresh tokens
-`COOKIE_SECRET`         | Secret used for cookie signing
-`BOOTSTRAP_ADMIN_EMAIL` | Email for the first administrator account
-`BOOTSTRAP_ADMIN_USERNAME` | Username for the first administrator account
-`BOOTSTRAP_ADMIN_PHONE_NUMBER` | Phone number for the first administrator account
-`BOOTSTRAP_ADMIN_PASSWORD` | Password for the first administrator account
-`BREVO_SMTP_USER` | Brevo SMTP username for sending emails
-`BREVO_SMTP_KEY` | Brevo SMTP key for sending emails
-`EMAIL_FROM` | Email address used as the sender for outgoing emails
+Variable                       | Required | Description
+------------------------------ | -------- | ------------------------------------------------------
+`PORT`                         | Yes      | Port the User Service listens on (`3000`)
+`NODE_ENV`                     | Yes      | `production` marks the refresh cookie `Secure`
+`FRONTEND_URL`                 | Yes      | Origin allowed by CORS. Also the base of admin activation links
+`DATABASE_URL`                 | Yes      | PostgreSQL connection string (Compose overrides it in the container)
+`JWT_PRIVATE_KEY_PATH`         | Yes      | Path to the RSA private key that signs access tokens
+`JWT_PUBLIC_KEY_PATH`          | Yes      | Path to the RSA public key that verifies access tokens
+`JWT_REFRESH_TOKEN_KEY`        | Yes      | Secret used to sign refresh tokens
+`COOKIE_SECRET`                | Yes      | Secret used to sign cookies
+`RABBITMQ_URL`                 | For events | Broker URL for the outbox publisher. Without it, registration still works but no `USER_REGISTERED` event is published
+`BREVO_SMTP_USER`              | For email | Brevo SMTP login
+`BREVO_SMTP_KEY`               | For email | Brevo SMTP key
+`EMAIL_FROM`                   | For email | Sender, e.g. `"Aaron <noreply@example.com>"`. Without the three email settings, OTP and invitation requests return `503 EMAIL_NOT_CONFIGURED`
+`BOOTSTRAP_ADMIN_EMAIL`        | No       | First-admin bootstrap (set all four or none)
+`BOOTSTRAP_ADMIN_USERNAME`     | No       | First-admin bootstrap
+`BOOTSTRAP_ADMIN_PHONE_NUMBER` | No       | First-admin bootstrap
+`BOOTSTRAP_ADMIN_PASSWORD`     | No       | First-admin bootstrap
+`USER_POSTGRES_DB`             | Compose  | Database name for the `user-postgres` container
+`USER_POSTGRES_USER`           | Compose  | Database user for the `user-postgres` container
+`USER_POSTGRES_PASSWORD`       | Compose  | Database password for the `user-postgres` container. Use a URL-safe value
+
+"Required" variables are checked at startup in `src/config/config.ts`. The
+service will not start without them.
 
 > Do not commit `.env`, private keys, or other secrets to the repository.
 
@@ -995,19 +1015,37 @@ npm run db:studio
 
 Start development with `npm run dev`, or run the compiled application with `npm start`.
 
-The registration consumer starts after the HTTP server begins listening. It reconnects if RabbitMQ becomes unavailable. `GET /healthz` only confirms that the HTTP server is running; it does not check RabbitMQ or whether students have received credits.
+On startup, the service runs the [first-admin bootstrap](#first-administrator-setup)
+before it starts listening. Once the HTTP server is listening, it starts the
+[outbox publisher](#credit-provisioning-outbox). The publisher reconnects
+if RabbitMQ becomes unavailable. `GET /healthz` only confirms that the
+HTTP server is running. It does not check RabbitMQ or whether students
+have received credits.
+
+#### npm scripts
+
+Script        | What it does
+------------- | ---------------------------------------------------------
+`dev`         | Run from source with reload (`nodemon` + `tsx`)
+`build`       | Compile TypeScript to `dist/`
+`start`       | Run the compiled app
+`test`        | Run the unit tests (`src/**/*.test.ts`, with `test/setup.ts`)
+`db:deploy`   | Apply existing migrations (`prisma migrate deploy`)
+`db:migrate`  | Create and apply a new migration in development (`prisma migrate dev`)
+`db:generate` | Generate the Prisma client
+`db:studio`   | Open Prisma Studio
 
 ## Credit provisioning outbox
 
 Successful student OTP verification consumes the pending challenge, creates the student, and inserts a `USER_REGISTERED` outbox event in one PostgreSQL transaction. Any failure rolls back all three writes. Failed/unverified registration, OTP resends, admin bootstrap, and admin activation emit no registration event. No broker calls run inside this transaction, and no existing users are backfilled.
 
-Configure the existing HTTP/database/auth/email environment plus `RABBITMQ_URL` in `user-service/.env`. The local default is `amqp://foc:foc-local-only@localhost:5672?heartbeat=20`; match the broker credentials and URL-encode special characters. See [RabbitMQ and service startup](../README.md#rabbitmq-and-service-startup) for Docker commands and the full [event contract](../credit-service/README.md#registration-and-initial-credit-grant).
+Configure the existing HTTP/database/auth/email environment plus `RABBITMQ_URL` in `user-service/.env`. `.env.example` uses `amqp://foc:foc-local-only@rabbitmq:5672?heartbeat=20` for the Docker stack. Use `localhost` instead when running on the host. Match the broker credentials and URL-encode special characters. See [RabbitMQ and service startup](../README.md#rabbitmq-and-service-startup) for Docker commands and the full [event contract](../credit-service/README.md#registration-and-initial-credit-grant).
 
 `npm run dev` or `npm start` starts the publisher in the background after HTTP begins listening. Run one active user-service publisher instance for this version; there are no leases or distributed worker coordination. Accidental duplicate publication cannot grant credits twice, but coordinated multi-instance scheduling is not implemented.
 
-The publisher polls every second and processes one due unpublished event at a time. It stores attempt count and retry timing before contacting RabbitMQ, reuses the immutable event body/ID, sets AMQP `messageId` to `eventId`, and marks `publishedAt` only after confirmed routing. Unpublished entries are retained indefinitely and retried with delays of 1, 2, 4, 8, 16, 32, then 60 seconds. Restarting resumes pending rows. There is no automatic outbox deletion.
+The publisher processes one due unpublished event at a time. It moves straight on to the next due event, and waits 5 seconds before polling again when none are due. It stores attempt count and retry timing before contacting RabbitMQ, reuses the immutable event body/ID, sets AMQP `messageId` to `eventId`, and marks `publishedAt` only after confirmed routing. Unpublished entries are retained indefinitely and retried with delays of 1, 2, 4, 8, 16, 32, then 60 seconds. Restarting resumes pending rows. There is no automatic outbox deletion.
 
-If confirmation succeeds but saving `publishedAt` fails, the next attempt can republish the same event. Delivery is at least once; credit-service's grant function supplies idempotency. Registration succeeds during broker or credit-service downtime, while provisioning remains pending. `GET /user` is HTTP liveness, not a check that credits were granted. Missing `RABBITMQ_URL` causes background publishing failures without preventing registration; configure it before expecting delivery.
+If confirmation succeeds but saving `publishedAt` fails, the next attempt can republish the same event. Delivery is at least once; credit-service's grant function supplies idempotency. Registration succeeds during broker or credit-service downtime, while provisioning remains pending. `GET /healthz` is HTTP liveness, not a check that credits were granted. Missing `RABBITMQ_URL` causes background publishing failures without preventing registration; configure it before expecting delivery.
 
 Publisher logs include event ID, user ID, attempt, and outcome. `lastError` stores the failing operation and a bounded driver code, never raw payloads or credentials. Inspect the following SQL in a client connected to the **user-service database**:
 
@@ -1030,7 +1068,7 @@ LIMIT 50;
 
 Old pending rows warrant checking broker connectivity, credentials, and publisher logs. A published row can still correspond to a queued or dead-lettered credit event: publication is not grant completion. For queue counts and safe replay, use the [dead-letter inspection/redrive instructions](../credit-service/README.md#inspecting-and-redriving-dead-letters). Do not rewrite stored payloads or set `publishedAt` manually to clear a backlog.
 
-No automated tests were added for this workflow. Use `npx prisma validate`, `npm run db:generate`, and `npm run build` for schema and compilation checks; these do not verify runtime recovery guarantees.
+`src/services/registration.service.test.ts` checks that verification creates the student and the `USER_REGISTERED` outbox event together, and creates neither when the code was already used. The publisher's retry and recovery behaviour has no automated tests. Use `npx prisma validate`, `npm run db:generate` and `npm run build` for schema and compilation checks.
 
 ## Security
 
@@ -1214,8 +1252,8 @@ container, database healthcheck, and named storage volume. Fill in
 Use a URL-safe database username/password (a randomly generated hex password
 works). Compose supplies the container database URL and JWT key paths.
 
-The root `compose.yaml` includes this file alongside Supplier's Compose file
-and supplies shared RabbitMQ. Set `RABBITMQ_URL` in this service's `.env` to use
+The root `compose.yaml` includes this file along with every other
+service's Compose file, and supplies the shared RabbitMQ. Set `RABBITMQ_URL` in this service's `.env` to use
 the `rabbitmq` hostname and credentials matching the root broker configuration.
 From the repository root, start just User and its dependencies with:
 
@@ -1225,14 +1263,14 @@ docker compose logs user-service
 ```
 
 User waits for healthy PostgreSQL and RabbitMQ when started from the root.
-For local browser testing, its API is published at `http://localhost:3000`
-(using `PORT` from `.env`). PostgreSQL is published on loopback port 5434
-for local Studio access. Remove these development port mappings for the
-final isolated deployment. You can also check HTTP
-from inside the container:
+In the root stack, the API port is not published. Call it through the
+frontend proxy at `http://localhost:5173/api/auth/...` and `/api/users/...`.
+PostgreSQL sits on an internal network, so its `5434` mapping has no
+effect there (see [Local ports](../README.md#local-ports)). To check
+HTTP from inside the container:
 
 ```sh
-docker compose exec user-service node -e "fetch('http://localhost:3000/user').then(r => r.text()).then(console.log)"
+docker compose exec user-service node -e "fetch('http://localhost:3000/healthz').then(r => r.text()).then(console.log)"
 ```
 
 Running `docker compose up -d --build` inside `user-service` starts only User
@@ -1240,15 +1278,16 @@ and PostgreSQL; RabbitMQ must be reachable separately for event publishing.
 Stopping, restarting, or recreating containers preserves database data in
 `user_postgres_data`; `docker compose down -v` deletes that volume.
 Failed migrations stop startup instead of serving against an incorrect schema.
-`GET /user` is a liveness endpoint, not a dependency check.
+`GET /healthz` is a liveness endpoint, not a dependency check.
 
 Refresh cookies retain the original behavior: `secure` is enabled when
 `NODE_ENV=production`. They remain HttpOnly and signed.
 
 ### Local Prisma Studio
 
-For local development, PostgreSQL is published only on `127.0.0.1:5434`.
-Set `DATABASE_URL` in `user-service/.env` to
+When this directory's Compose file runs on its own
+(`cd user-service && docker compose up -d user-postgres`), PostgreSQL is
+published on `127.0.0.1:5434`. The root stack doesn't publish it. Set `DATABASE_URL` in `user-service/.env` to
 `postgresql://USER:PASSWORD@localhost:5434/DATABASE?sslmode=disable`, using
 the same credentials and database as `USER_POSTGRES_*`. Compose overrides
 this URL inside the API container to use `user-postgres:5432`.
