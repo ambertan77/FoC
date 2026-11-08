@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-10-12
+// Scope: Generated the redrive(limit) CLI that moves validated messages from the dead queue back to the main queue with the retry count reset, acking only after a confirmed publish.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import { registrationEventSchema } from "../schemas/registration-event.schema.js";
 import {
     connectRegistrationMessaging,

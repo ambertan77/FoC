@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-10-12
+// Scope: Generated getCreditBalance, getCreditTransactions (cursor pagination, PROVISIONING when no account exists) and the idempotent 50-credit grantInitialCredits with P2002 handling.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import { z } from "zod";
 import {
     CreditTransactionType,
