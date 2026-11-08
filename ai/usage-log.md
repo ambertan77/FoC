@@ -339,3 +339,14 @@ Tool for entries 1–27: **ChatGPT (Astra 6)**. Tool for entry 28: **Claude Code
 - **Key response:** Audited the root, frontend and service READMEs and the root `.env.example` against the code (routes, schemas, config, Compose files, workflows, gateway). Produced a list of stale and missing items and a commit-by-commit update plan. The order-service and supplier-service findings were handed to their owners instead of being edited.
 - **Kept/changed:** _To fill in after review._
 - **Verification:** _To fill in after review._
+
+## 29. Migration of supplier images from AWS EC2 to S3
+
+- **Timestamp**: 2026-11-08 18:50
+- **Tool & model**: Claude (Opus 5.5)
+- **Mode:** generate
+- **Files:** 
+- **Prompt (approx.):** ""
+- **Key response:** 
+- **Kept/changed:** 
+- **Verification:** All test jobs passed, and user testing on localhost was successful. 
