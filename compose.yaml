@@ -1,3 +1,9 @@
+# AI Assistance Disclosure:
+# Tool: ChatGPT (Astra 6)
+# Date: approx. 2026-10-21
+# Scope: Generated the root compose file that includes each service's compose file and wires shared networks and startup dependencies; helped debug service startup ordering.
+# Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 include:
   - supplier-service/compose.yaml
   - user-service/compose.yaml

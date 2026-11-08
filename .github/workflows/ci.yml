@@ -1,3 +1,9 @@
+# AI Assistance Disclosure:
+# Tool: ChatGPT (Astra 6)
+# Date: approx. 2026-10-25
+# Scope: Generated the CI workflow (backend unit tests, credit-service integration tests with a Postgres service, frontend build, Docker build check); later helped add order-service and credit-service unit test steps.
+# Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 name: CI
 
 on:
