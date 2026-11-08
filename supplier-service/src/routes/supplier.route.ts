@@ -2,7 +2,7 @@ import { Router } from "express";
 import { authenticate } from "../middleware/auth.middleware.js";
 import { authorize } from "../middleware/authorize.middleware.js";
 import { Role } from "../types/auth.types.js";
-import { upload } from "../libs/upload.js";
+import { upload } from "../middleware/upload.middleware.js";
 import { uploadSupplierImage, serveAsset } from "../controllers/supplier.asset.controller.js"
 import { countSuppliersForType, createSupplierType, deleteSupplierType, getAllSupplierTypes } from "../controllers/supplier.type.controller.js";
 import {

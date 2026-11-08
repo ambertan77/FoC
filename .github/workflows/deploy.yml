@@ -135,6 +135,6 @@ jobs:
       - name: Upload hashed bundles (cache for a year)
         run: aws s3 sync dist/assets "s3://${{ vars.S3_BUCKET }}/assets" --cache-control "public,max-age=31536000,immutable"
       - name: Upload index.html, favicon and images (always revalidate)
-        run: aws s3 sync dist "s3://${{ vars.S3_BUCKET }}" --delete --exclude "assets/*" --cache-control "no-cache"
+        run: aws s3 sync dist "s3://${{ vars.S3_BUCKET }}" --delete --exclude "assets/*" --exclude "images/*" --cache-control "no-cache"
       - name: Refresh CloudFront
         run: aws cloudfront create-invalidation --distribution-id "${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}" --paths "/*"

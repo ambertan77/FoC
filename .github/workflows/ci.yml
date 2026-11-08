@@ -51,6 +51,7 @@ jobs:
           FRONTEND_URL: http://localhost
           JWT_PUBLIC_KEY_PATH: /tmp/unused.pem
           ORDER_SUPPLIER_SERVICE_TOKEN: ci-only
+          STORAGE: local
           ORDER_CREDIT_SERVICE_TOKEN: ci-only
           SUPPLIER_SERVICE_URL: http://localhost
           CREDIT_SERVICE_URL: http://localhost

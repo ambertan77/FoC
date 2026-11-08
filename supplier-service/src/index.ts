@@ -5,13 +5,13 @@ import "dotenv/config";
 import supplierRouter from "./routes/supplier.route.js";
 import config from "./config/config.js";
 import { errorHandler } from "./middleware/error.middleware.js";
-import { ensureUploadsDir } from "./libs/upload.js";
+import { storage } from "./libs/storage.js";
 import { AppError } from "./errors/errors.js";
 import internalSupplierRouter from "./routes/internal-supplier.route.js";
 
 const app = express();
 
-await ensureUploadsDir();
+await storage.init(); // initialise the storage class, based on how we are running this app
 
 app.use(
     cors({

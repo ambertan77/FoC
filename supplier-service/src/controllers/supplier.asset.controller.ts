@@ -1,26 +1,21 @@
+// AI Assistance Disclosure:
+// Tool: Claude (Opus 5.5)
+// Date: 2026-11-08
+// Scope: Refactor asset controllers to use the new storage service interface for S3 and local storage
+// Author review: Reviewed, tested, and edited by Amber Tan Junning.
+
 import type { Request, Response } from "express";
-import fs from "node:fs/promises";
+import { pipeline } from "node:stream/promises";
 import { AppError } from "../errors/errors.js";
-import {
-    buildAssetUrl,
-    getContentType,
-    resolveSafeUploadPath,
-} from "../libs/upload.js";
+import { getImage, uploadImage } from "../services/supplier.asset.service.js";
 
 // get file using filename
 export async function serveAsset(req: Request, res: Response) {
-    const filename = req.params.filename as string;
-    const safePath = resolveSafeUploadPath(filename);
+    const { body, contentType } = await getImage(req.params.filename as string);
 
-    try {
-        await fs.access(safePath);
-    } catch {
-        throw new AppError("Image not found", 404, "NOT_FOUND");
-    }
-
-    res.setHeader("Content-Type", getContentType(filename));
+    res.setHeader("Content-Type", contentType);
     res.setHeader("Access-Control-Allow-Origin", "*");
-    res.sendFile(safePath);
+    await pipeline(body, res);
 }
 
 // add new supplier image
@@ -29,9 +24,9 @@ export async function uploadSupplierImage(req: Request, res: Response) {
         throw new AppError("No image file provided", 400, "BAD_REQUEST");
     }
 
-    const imageUrl = buildAssetUrl(req, req.file.filename);
+    const imageUrl = await uploadImage(req.file);
 
-    return res.status(201).json({
+    return res.status(200).json({
         success: true,
         code: "SUCCESS",
         data: { imageUrl },
