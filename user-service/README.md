@@ -1,3 +1,11 @@
+<!--
+AI Assistance Disclosure:
+Tool: Claude Code (Claude Opus 5.5)
+Date: 2026-11-08
+Scope: Audited against the code; rewrote the API reference to match the current routes, request schemas, response shapes and error codes.
+Author review: Reviewed and edited by Lim Shao Qi.
+-->
+
 # User Service
 
 ## Table of Contents
@@ -192,70 +200,238 @@ user-service/
 
 ## API Reference
 
+All endpoints are served under `/api` through the gateway (see the
+[root README](../README.md#services-and-api)). Request bodies are JSON.
+Most bodies are validated with strict schemas, so unknown fields are
+rejected with `400`. Login is the exception. A validation error returns
+`400` with the first issue's message.
+
+Authenticated endpoints need an access token:
+
+```http
+Authorization: Bearer <access-token>
+```
+
 ### Authentication
 
-Method | Endpoint             | Authentication | Description
------- | -------------------- | -------------- | --------------------------------
-`POST` | `/api/auth/register` | Public         | Register a new user
-`POST` | `/api/auth/login`    | Public         | Authenticate a user
-`POST` | `/api/auth/refresh`  | Refresh Token  | Generate a new access token
-`POST` | `/api/auth/logout`   | Refresh Token  | Revoke the current refresh token
+Method | Endpoint                        | Access         | Description
+------ | ------------------------------- | -------------- | -------------------------------------------------
+`POST` | `/api/auth/register`            | Public         | Start student registration and email an OTP
+`POST` | `/api/auth/register/resend`     | Public         | Resend the registration OTP
+`POST` | `/api/auth/register/verify`     | Public         | Verify the OTP and create the student account
+`POST` | `/api/auth/admin-activation`    | Public         | Create an admin account from an invitation token
+`POST` | `/api/auth/login`               | Public         | Log in and receive tokens
+`POST` | `/api/auth/refresh`             | Refresh cookie | Rotate the refresh token and get a new access token
+`POST` | `/api/auth/logout`              | Refresh cookie | Revoke the refresh token and clear the cookie
 
-### User Management
+### Users
 
-Method | Endpoint             | Authentication | Description
------- | -------------------- | -------------- | -------------------------------------------------------
-`GET`  | `/api/users/me`      | Authenticated  | Retrieve the currently authenticated user's information
-`PUT`  | `/api/users/me`      | Authenticated  | Update the currently authenticated user's information
-`GET`  | `/api/users`         | Admin          | Retrieve users
-`PUT`  | `/api/users/:userId` | Admin          | Update a user's information
+Method  | Endpoint                               | Access        | Description
+------- | -------------------------------------- | ------------- | ------------------------------------------------
+`GET`   | `/api/users/me`                        | Authenticated | Get my profile and any pending email change
+`PATCH` | `/api/users/me`                        | Authenticated | Update my username and/or phone number
+`POST`  | `/api/users/me/email-change`           | Authenticated | Start an email change and send an OTP to the new address
+`POST`  | `/api/users/me/email-change/resend`    | Authenticated | Resend the email-change OTP
+`POST`  | `/api/users/me/email-change/verify`    | Authenticated | Verify the OTP and apply the new email
+`POST`  | `/api/users/me/password-change`        | Authenticated | Change my password
+`GET`   | `/api/users`                           | Admin         | List and search users
+`POST`  | `/api/users/admin-invitations`         | Admin         | Email an admin invitation link
+`PATCH` | `/api/users/:userId/role`              | Admin         | Promote a student to admin
+`GET`   | `/api/users/:userId`                   | Authenticated | Get another user's contact details
+
+### Health
+
+Method | Endpoint   | Access | Description
+------ | ---------- | ------ | ------------------------------------------------------------
+`GET`  | `/healthz` | Public | Liveness check on the service port (not routed by the gateway)
+
+### User object
+
+Endpoints that return a user use this shape:
+
+```json
+{
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "email": "student@example.com",
+    "username": "student123",
+    "phoneNumber": "+6591234567",
+    "role": "STUDENT"
+}
+```
+
+Phone numbers are stored and returned as `+65XXXXXXXX`. Requests may send
+`91234567` or `+65 9123 4567`. Spaces and dashes are removed, and the
+number must be an 8-digit Singapore mobile number starting with 8 or 9.
 
 --------------------------------------------------------------------------------
 
 ### `POST /api/auth/register`
 
-Registers a new student account.
+Validates the details, stores a pending registration and emails a 6-digit
+OTP. **No account is created yet.** Call
+[`/register/verify`](#post-apiauthregisterverify) with the OTP to create
+it.
 
 #### Request Body
 
 ```json
 {
-    "email": "student@example.com",
     "username": "student123",
+    "email": "student@example.com",
     "phoneNumber": "91234567",
     "password": "Password123!"
 }
 ```
 
-#### Successful Response
+- `username`: 3–30 letters and numbers.
+- `email` is trimmed and lower-cased.
+- `password`: at least 8 characters, with an uppercase letter, a lowercase
+  letter, a number and a special character.
+
+#### Successful Response (`202`)
 
 ```json
 {
     "success": true,
     "data": {
-        "id": "550e8400-e29b-41d4-a716-446655440000",
-        "email": "student@example.com",
-        "username": "student123",
-        "phoneNumber": "91234567",
-        "role": "STUDENT"
+        "challengeId": "7d9f4b1e-2c3a-4f5b-9e8d-1a2b3c4d5e6f",
+        "expiresAt": "2026-11-08T10:10:00.000Z"
     }
 }
 ```
 
 #### Possible Responses
 
-Status | Description
------- | -----------------------------------------------
-`201`  | User successfully registered
-`400`  | Invalid request data
-`409`  | Email, username, or phone number already exists
-`500`  | Internal server error
+Status | Code                         | Description
+------ | ---------------------------- | ----------------------------------------------
+`202`  |                              | OTP sent
+`400`  | `BAD_REQUEST`                | Invalid request data
+`409`  | `EMAIL_ALREADY_REGISTERED`   | Email already has an account
+`409`  | `USERNAME_TAKEN`             | Username already taken
+`409`  | `PHONE_NUMBER_TAKEN`         | Phone number already registered
+`429`  | `OTP_REQUEST_LIMIT_EXCEEDED` | Too many OTP requests for this email in the last hour
+`502`  | `EMAIL_DELIVERY_FAILED`      | The OTP email could not be sent
+`503`  | `EMAIL_NOT_CONFIGURED`       | SMTP settings are missing
+
+--------------------------------------------------------------------------------
+
+### `POST /api/auth/register/resend`
+
+Sends a new OTP for an active registration. Any previous code stops
+working.
+
+#### Request Body
+
+```json
+{ "challengeId": "7d9f4b1e-2c3a-4f5b-9e8d-1a2b3c4d5e6f" }
+```
+
+#### Successful Response (`202`)
+
+Same shape as `/register`: `data: { challengeId, expiresAt }`.
+
+#### Possible Responses
+
+Status | Code                         | Description
+------ | ---------------------------- | ---------------------------------------------
+`202`  |                              | OTP resent
+`400`  | `BAD_REQUEST`                | Invalid challenge ID
+`409`  | `REGISTRATION_NOT_ACTIVE`    | No active registration for this challenge
+`409`  | `EMAIL_ALREADY_REGISTERED`, `USERNAME_TAKEN`, `PHONE_NUMBER_TAKEN` | Details were taken since registration started
+`429`  | `OTP_REQUEST_LIMIT_EXCEEDED` | Too many OTP requests in the last hour
+`502`  | `EMAIL_DELIVERY_FAILED`      | The OTP email could not be sent
+`503`  | `EMAIL_NOT_CONFIGURED`       | SMTP settings are missing
+
+--------------------------------------------------------------------------------
+
+### `POST /api/auth/register/verify`
+
+Checks the OTP. In one transaction, it creates the `STUDENT` account and
+a `USER_REGISTERED` outbox event, which credit-service uses to grant the
+initial credits (see [Credit provisioning outbox](#credit-provisioning-outbox)).
+The user then logs in normally.
+
+#### Request Body
+
+```json
+{
+    "challengeId": "7d9f4b1e-2c3a-4f5b-9e8d-1a2b3c4d5e6f",
+    "otp": "123456"
+}
+```
+
+#### Successful Response (`201`)
+
+```json
+{
+    "success": true,
+    "data": {
+        "user": { "id": "…", "email": "student@example.com", "username": "student123", "phoneNumber": "+6591234567", "role": "STUDENT" }
+    }
+}
+```
+
+#### Possible Responses
+
+Status | Code                      | Description
+------ | ------------------------- | --------------------------------------------------
+`201`  |                           | Account created
+`400`  | `BAD_REQUEST`             | Invalid challenge ID or OTP format
+`400`  | `INVALID_OTP`             | Wrong code (counts towards the attempt limit)
+`409`  | `REGISTRATION_NOT_ACTIVE` | No active registration for this challenge
+`409`  | `OTP_NO_LONGER_VALID`     | The code was replaced or used by a concurrent request
+`409`  | `REGISTRATION_CONFLICT`   | Email, username or phone was taken in the meantime
+`410`  | `OTP_EXPIRED`             | The code has expired
+`429`  | `OTP_ATTEMPTS_EXCEEDED`   | Too many wrong attempts. Request a new code
+
+--------------------------------------------------------------------------------
+
+### `POST /api/auth/admin-activation`
+
+Creates an `ADMIN` account from an invitation. The invitation email
+links to `${FRONTEND_URL}/activate-admin#token=<token>`, and the frontend
+sends that token here. The invited email becomes the account email. The
+new admin then logs in normally.
+
+#### Request Body
+
+```json
+{
+    "token": "<43-character base64url token>",
+    "username": "admin01",
+    "phoneNumber": "91234567",
+    "password": "Password123!"
+}
+```
+
+#### Successful Response (`201`)
+
+```json
+{
+    "success": true,
+    "message": "Administrator account activated successfully.",
+    "data": { "user": { "id": "…", "role": "ADMIN", "…": "…" } }
+}
+```
+
+#### Possible Responses
+
+Status | Code                               | Description
+------ | ---------------------------------- | ---------------------------------------------
+`201`  |                                    | Admin account created
+`400`  | `BAD_REQUEST`                      | Invalid request data
+`400`  | `ADMIN_ACTIVATION_INVALID`         | Unknown, already used or replaced invitation link
+`409`  | `ADMIN_ACTIVATION_NO_LONGER_VALID` | The link was used by a concurrent request
+`409`  | `EMAIL_ALREADY_REGISTERED`, `USERNAME_TAKEN`, `PHONE_NUMBER_TAKEN` | Details already in use
+`409`  | `ADMIN_ACTIVATION_CONFLICT`        | Details were taken while activating
+`410`  | `ADMIN_ACTIVATION_EXPIRED`         | Invitation has expired
 
 --------------------------------------------------------------------------------
 
 ### `POST /api/auth/login`
 
-Authenticates a user and issues an access token and refresh token.
+Authenticates a user. Returns an access token in the body and sets the
+refresh token as an HTTP-only cookie.
 
 #### Request Body
 
@@ -266,88 +442,64 @@ Authenticates a user and issues an access token and refresh token.
 }
 ```
 
-#### Successful Response
+#### Successful Response (`200`)
 
 ```json
 {
     "success": true,
+    "message": "Login successfully",
     "data": {
         "accessToken": "<access-token>",
-        "user": {
-            "id": "550e8400-e29b-41d4-a716-446655440000",
-            "email": "student@example.com",
-            "username": "student123",
-            "phoneNumber": "91234567",
-            "role": "STUDENT"
-        }
+        "user": { "id": "…", "email": "student@example.com", "username": "student123", "phoneNumber": "+6591234567", "role": "STUDENT" }
     }
 }
 ```
 
-The refresh token is returned using an `HttpOnly` cookie.
-
 #### Possible Responses
 
-Status | Description
------- | ----------------------------------
-`200`  | Login successfully
-`400`  | Invalid request data
-`401`  | Invalid email or password provided
-`500`  | Internal server error
+Status | Code                  | Description
+------ | --------------------- | ----------------------------------
+`200`  |                       | Logged in
+`400`  | `BAD_REQUEST`         | Invalid request data
+`401`  | `INVALID_CREDENTIALS` | Invalid email or password provided
 
 --------------------------------------------------------------------------------
 
 ### `POST /api/auth/refresh`
 
-Generates a new access token using the refresh token stored in the request cookie.
+Reads the signed `refreshToken` cookie. It rotates the token (revoking
+the old one and setting a new cookie) and returns a new access token. No
+request body is needed. The browser must send cookies
+(`withCredentials`).
 
-#### Request
-
-No request body is required.
-
-The refresh token must be provided through the authentication cookie.
-
-#### Successful Response
+#### Successful Response (`200`)
 
 ```json
 {
     "success": true,
+    "message": "Token refreshed successfully",
     "data": {
         "accessToken": "<new-access-token>",
-        "user": {
-            "id": "550e8400-e29b-41d4-a716-446655440000",
-            "email": "student@example.com",
-            "username": "student123",
-            "phoneNumber": "91234567",
-            "role": "STUDENT"
-        }
+        "user": { "id": "…", "…": "…" }
     }
 }
 ```
 
-A new refresh token is also issued through the `HttpOnly` cookie.
-
 #### Possible Responses
 
-Status | Description
------- | ------------------------------------------
-`200`  | Token refreshed successfully
-`401`  | Invalid token, please sign out and back in
-`500`  | Internal server error
+Status | Code           | Description
+------ | -------------- | ------------------------------------------------------
+`200`  |                | Token refreshed
+`401`  | `UNAUTHORIZED` | Cookie missing, invalid, expired, revoked or reused. The cookie is cleared
 
 --------------------------------------------------------------------------------
 
 ### `POST /api/auth/logout`
 
-Revokes the current refresh token and clears the authentication cookie.
+Clears the refresh cookie and revokes the refresh token if one was sent.
+Always returns `200`, even with no cookie or an invalid one.
 
-#### Request
-
-No request body is required.
-
-The refresh token must be provided through the authentication cookie.
-
-#### Successful Response
+#### Successful Response (`200`)
 
 ```json
 {
@@ -356,61 +508,46 @@ The refresh token must be provided through the authentication cookie.
 }
 ```
 
-#### Possible Responses
-
-Status | Description
------- | ------------------------------------------
-`200`  | Logged out successfully
-`401`  | Invalid token, please sign out and back in
-`500`  | Internal server error
-
 --------------------------------------------------------------------------------
 
 ### `GET /api/users/me`
 
-Retrieves information about the currently authenticated user.
+Returns the current user and any email change waiting for OTP
+verification.
 
-#### Headers
-
-```http
-Authorization: Bearer <access-token>
-```
-
-#### Successful Response
+#### Successful Response (`200`)
 
 ```json
 {
     "success": true,
     "data": {
-        "id": "550e8400-e29b-41d4-a716-446655440000",
-        "email": "student@example.com",
-        "username": "student123",
-        "phoneNumber": "91234567",
-        "role": "STUDENT"
+        "user": { "id": "…", "email": "student@example.com", "username": "student123", "phoneNumber": "+6591234567", "role": "STUDENT" },
+        "pendingEmailChange": {
+            "challengeId": "…",
+            "newEmail": "new@example.com",
+            "expiresAt": "2026-11-08T10:10:00.000Z"
+        }
     }
 }
 ```
 
+`pendingEmailChange` is `null` when there is none.
+
 #### Possible Responses
 
-Status | Description
------- | ------------------------------------------
-`200`  | User information retrieved successfully
-`401`  | Invalid token, please sign out and back in
-`404`  | User not found
-`500`  | Internal server error
+Status | Code                                            | Description
+------ | ----------------------------------------------- | -----------------------
+`200`  |                                                 | Profile returned
+`401`  | `AUTHENTICATION_REQUIRED`, `INVALID_ACCESS_TOKEN` | Missing or invalid token
+`404`  | `USER_NOT_FOUND`                                | Account no longer exists
 
 --------------------------------------------------------------------------------
 
-### `PUT /api/users/me`
+### `PATCH /api/users/me`
 
-Updates information belonging to the currently authenticated user.
-
-#### Headers
-
-```http
-Authorization: Bearer <access-token>
-```
+Updates the current user's username, phone number or both. At least one
+field is required. To change the email or password, use the dedicated
+endpoints below.
 
 #### Request Body
 
@@ -421,138 +558,321 @@ Authorization: Bearer <access-token>
 }
 ```
 
-Only the fields that need to be changed need to be included.
-
-#### Successful Response
+#### Successful Response (`200`)
 
 ```json
 {
     "success": true,
-    "data": {
-        "id": "550e8400-e29b-41d4-a716-446655440000",
-        "email": "student@example.com",
-        "username": "newUsername",
-        "phoneNumber": "98765432",
-        "role": "STUDENT"
-    }
+    "data": { "user": { "id": "…", "username": "newUsername", "phoneNumber": "+6598765432", "…": "…" } }
 }
 ```
 
 #### Possible Responses
 
-Status | Description
------- | ------------------------------------------
-`200`  | User information updated successfully
-`400`  | Invalid request data
-`401`  | Invalid token, please sign out and back in
-`409`  | Username or phone number already exists
-`500`  | Internal server error
+Status | Code                 | Description
+------ | -------------------- | --------------------------------------------
+`200`  |                      | Profile updated
+`400`  | `BAD_REQUEST`        | Invalid data, or no field provided
+`401`  | `AUTHENTICATION_REQUIRED`, `INVALID_ACCESS_TOKEN` | Missing or invalid token
+`404`  | `USER_NOT_FOUND`     | Account no longer exists
+`409`  | `USERNAME_TAKEN`     | Username already taken
+`409`  | `PHONE_NUMBER_TAKEN` | Phone number already registered
+`409`  | `PROFILE_CONFLICT`   | A value was taken while saving
 
 --------------------------------------------------------------------------------
 
-### `GET /api/users`
+### `POST /api/users/me/email-change`
 
-Retrieves users for administrative management.
+Emails a 6-digit OTP to the **new** address. The email isn't changed
+until the OTP is verified.
 
-#### Headers
+#### Request Body
 
-```http
-Authorization: Bearer <admin-access-token>
+```json
+{ "email": "new@example.com" }
 ```
 
-#### Query Parameters
-
-```text
-?page=1&limit=10&search=john&role=STUDENT
-```
-
-Parameter | Type   | Required | Description
---------- | ------ | -------- | --------------------------
-`page`    | number | No       | Page number
-`limit`   | number | No       | Number of users per page
-`search`  | string | No       | Search by user information
-`role`    | string | No       | Filter by user role
-
-#### Successful Response
+#### Successful Response (`202`)
 
 ```json
 {
     "success": true,
-    "data": {
-        "items": [],
-        "pagination": {
-            "page": 1,
-            "limit": 10,
-            "totalItems": 25,
-            "totalPages": 3
-        }
-    }
+    "data": { "challengeId": "…", "expiresAt": "2026-11-08T10:10:00.000Z" }
 }
 ```
 
 #### Possible Responses
 
-Status | Description
------- | --------------------------------------------------
-`200`  | Users retrieved successfully
-`401`  | Invalid token, please sign out and back in
-`403`  | You do not have permission to access this resource
-`500`  | Internal server error
+Status | Code                         | Description
+------ | ---------------------------- | ---------------------------------------------
+`202`  |                              | OTP sent to the new address
+`400`  | `BAD_REQUEST`                | Invalid email
+`400`  | `EMAIL_UNCHANGED`            | New email is the same as the current one
+`404`  | `USER_NOT_FOUND`             | Account no longer exists
+`409`  | `EMAIL_ALREADY_REGISTERED`   | Another account uses this email
+`429`  | `OTP_REQUEST_LIMIT_EXCEEDED` | Too many OTP requests in the last hour
+`502`  | `EMAIL_DELIVERY_FAILED`      | The OTP email could not be sent
+`503`  | `EMAIL_NOT_CONFIGURED`       | SMTP settings are missing
 
 --------------------------------------------------------------------------------
 
-### `PUT /api/users/:userId`
+### `POST /api/users/me/email-change/resend`
 
-Allows an administrator to update another user's information.
+Sends a new OTP for the current user's pending email change.
 
-#### Headers
+#### Request Body
 
-```http
-Authorization: Bearer <admin-access-token>
+```json
+{ "challengeId": "…" }
 ```
 
-#### Path Parameters
+#### Successful Response (`202`)
 
-Parameter | Type | Description
---------- | ---- | ------------------------
-`userId`  | UUID | ID of the user to update
+Same shape as `/me/email-change`.
+
+#### Possible Responses
+
+Status | Code                         | Description
+------ | ---------------------------- | ---------------------------------------------
+`202`  |                              | OTP resent
+`400`  | `BAD_REQUEST`                | Invalid challenge ID
+`409`  | `EMAIL_CHANGE_NOT_ACTIVE`    | No active email change for this challenge
+`409`  | `EMAIL_ALREADY_REGISTERED`   | The new email was taken in the meantime
+`429`  | `OTP_REQUEST_LIMIT_EXCEEDED` | Too many OTP requests in the last hour
+`502`  | `EMAIL_DELIVERY_FAILED`      | The OTP email could not be sent
+`503`  | `EMAIL_NOT_CONFIGURED`       | SMTP settings are missing
+
+--------------------------------------------------------------------------------
+
+### `POST /api/users/me/email-change/verify`
+
+Checks the OTP and switches the account to the new email.
 
 #### Request Body
 
 ```json
 {
-    "username": "updatedUsername",
-    "phoneNumber": "98765432",
-    "role": "STUDENT"
+    "challengeId": "…",
+    "otp": "123456"
 }
 ```
 
-#### Successful Response
+#### Successful Response (`200`)
+
+```json
+{
+    "success": true,
+    "data": { "user": { "id": "…", "email": "new@example.com", "…": "…" } }
+}
+```
+
+#### Possible Responses
+
+Status | Code                       | Description
+------ | -------------------------- | --------------------------------------------------
+`200`  |                            | Email changed
+`400`  | `BAD_REQUEST`              | Invalid challenge ID or OTP format
+`400`  | `INVALID_OTP`              | Wrong code (counts towards the attempt limit)
+`404`  | `USER_NOT_FOUND`           | Account no longer exists
+`409`  | `EMAIL_CHANGE_NOT_ACTIVE`  | No active email change for this challenge
+`409`  | `OTP_NO_LONGER_VALID`      | The code was replaced or used by a concurrent request
+`409`  | `EMAIL_ALREADY_REGISTERED` | The new email was taken in the meantime
+`410`  | `OTP_EXPIRED`              | The code has expired
+`429`  | `OTP_ATTEMPTS_EXCEEDED`    | Too many wrong attempts. Request a new code
+
+--------------------------------------------------------------------------------
+
+### `POST /api/users/me/password-change`
+
+Changes the password and **revokes every refresh token for the user**, so
+all other sessions are signed out. A fresh refresh cookie is set for the
+current session.
+
+#### Request Body
+
+```json
+{
+    "currentPassword": "Password123!",
+    "newPassword": "NewPassword456!"
+}
+```
+
+`newPassword` follows the same rules as registration.
+
+#### Successful Response (`200`)
+
+```json
+{
+    "success": true,
+    "message": "Password changed successfully."
+}
+```
+
+#### Possible Responses
+
+Status | Code                       | Description
+------ | -------------------------- | ------------------------------------
+`200`  |                            | Password changed
+`400`  | `BAD_REQUEST`              | Invalid request data
+`400`  | `PASSWORD_UNCHANGED`       | New password is the same as the current one
+`401`  | `INVALID_CURRENT_PASSWORD` | Current password is wrong
+`404`  | `USER_NOT_FOUND`           | Account no longer exists
+
+--------------------------------------------------------------------------------
+
+### `GET /api/users`
+
+Lists users for the admin user-management page, oldest first.
+
+#### Query Parameters
+
+```text
+?page=1&pageSize=20&search=john&role=STUDENT
+```
+
+Parameter  | Type   | Default | Description
+---------- | ------ | ------- | ---------------------------------------------------------
+`page`     | number | `1`     | Page number, at least 1
+`pageSize` | number | `20`    | Users per page, between 1 and 100
+`search`   | string |         | Case-insensitive match on username or email (max 100 chars)
+`role`     | string |         | `STUDENT` or `ADMIN`
+
+Unknown query parameters are rejected with `400`.
+
+#### Successful Response (`200`)
 
 ```json
 {
     "success": true,
     "data": {
-        "id": "550e8400-e29b-41d4-a716-446655440000",
-        "email": "student@example.com",
-        "username": "updatedUsername",
-        "phoneNumber": "98765432",
-        "role": "STUDENT"
+        "users": [ { "id": "…", "email": "…", "username": "…", "phoneNumber": "+65…", "role": "STUDENT" } ],
+        "page": 1,
+        "pageSize": 20,
+        "total": 25
     }
 }
 ```
 
 #### Possible Responses
 
-Status | Description
------- | --------------------------------------------------
-`200`  | User updated successfully
-`400`  | Invalid request data
-`401`  | Invalid token, please sign out and back in
-`403`  | You do not have permission to access this resource
-`404`  | User not found
-`409`  | Username or phone number already exists
-`500`  | Internal server error
+Status | Code          | Description
+------ | ------------- | --------------------------------------------------
+`200`  |               | Users returned
+`400`  | `BAD_REQUEST` | Invalid query parameters
+`401`  | `AUTHENTICATION_REQUIRED`, `INVALID_ACCESS_TOKEN` | Missing or invalid token
+`403`  | `FORBIDDEN`   | Caller is not an admin
+
+--------------------------------------------------------------------------------
+
+### `POST /api/users/admin-invitations`
+
+Emails an invitation link to a new admin. The link expires after **24
+hours**, and the same email can be re-invited after **60 seconds**. A new
+invitation replaces any earlier one for that email.
+
+#### Request Body
+
+```json
+{ "email": "new-admin@example.com" }
+```
+
+#### Successful Response (`202`)
+
+```json
+{
+    "success": true,
+    "message": "Administrator invitation sent."
+}
+```
+
+#### Possible Responses
+
+Status | Code                        | Description
+------ | --------------------------- | -------------------------------------
+`202`  |                             | Invitation sent
+`400`  | `BAD_REQUEST`               | Invalid email
+`401`  | `AUTHENTICATION_REQUIRED`, `INVALID_ACCESS_TOKEN` | Missing or invalid token
+`403`  | `FORBIDDEN`                 | Caller is not an admin
+`409`  | `EMAIL_ALREADY_REGISTERED`  | Email already has an account
+`429`  | `ADMIN_INVITATION_COOLDOWN` | Invitation sent less than 60 seconds ago
+`502`  | `EMAIL_DELIVERY_FAILED`     | The invitation email could not be sent
+`503`  | `EMAIL_NOT_CONFIGURED`      | SMTP settings are missing
+
+--------------------------------------------------------------------------------
+
+### `PATCH /api/users/:userId/role`
+
+Promotes a student to admin. Demotion is not supported. The only
+accepted value is `ADMIN`.
+
+#### Path Parameters
+
+Parameter | Type | Description
+--------- | ---- | -------------------------
+`userId`  | UUID | ID of the user to promote
+
+#### Request Body
+
+```json
+{ "role": "ADMIN" }
+```
+
+#### Successful Response (`200`)
+
+```json
+{
+    "success": true,
+    "data": { "user": { "id": "…", "role": "ADMIN", "…": "…" } }
+}
+```
+
+#### Possible Responses
+
+Status | Code                   | Description
+------ | ---------------------- | ------------------------------------
+`200`  |                        | User promoted
+`400`  | `BAD_REQUEST`          | Invalid user ID or role
+`401`  | `AUTHENTICATION_REQUIRED`, `INVALID_ACCESS_TOKEN` | Missing or invalid token
+`403`  | `FORBIDDEN`            | Caller is not an admin
+`404`  | `USER_NOT_FOUND`       | No such user
+`409`  | `USER_ALREADY_ADMIN`   | User is already an admin
+`409`  | `ROLE_UPDATE_CONFLICT` | The role changed while promoting
+
+--------------------------------------------------------------------------------
+
+### `GET /api/users/:userId`
+
+Returns another user's contact details. The frontend uses it to show the
+requester's or courier's details on an order.
+
+> **Note:** any authenticated user can call this for any `userId`.
+> Access is not limited to users who share an order with the caller.
+
+#### Successful Response (`200`)
+
+This response uses a different shape from the [user object](#user-object):
+`userId` instead of `id`, no `role`, and a `message` field.
+
+```json
+{
+    "success": true,
+    "message": "User fetched successfully",
+    "data": {
+        "userId": "550e8400-e29b-41d4-a716-446655440000",
+        "username": "student123",
+        "email": "student@example.com",
+        "phoneNumber": "+6591234567"
+    }
+}
+```
+
+#### Possible Responses
+
+Status | Code             | Description
+------ | ---------------- | ------------------------
+`200`  |                  | User returned
+`401`  | `AUTHENTICATION_REQUIRED`, `INVALID_ACCESS_TOKEN` | Missing or invalid token
+`404`  | `USER_NOT_FOUND` | No such user
 
 --------------------------------------------------------------------------------
 
