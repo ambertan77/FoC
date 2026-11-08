@@ -2,7 +2,7 @@
 AI Assistance Disclosure:
 Tool: Claude Code (Claude Opus 5.5)
 Date: 2026-11-08
-Scope: Audited against the code; updated the repository structure, added the services and API index, the Docker quick start and the RabbitMQ/service startup section, and updated the AI Use Summary.
+Scope: Audited against the code; updated the repository structure, added the services and API index, the Docker quick start, the RabbitMQ/service startup section and the CI/CD and server setup details, and updated the AI Use Summary.
 Author review: Reviewed and edited by Lim Shao Qi.
 -->
 
@@ -88,15 +88,56 @@ the gateway (`gateway/nginx.conf`). Locally it is the frontend container
 
 ## Deployment
 
-The project is built, tested and deployed by GitHub Actions.
+The project is built, tested and deployed by GitHub Actions. In
+production:
 
-- **CI** (`.github/workflows/ci.yml`) runs on every pull request into
-  `main`: it builds and tests each service, lints and builds the frontend,
-  and checks that every Dockerfile builds.
-- **CD** (`.github/workflows/deploy.yml`) runs on every push to `main`: it
-  pushes the backend images to Amazon ECR, restarts the Docker Compose stack
-  on EC2 (`compose.yaml` + `compose.prod.yaml`, with `gateway/nginx.conf` as
-  the API gateway), and publishes the frontend to S3 behind CloudFront.
+- the browser loads the frontend from S3 through CloudFront
+- CloudFront forwards `/api/*` to the EC2 host
+- on EC2, the nginx gateway (`gateway/nginx.conf`, published on port 80)
+  routes each request to its service
+
+### CI (`.github/workflows/ci.yml`)
+
+CI runs on every pull request into `main`, and again as the first step of
+every deploy. Its jobs:
+
+| Job | What it checks |
+| --- | --- |
+| `backend` (one per service) | `npm ci`, `prisma validate`, `prisma generate`, `npm run build`, `npm test` |
+| `credit-service integration` | `npm run test:integration` against real Postgres 17 and RabbitMQ 4.2 service containers |
+| `frontend` | `npm ci`, `npm run lint`, `npm run build` (with `VITE_*=/api`) |
+| `docker` (one per service and the frontend) | Every Dockerfile builds. Runs on pull requests only, because the deploy's `build-push` job already builds the images |
+
+A newer push to the same pull request cancels the CI run in progress.
+
+### CD (`.github/workflows/deploy.yml`)
+
+CD runs on every push to `main`. Pushes that change only `.md` files are
+skipped. You can also start it by hand from the Actions tab
+(`workflow_dispatch`). Only one deploy runs at a time, and later ones
+queue instead of cancelling it. The jobs:
+
+1. **`ci`** reruns the full CI workflow.
+2. **`build-push`** builds the four backend images and pushes them to
+   Amazon ECR as `foc/<service>:<commit-sha>` and `:latest`. It only runs
+   in `AY2627S1-CS3219-P20/FoC`, so on forks it and the rest of the deploy
+   are skipped.
+3. **`deploy-backend`**:
+   1. copies the compose files, `gateway/nginx.conf` and `data/csv` to
+      `EC2_APP_DIR`
+   2. logs in to ECR, pulls the new images and runs
+      `docker compose -f compose.yaml -f compose.prod.yaml up -d`
+   3. waits for every service's `/healthz` and prints that service's logs
+      if one stays unhealthy
+   4. reloads the gateway and saves `IMAGE_TAG` in the server `.env`
+   5. finally, checks that `https://<CloudFront domain>/api/users/me`
+      returns 401, which proves the CloudFront → gateway → service path
+      works
+4. **`deploy-frontend`** builds the frontend and uploads it to S3. Hashed
+   assets are cached for a year, and `index.html` and other files are
+   always revalidated. It then invalidates the CloudFront cache.
+
+### Repository settings
 
 The deploy workflow reads these repository settings
 (**Settings → Secrets and variables → Actions**):
@@ -115,6 +156,29 @@ The deploy workflow reads these repository settings
 | `EC2_HOST`    | The server's Elastic IP                |
 | `EC2_USER`    | SSH user, e.g. `ubuntu`                |
 | `EC2_SSH_KEY` | Private key of the deploy SSH key pair |
+
+### One-time AWS and server setup
+
+The workflow assumes this already exists:
+
+- **IAM role** (`AWS_ROLE_ARN`): trusts GitHub's OIDC provider for this
+  repository. It can push to ECR, sync to `S3_BUCKET` and create
+  CloudFront invalidations. No long-lived AWS keys are stored in GitHub.
+- **ECR repositories**: `foc/user-service`, `foc/supplier-service`,
+  `foc/order-service`, `foc/credit-service`.
+- **EC2 host**:
+  - Docker with the Compose plugin and the AWS CLI are installed
+  - the instance can pull from ECR
+  - port 80 is reachable from CloudFront
+- **Files in `EC2_APP_DIR`**, which the deploy never copies:
+  - `.env` with `ECR_REGISTRY=<account-id>.dkr.ecr.<region>.amazonaws.com`.
+    The deploy adds `IMAGE_TAG` itself.
+  - each service's `.env`, filled in from its `.env.example`
+  - `user-service/keys/private.pem` and `public.pem`, plus
+    `supplier-service/keys/public.pem` (see
+    [One-time setup](#one-time-setup))
+- **CloudFront**: the default origin is `S3_BUCKET`, and `/api/*` goes to
+  the EC2 host.
 
 ---
 
