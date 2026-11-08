@@ -62,6 +62,7 @@ services:
 
   supplier-service:
     networks:
+      - default
       - backend
       - supplier-db
 
