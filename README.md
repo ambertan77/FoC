@@ -2,7 +2,7 @@
 AI Assistance Disclosure:
 Tool: Claude Code (Claude Opus 5.5)
 Date: 2026-11-08
-Scope: Audited against the code; updated the repository structure, added the services and API index, and updated the AI Use Summary.
+Scope: Audited against the code; updated the repository structure, added the services and API index, the Docker quick start and the RabbitMQ/service startup section, and updated the AI Use Summary.
 Author review: Reviewed and edited by Lim Shao Qi.
 -->
 
@@ -118,48 +118,166 @@ The deploy workflow reads these repository settings
 
 ---
 
-## RabbitMQ and Service Startup
+## Run Locally with Docker
 
-RabbitMQ runs in Docker; no native RabbitMQ installation is needed. Start Docker Desktop/the Docker engine first. From the repository root:
+The whole stack can run in Docker: four services, four Postgres
+databases, RabbitMQ and the frontend. Start Docker Desktop or the Docker
+engine first.
+
+### One-time setup
+
+1. Create each `.env` from its example. Fill in the secrets: the database
+   passwords, `COOKIE_SECRET`, `JWT_REFRESH_TOKEN_KEY`, the shared service
+   tokens and the Brevo SMTP settings.
+
+   ```sh
+   cp .env.example .env
+   for d in user-service supplier-service order-service credit-service frontend; do
+     cp "$d/.env.example" "$d/.env"
+   done
+   ```
+
+   Under Docker, services reach each other by Compose hostname
+   (`rabbitmq`, `<service>-postgres`). The order-service and credit-service
+   examples already use these hostnames. For user-service and
+   supplier-service, Compose overrides `DATABASE_URL` and the JWT key paths.
+   Make sure the database credentials in each `.env` match its
+   `*_POSTGRES_*` / `POSTGRES_*` values. Use the same RabbitMQ credentials in
+   the root `.env` and in the `RABBITMQ_URL` of user-service, order-service
+   and credit-service. URL-encode any special characters in the credentials.
+
+2. Generate the RS256 key pair used for access tokens. user-service signs
+   tokens with the private key. The other services verify them with the
+   public key. order-service and credit-service mount
+   `user-service/keys/public.pem` directly. supplier-service needs its own
+   copy:
+
+   ```sh
+   mkdir -p user-service/keys supplier-service/keys
+   openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out user-service/keys/private.pem
+   openssl rsa -in user-service/keys/private.pem -pubout -out user-service/keys/public.pem
+   cp user-service/keys/public.pem supplier-service/keys/public.pem
+   ```
+
+   `*.pem` files are git-ignored. Never commit them.
+
+### Start, stop and reset
 
 ```sh
-docker compose config --quiet
-docker compose up -d rabbitmq
-docker compose ps
-docker compose logs --tail=50 rabbitmq
+docker compose up -d --build   # build and start everything
+docker compose ps              # all services should become healthy
+docker compose logs -f order-service
+docker compose down            # stop; data volumes are kept
 ```
+
+**`docker compose down -v` deletes all database, broker and upload data.**
+
+Each container's entrypoint runs `prisma migrate deploy` before the app
+starts. supplier-service also seeds suppliers from `data/csv/`. No manual
+migration step is needed.
 
 If macOS reports `docker: command not found` and Docker Desktop installed its CLI under `~/.docker/bin`, run `export PATH="$HOME/.docker/bin:$PATH"` in your terminal. Add that export to `~/.zshrc` to keep it for new shells.
 
-Compose downloads `rabbitmq:4.2-management` and stores broker data in a named volume. Both ports are bound to localhost:
+### Local ports
 
-- AMQP: `5672`
-- Management UI: `15672`, at <http://localhost:15672>
+Only the frontend is published, on `127.0.0.1`:
+
+| What | Address |
+| --- | --- |
+| Web app | <http://localhost:5173> (`FRONTEND_PORT` in `frontend/.env`) |
+| API | <http://localhost:5173/api/...>, proxied by the frontend container's nginx |
+
+Nothing else is reachable from the host:
+
+- The backend services (3000–3003) don't publish their ports.
+- Postgres and RabbitMQ run only on `internal: true` networks (see
+  `compose.yaml`). Docker doesn't publish ports for those containers, so the
+  `ports:` entries in the compose files have no effect in the full stack.
+
+To inspect a database, use `docker compose exec`:
+
+```sh
+docker compose exec user-postgres psql -U foc_user users
+```
+
+---
+
+## RabbitMQ and Service Startup
+
+RabbitMQ is only used by user-service, order-service and credit-service.
+supplier-service does not use it. The publishers, consumers and workers
+run inside each service's process. You do not need separate worker
+commands.
+
+| Service | Runs in-process | Publishes to | Consumes from |
+| --- | --- | --- | --- |
+| user-service | Outbox publisher | `user.events` (`user.registered.v1`) | — |
+| order-service | Outbox publisher, credit-result consumer, order-expiry worker, order-receipt worker | `credit.commands` (`credit.reserve.v1`), `order.events` (`order.received.v1`, `order.canceled.v1`, `order.expired.v1`, `order.failed.v1`) | `order.credit-events.v1` |
+| credit-service | Registration consumer, settlement consumer, reservation-request consumer, outbox publisher | `credit.events` (`credit.reservation.succeeded.v1`, `credit.reservation.failed.v1`) | `credit.user-registered.v1`, `credit.order-events.v1`, `credit.reserve.v1` |
+
+Each consumer queue has a matching `.retry.v1` and `.dead.v1` queue.
+Messages that keep failing end up in the dead queue. Each service README
+explains how to replay them with its redrive scripts:
+
+- order-service: `npm run redrive:credit-reservation-results`, `npm run redrive:order-outbox`
+- credit-service: `npm run redrive:registration`, `redrive:settlement`, `redrive:reservation`, `redrive:credit-outbox` (and `redrive:prod`, the compiled registration redrive)
+
+Services can start in any order. Each connection sets up the exchanges,
+queues and bindings it needs before processing messages. The HTTP servers
+can start while RabbitMQ is down.
+
+### Broker settings
+
+Compose downloads `rabbitmq:4.2-management` and stores broker data in a named volume.
 
 The development login is `foc` / `foc-local-only`. Override it using `RABBITMQ_USER` and `RABBITMQ_PASSWORD` in the **root** `.env`. These settings create users when the broker volume is first initialized. Changing them later does not update existing broker users.
 
-Set `RABBITMQ_URL` in **both service directories'** `.env` files using the same credentials. URL-encode any special characters in the credentials.
+This local setup uses one broker node. Data survives restarts, but the setup does not provide high availability or recovery from permanent volume loss.
 
-Services running on your host use `localhost`. A future service running in a container on the same Compose network would use `rabbitmq`. Host service processes do not automatically load the root `.env`.
+### Running services on the host instead
 
-Apply migrations and generate clients in each service before startup:
+To run a service with `npm run dev` outside Docker, its dependencies must
+be reachable on `localhost`. The root stack's Postgres and RabbitMQ are on
+internal networks, so start them separately:
 
 ```sh
-cd user-service && npm ci && npm run db:deploy && npm run db:generate && npm run build
-cd supplier-service && npm ci && npm run db:deploy && npm run db:generate && npm run build
-cd order-service && npm ci && npm run db:deploy && npm run db:generate && npm run build
-cd credit-service && npm ci && npm run db:deploy && npm run db:generate && npm run build
+# Postgres: each service's own compose file publishes its database
+# (supplier 5433, user 5434, order 5435, credit 5436)
+(cd user-service && docker compose up -d user-postgres)
+
+# RabbitMQ: a standalone broker on 5672, with the management UI on 15672
+docker run -d --name foc-rabbitmq-dev \
+  -p 127.0.0.1:5672:5672 -p 127.0.0.1:15672:15672 \
+  -e RABBITMQ_DEFAULT_USER=foc -e RABBITMQ_DEFAULT_PASS=foc-local-only \
+  rabbitmq:4.2-management
 ```
 
-Run `npm start` from each service directory in separate terminals, or use `npm run dev`. The user-service publisher and credit-service consumer run inside those processes; you do not need separate worker commands.
+These containers have their own volumes, separate from the full stack's
+data. Then, in that service's `.env`:
 
-Either service can start first. Each connection sets up the required exchanges, queues and bindings before processing messages. The HTTP servers can start while RabbitMQ is down.
+- point `DATABASE_URL` at `localhost` and the published Postgres port
+- change `RABBITMQ_URL` to use `localhost`
+- use the relative `./keys/...` paths
 
-Stop services with Ctrl+C. They try to finish work already in progress before a 15-second shutdown deadline.
+Host processes do not load the root `.env`.
 
-Use `docker compose stop rabbitmq` to stop the broker and `docker compose start rabbitmq` to restart it. These commands and ordinary `docker compose down` preserve the volume. **`docker compose down -v` deletes broker data.**
+Apply migrations and generate clients before the first start. Run these
+from the repository root. For supplier-service, `db:generate` must run
+before `db seed`, because the seed script imports the generated client:
 
-This local setup uses one broker node. Data survives restarts, but the setup does not provide high availability or recovery from permanent volume loss.
+```sh
+(cd user-service && npm ci && npm run db:deploy && npm run db:generate && npm run build)
+(cd supplier-service && npm ci && npx prisma migrate deploy && npm run db:generate && npx prisma db seed && npm run build)
+(cd order-service && npm ci && npm run db:deploy && npm run db:generate && npm run build)
+(cd credit-service && npm ci && npm run db:deploy && npm run db:generate && npm run build)
+```
+
+Then run `npm start` or `npm run dev` from each service directory, each in
+its own terminal.
+
+Stop services with Ctrl+C. user-service, order-service and credit-service
+try to finish work already in progress before a 15-second shutdown
+deadline. supplier-service exits immediately.
 
 ## AI Use Summary
 
