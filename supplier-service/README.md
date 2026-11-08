@@ -30,6 +30,10 @@ The Supplier Service is responsible for managing suppliers and supplier types fo
 - Count the number of suppliers associated with each type.
 - Create and delete supplier types (with constraints).
 
+### Supplier Assets
+- Get images associated to supplier records.
+- Upload images for supplier records.
+
 ## Tech Stack
 
 Technology    | Purpose
@@ -124,7 +128,6 @@ supplier-service/
 │   ├── constants/
 │   ├── controllers/
 │   ├── errors/
-│   ├── integrations/
 │   ├── libs/
 │   ├── middlewares/
 │   ├── routes/
@@ -153,7 +156,7 @@ supplier-service/
 
 ### Supplier Service API Endpoints
 
-All routes are protected by JWT authentication (`authenticate`). The `authorize` function in the middleware ensures that the caller has the required permissions to access the endpoint. All endpoints use HTTP and are called synchronously.
+All routes, with the exception of getting supplier images, are protected by JWT authentication (`authenticate`). The `authorize` function in the middleware ensures that the caller has the required permissions to access the endpoint. All endpoints use HTTP and are called synchronously.
 
 | Method | Path | Role | Description |
 | --- | --- | --- | --- |
@@ -169,6 +172,7 @@ All routes are protected by JWT authentication (`authenticate`). The `authorize`
 | `POST` | `/api/suppliers/types` | admin | Create a new supplier type |
 | `DELETE` | `/api/suppliers/types/:typeId` | admin | Delete an existing supplier type with no supplier records associated to it |
 | `POST` | `/api/suppliers/assets/images` | admin | Upload image of a supplier |
+| `GET` | `/api/suppliers/assets/images/:filename` | all, no authentication required | Get a supplier image with the specified filename |
 
 ### Query suppliers (`GET /api/suppliers/`)
 
@@ -295,6 +299,7 @@ Status | Description
 `200`  | Supplier successfully deactivated
 `400`  | Invalid request data 
 `404`  | Supplier with the specified supplierId not found
+`409`  | Supplier is already deactivated
 
 ### Activate supplier (`PATCH /api/suppliers/:supplierId/activation`)
 
@@ -423,11 +428,28 @@ Status | Description
 { "success": false, "code": "CONFLICT", "message": "..." }
 ```
 
+## Supplier Assets
+
+Under `storage.ts`, a storage interface is implemented by two classes, `S3Storage` and `LocalStorage`. 
+
+`S3Storage` is the storage class that will be used when the application is deployed on cloud. All seeded images and image uploads have a dedicated image bucket on AWS S3. 
+
+When this application is ran on localhost, `LocalStorage` is the storage class used. When an uploaded supplier image is requested, the request is passed from nginx to supplier service, before being served. 
+
+### Uploading Images
+
+When the route for uploading images is used, the following steps occur:
+1. The authenticate middleware checks the JWT token and authenticates the caller. 
+2. The authorize middleware checks that the caller has the `admin` role. 
+3. The multer in the upload middleware checks that the uploaded image does not exceed the maximum allowed image size, and is of the allowed file types. The image is then placed into `req.file` before control is passed to the controller. 
+4. The controller checks that the image exists in `req.file`.
+5. The `uploadImage` function in `supplier.asset.service.ts` creates a unique file name for the image and calls the storage class implemented to save the file. 
+
 ## Containerization
 
 Supplier service makes use of Docker for containerization. A multi-stage build is used. 
 
-During the build stage, the database seeding script (`prisma/seed.ts`) always runs. The script checks whether the `supplier` table is empty; if it is empty (i.e. no rows in the table exist), then the script will seed the `supplier` table with data from `foc/data/csv/supplier-seed-data.csv`. Effectively, the database seeding will only occur once, unless the database is reset.
+When the container starts up, the database seeding script (`prisma/seed.ts`) always runs. The script checks whether the `supplier` table is empty; if it is empty (i.e. no rows in the table exist), then the script will seed the `supplier` table with data from `foc/data/csv/supplier-seed-data.csv`. Effectively, the database seeding will only occur once, unless the database is reset.
 
 The `supplierType` and `openingHours` table will also be populated based on the data provided in the CSV file. On initial startup, the `supplierType` table will be populated with 3 types: `RETAIL`, `FOOD` and `FACILITIES`. 
 
@@ -454,7 +476,10 @@ Create a `.env` file in the root of the Supplier Service and fill in the require
 `POSTGRES_PASSWORD` | Password for the PostgreSQL database
 `DATABASE_URL` | PostgreSQL connection string
 `JWT_PUBLIC_KEY_PATH` | Path to the RSA public key used to verify access tokens
-`ASSETS_PUBLIC_URL` | Public URL for supplier assets (images)
+`STORAGE` | Required, `local` or `s3`. Where uploaded images are stored: `local` saves them to disk (`supplier-service/uploads/`), `s3` uses foc's AWS S3 image bucket
+`ASSETS_PUBLIC_URL` | Base URL of all returned image URLs
+`S3_BUCKET` | Required variable when `STORAGE=s3`. Name of the images bucket in AWS S3.
+`AWS_REGION` | Required variable when `STORAGE=s3`. Region of the images bucket in AWS S3.
 `ORDER_SUPPLIER_SERVICE_TOKEN` | Shared secret for internal communication between the Order Service and Supplier Service
 
 > Do not commit `.env`, private keys, or other secrets to the repository.
@@ -483,7 +508,7 @@ npm run db:studio
 
 Start development with `npm run dev`, or run the compiled application with `npm start`.
 
-The registration consumer starts after the HTTP server begins listening. It reconnects if RabbitMQ becomes unavailable. `GET /healthz` only confirms that the HTTP server is running; it does not check RabbitMQ or whether students have received credits.
+`GET /healthz` only confirms that the HTTP server is running.
 
 ### Testing
 
