@@ -353,6 +353,7 @@ deadline. supplier-service exits immediately.
     - RabbitMQ outbox publisher, registration consumer and redrive script
     - frontend auth, profile, user-management and credits features
     - Dockerfiles, Compose files and GitHub Actions CI/CD workflows
+    - Migration of supplier images from AWS EC2 to S3, while using local storage when running the app locally
   - Writing the user-service unit tests
   - Debugging:
     - stale credit data across sessions
