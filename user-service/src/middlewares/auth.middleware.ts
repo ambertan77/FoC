@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-09-26
+// Scope: Generated the authenticate middleware that parses Bearer access tokens and attaches req.user.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import type { NextFunction, Response } from "express";
 import { AppError } from "../errors/errors.js";
 import { verifyAccessToken } from "../libs/accessToken.js";

@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-10-12
+// Scope: Generated bootstrapAdmin: one-time first-admin creation from env config with a BootstrapState marker, BootstrapResult outcomes and conflict errors.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import argon2 from "argon2";
 import { Prisma, type PrismaClient } from "../generated/prisma/client.js";
 import { registerSchema } from "../schemas/register.schema.js";

@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-10-25
+// Scope: Generated the test setup that provides deterministic env vars and PEM keys before any module is imported.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 // Loaded via `node --import` before any test file. config.ts throws on missing
 // env vars and accessToken.ts reads PEM files at import time, so provide
 // deterministic values here. dotenv never overrides variables already set,

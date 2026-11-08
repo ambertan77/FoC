@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-10-12
+// Scope: Suggested the credit balance, provisioning and transaction types and the CREDIT_TRANSACTION_TYPES list.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 export type CreditProvisioningResponse = {
     success: true;
     data: { status: "PROVISIONING" };

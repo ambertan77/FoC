@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-09-26
+// Scope: Generated controllers for profile, email change, password change, admin invitation, user listing and role promotion, validating requests with Zod safeParse.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import type { Request, Response } from "express";
 import { AppError } from "../errors/errors.js";
 import {

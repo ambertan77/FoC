@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-09-25
+// Scope: Generated the 6-digit registration OTP form with verify and resend actions.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import { useForm } from '@tanstack/react-form';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';

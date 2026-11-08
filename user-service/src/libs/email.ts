@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-09-26
+// Scope: Generated the Brevo SMTP transporter setup (getEmailSetting, getTransporter) and sendRegistrationOtpEmail; the other email senders follow the same pattern.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import nodemailer, { type Transporter } from "nodemailer";
 import { AppError } from "../errors/errors.js";
 import {

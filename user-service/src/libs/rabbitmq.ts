@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-10-12
+// Scope: Generated RabbitMQ helpers: RABBITMQ_URL validation, main/retry/dead queue topology, and publishConfirmed with publisher confirms and guards against concurrent or post-failure publishes.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import "dotenv/config";
 import {
   connect,

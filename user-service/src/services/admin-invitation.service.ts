@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-09-26
+// Scope: Generated createAdminInvitation: hashed 32-byte token, activation URL, resend cooldown, already-registered check and cleanup when the email fails to send.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import { createHash, randomBytes } from "node:crypto";
 import config from "../config/config.js";
 import {

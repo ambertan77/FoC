@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-10-12
+// Scope: Generated the registration consumer: event validation, x-retry-count handling, forwarding transient failures to the retry queue and invalid events to the dead queue, and ack-after-forward.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import { setTimeout as delay } from "node:timers/promises";
 import type { ConsumeMessage, ConfirmChannel } from "amqplib";
 import type { PrismaClient } from "../generated/prisma/client.js";

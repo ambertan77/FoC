@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-09-26
+// Scope: Generated the profile query hook and PROFILE_QUERY_KEY.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import { useQuery } from '@tanstack/react-query';
 import { parseError, type ParsedError } from '@/utils/errorHandler';
 import { getMyProfileService } from '../services/user.service';

@@ -1,3 +1,9 @@
+# AI Assistance Disclosure:
+# Tool: ChatGPT (Astra 6)
+# Date: approx. 2026-10-25
+# Scope: Generated the deploy workflow: reuse CI, push images to ECR via OIDC, deploy the backend to EC2 with docker compose, and upload the frontend to S3 with a CloudFront invalidation; skip docs-only changes.
+# Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 name: Deploy
 
 on:

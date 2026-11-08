@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-09-26
+// Scope: Suggested types for the admin user list, role update, profile and email-change responses.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import type { ApiUser, Role } from '@/features/auth/types/auth.types';
 
 export interface AdminUserListParams {

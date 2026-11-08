@@ -1,4 +1,11 @@
+# AI Assistance Disclosure:
+# Tool: ChatGPT (Astra 6)
+# Date: approx. 2026-10-21
+# Scope: Generated the compose services for order-service and its Postgres 17 database with a healthcheck and depends_on: service_healthy.
+# Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 services:
+  # Source: Docker Hub Official Postgres Image — https://hub.docker.com/_/postgres
   order-postgres:
     image: postgres:17
     restart: unless-stopped

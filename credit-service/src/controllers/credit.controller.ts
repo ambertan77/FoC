@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-10-12
+// Scope: Generated getMyBalance and getMyTransactions controllers that require an authenticated user and validate query parameters with Zod.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import type { Response } from "express";
 import { AppError } from "../errors/errors.js";
 import { prisma } from "../libs/prisma.js";

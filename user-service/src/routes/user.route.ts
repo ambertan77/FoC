@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-09-26
+// Scope: Generated route wiring for /me profile, email-change and password-change endpoints, plus admin-only list and role-promotion routes guarded by authorize(Role.ADMIN).
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import { Router } from "express";
 import {
   changePassword,

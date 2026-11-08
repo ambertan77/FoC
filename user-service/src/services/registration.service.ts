@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-09-26
+// Scope: Generated startRegistration, resendRegistrationOtp and verifyRegistration: hashed OTPs, hourly request limits, failed-attempt lockout, transaction-conflict retry and outbox event creation.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import { randomInt, randomUUID } from "node:crypto";
 import argon2 from "argon2";
 import {

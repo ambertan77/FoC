@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-09-26
+// Scope: Generated API calls for listing and promoting users, admin invitations, profile read/update, email change and password change.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import authApi from '@/api/authApi';
 import { ENDPOINTS } from '@/api/endpoints';
 import { ROLES } from '@/features/auth/types/auth.types';

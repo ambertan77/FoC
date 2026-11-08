@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-10-12
+// Scope: Generated the balance query hook that polls every 2s while provisioning and gives up after a 30s deadline.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ROLES } from "@/features/auth/types/auth.types";

@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-09-26
+// Scope: Generated the admin activation form (username, phone, password, confirm password) with field-level API error mapping.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import { useState } from 'react';
 import { useForm } from '@tanstack/react-form';
 import { EyeIcon, EyeOffIcon } from 'lucide-react';

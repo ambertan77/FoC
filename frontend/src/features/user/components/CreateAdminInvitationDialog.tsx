@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-09-26
+// Scope: Generated the dialog for inviting an administrator by email, including cooldown and conflict error handling.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import { useForm } from '@tanstack/react-form';
 import { MailPlusIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';

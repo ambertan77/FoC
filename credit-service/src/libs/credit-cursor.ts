@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-10-12
+// Scope: Generated encodeTransactionCursor/decodeTransactionCursor for opaque base64url cursors, rejecting malformed cursors with a 400.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import { AppError } from "../errors/errors.js";
 import { transactionCursorSchema, type TransactionCursor } from "../schemas/credit.schema.js";
 

@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-10-25
+// Scope: Generated unit tests for verifyRegistration (consumed challenge, expiry, lockout, wrong code, outbox event, concurrent consumption) with mocked Prisma.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import test, { beforeEach, mock } from "node:test";
 import assert from "node:assert/strict";
 import argon2 from "argon2";

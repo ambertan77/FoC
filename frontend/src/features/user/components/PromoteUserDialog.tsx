@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-09-26
+// Scope: Generated the confirmation dialog for promoting a student to administrator.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import { ShieldCheckIcon } from 'lucide-react';
 import type { ApiUser } from '@/features/auth/types/auth.types';
 import { Button } from '@/components/ui/button';

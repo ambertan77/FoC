@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-09-26
+// Scope: Generated the profile page layout combining the profile details and change-password forms.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import { KeyRoundIcon, UserRoundIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {

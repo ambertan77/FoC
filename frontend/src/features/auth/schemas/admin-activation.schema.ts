@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-09-26
+// Scope: Generated Zod schemas for the activation token and the admin activation form.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import { z } from 'zod';
 import {
     passwordSchema,

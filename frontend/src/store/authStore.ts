@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-10-12
+// Scope: Helped fix stale credit data by clearing credit queries (removeQueries on creditKeys.all) when the session user changes or auth is cleared.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import type { ApiUser } from "@/features/auth/types/auth.types";
 import { creditKeys } from "@/features/credit/hooks/credit.keys";
 import queryClient from "@/lib/queryClient";

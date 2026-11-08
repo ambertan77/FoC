@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-10-25
+// Scope: Generated unit tests for registerSchema normalisation, weak passwords, invalid usernames, non-Singapore numbers, unknown fields and the verify payload.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import test from "node:test";
 import assert from "node:assert/strict";
 import {

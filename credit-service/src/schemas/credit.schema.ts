@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-10-12
+// Scope: Generated Zod schemas for the transaction-history query (type filter, asc/desc sort) and the cursor payload.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import { z } from "zod";
 import { CreditTransactionType } from "../generated/prisma/client.js";
 

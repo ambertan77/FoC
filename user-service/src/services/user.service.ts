@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-09-26
+// Scope: Generated listUsers, promoteUserToAdmin, getMyProfile, updateMyProfile and changePassword, including uniqueness checks and P2002 conflict handling.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import argon2 from "argon2";
 import {
   Prisma,

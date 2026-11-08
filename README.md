@@ -120,3 +120,25 @@ Stop services with Ctrl+C. They try to finish work already in progress before a 
 Use `docker compose stop rabbitmq` to stop the broker and `docker compose start rabbitmq` to restart it. These commands and ordinary `docker compose down` preserve the volume. **`docker compose down -v` deletes broker data.**
 
 This local setup uses one broker node. Data survives restarts, but the setup does not provide high availability or recovery from permanent volume loss.
+
+## AI Use Summary
+
+- **Tools:** ChatGPT (Astra 6)
+- **Used for:**
+  - Generating initial implementations:
+    - user-service registration with OTP, profile, email change, password change, admin invitation and activation, and first-admin bootstrap
+    - credit-service ledger, initial credit grant, balance and history endpoints
+    - RabbitMQ outbox publisher, registration consumer and redrive script
+    - frontend auth, profile, user-management and credits features
+    - Dockerfiles, Compose files and GitHub Actions CI/CD workflows
+  - Writing the user-service unit tests
+  - Debugging:
+    - stale credit data across sessions
+    - phone prefix display
+    - service startup ordering
+    - gateway DNS resolution after redeploys
+  - Refactoring the credits history UI and the CI test steps
+  - Drafting frontend README documentation
+- **Prohibited phases avoided:** requirements elicitation; architecture/design decisions
+- **Verification:** all AI outputs reviewed, edited and tested by the authors
+- **Full log:** [/ai/usage-log.md](ai/usage-log.md)

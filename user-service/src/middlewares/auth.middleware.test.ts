@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-10-25
+// Scope: Generated unit tests for authenticate, authorize role enforcement and errorHandler mapping.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import test, { mock } from "node:test";
 import assert from "node:assert/strict";
 import type { NextFunction, Request, Response } from "express";

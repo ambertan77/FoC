@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-10-12
+// Scope: Generated the useInfiniteQuery hook for cursor-paginated transactions with type and sort filters.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import { useQuery } from "@tanstack/react-query";
 import { ROLES } from "@/features/auth/types/auth.types";
 import useAuth from "@/hooks/useAuth";

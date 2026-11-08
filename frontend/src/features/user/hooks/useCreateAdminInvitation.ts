@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-09-26
+// Scope: Generated the create-admin-invitation mutation hook.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import { useMutation } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
 import { parseError, type ParsedError } from '@/utils/errorHandler';

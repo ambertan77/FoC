@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-09-26
+// Scope: Generated registerService, verifyRegistrationService, resendRegistrationOtpService and activateAdminService API calls.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import { ENDPOINTS } from "@/api/endpoints";
 import type { ApiResponse } from "@/types/api.types";
 import type {

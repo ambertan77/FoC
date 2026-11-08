@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-10-12
+// Scope: Generated the outbox polling loop (startOutboxPublisher) with exponential retryDelay capped at 60s, failureCode mapping and clean disconnect.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import { setTimeout as delay } from "node:timers/promises";
 import type { PrismaClient } from "../generated/prisma/client.js";
 import {

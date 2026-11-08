@@ -1,3 +1,9 @@
+# AI Assistance Disclosure:
+# Tool: ChatGPT (Astra 6)
+# Date: approx. 2026-10-21
+# Scope: Generated the compose service that passes the required VITE_* build args and binds the frontend port to localhost.
+# Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 services:
   frontend:
     build:

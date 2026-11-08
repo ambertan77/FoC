@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-10-12
+// Scope: Suggested the balance and transaction response types, including the provisioning response union.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import type { CreditTransactionType } from "../generated/prisma/client.js";
 
 export type ProvisioningResponse = {

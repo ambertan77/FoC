@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-10-13
+// Scope: Generated presentation helpers: transactionLabels, transactionDescriptions, formatCredits, formatCreditDelta and formatCreditTimestamp.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import type { CreditTransactionType } from "./types/credit.types";
 
 export const transactionLabels: Record<CreditTransactionType, string> = {

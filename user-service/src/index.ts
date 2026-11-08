@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-10-12
+// Scope: Generated the startup sequence that runs bootstrapAdmin before listening, starts the outbox publisher, and bounds graceful SIGINT/SIGTERM shutdown with a deadline.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import express from "express";
 import type { Request, Response } from "express";
 import cors from "cors";

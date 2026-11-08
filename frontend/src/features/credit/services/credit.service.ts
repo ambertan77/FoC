@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-10-12
+// Scope: Generated creditKeys and the getCreditBalanceService/getCreditTransactionsService API calls with response validation.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import { z } from "zod";
 import creditApi from "@/api/creditApi";
 import { ENDPOINTS } from "@/api/endpoints";
