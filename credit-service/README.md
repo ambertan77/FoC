@@ -2,7 +2,7 @@
 AI Assistance Disclosure:
 Tool: Claude Code (Claude Opus 5.5)
 Date: 2026-11-08
-Scope: Audited against the code; documented reservation processing, result events, reason codes, the reservation consumer and outbox publisher, and the disabled internal API, and corrected stale messaging claims.
+Scope: Audited against the code; documented reservation processing, result events, reason codes, the reservation consumer and outbox publisher, and the disabled internal API, and corrected stale messaging claims. Fixed the startup, redrive, test, environment, project structure and error sections, and added a Docker section.
 Author review: Reviewed and edited by Lim Shao Qi.
 -->
 
@@ -467,7 +467,7 @@ Missing accounts or reservations, or conflicts that use up the local serializati
 
 A database outage closes the consumer session. Reconnect waits grow from 1 to 60 seconds without increasing the event's retry count. Before acknowledging an original message, retry/DLQ forwarding must be confirmed and successfully routed.
 
-The settlement consumer starts alongside registration after the HTTP server begins listening. It processes one message at a time (prefetch 1) and stops before Prisma disconnects.
+The settlement consumer starts with the other background workers after the HTTP server begins listening (see [Running the service](#running-the-service)). It processes one message at a time (prefetch 1) and stops before Prisma disconnects.
 
 #### Broker integration checks
 
@@ -491,7 +491,7 @@ npm run db:generate
 npm run build
 ```
 
-Run F4–F7 input-validation tests with `npm test` (no database or broker required). Generate the Prisma client with `npm run db:generate` after schema changes. Run PostgreSQL integration tests with:
+`npm test` needs no database or broker. It runs `test/**/*.test.ts` (F4–F7 input validation) and the unit tests next to the code in `src/**/*.test.ts` (the reservation-request event schema and the reservation-request service). Generate the Prisma client with `npm run db:generate` after schema changes. Run PostgreSQL integration tests with:
 
 ```sh
 CREDIT_TEST_DATABASE_URL="postgresql://username:password@localhost:5432/credit_test" npm run test:integration
@@ -501,7 +501,7 @@ Use a dedicated test database, never production. The database role needs permiss
 
 The F4–F7 tests cover:
 
-- **F4:** available-to-reserved balances and ledger entries, full-balance reservation, insufficient funds, concurrent holds, atomic rollback, and HTTP authentication/validation.
+- **F4:** available-to-reserved balances and ledger entries, full-balance reservation, insufficient funds, concurrent holds, atomic rollback, and HTTP authentication/validation. The HTTP checks mount the [disabled internal router](#internal-reservation-api-disabled) inside the test; the running service does not.
 - **F5:** payment of held credits to the courier, conservation of credits, duplicate/conflicting receipts, and rollback of both participants' balances.
 - **F6:** cancellation and expiry returning held credits with the correct release reason and ledger entry.
 - **F7:** failure returning held credits with a REFUND entry, without refunding an already transferred reservation.
@@ -565,9 +565,15 @@ Redrive commands for each Credit dead-letter queue:
 | Reservation requests | `credit.reserve.dead.v1` | `npm run redrive:reservation -- --limit 10` |
 | Credit outbox (`DEAD` rows) | database | `npm run redrive:credit-outbox -- --limit 10` |
 
-Redrive means sending a dead-letter message back for another processing attempt. The command only needs `RABBITMQ_URL`; it does not start Prisma or the HTTP server.
+Redrive means sending a dead-letter message back for another processing attempt.
 
-Restart credit service afterward. Keeping its consumer paused during redrive prevents a still-failing event from returning to the dead-letter queue and being picked up again in the same run. Run one redrive command at a time.
+`redrive:prod` runs the compiled registration redrive (`dist/scripts/redrive-registration.js`). Use it where the TypeScript sources are not available, such as inside the production container: `docker compose -f compose.prod.yaml exec credit-service npm run redrive:prod -- --limit 10`.
+
+#### Queue redrive (registration, settlement, reservation requests)
+
+These commands only need `RABBITMQ_URL`. They do not start Prisma or the HTTP server.
+
+Stop credit service before running one, and restart it afterward. Keeping its consumer paused during redrive prevents a still-failing event from returning to the dead-letter queue and being picked up again in the same run. Run one redrive command at a time.
 
 The command processes the oldest available dead letters. It stops at the requested positive limit or the number of ready messages counted at startup, whichever is smaller.
 
@@ -587,6 +593,18 @@ For each message, it:
 A broker failure stops the command with exit code 1. The current unacknowledged message becomes available again when the connection closes. Invalid event bodies, identities or redrive counts also stop the command without removing the message. Investigate these separately; redrive does not rewrite events or repair accounts and reservations.
 
 A crash after forwarding but before acknowledgment can create a duplicate delivery. Credit Service's handlers are idempotent, so a duplicate cannot grant reserve, transfer, release or refund twice. A successful redrive means the message was republished; credit service may not have processed it yet.
+
+#### Outbox redrive (`redrive:credit-outbox`)
+
+This command only touches the database. It does not connect to RabbitMQ. It loads the service config, so it needs every variable that is [required at startup](#environment-variables), not only `DATABASE_URL`.
+
+In one transaction it:
+
+- Selects up to `--limit` `DEAD` reservation-result rows, oldest first.
+- Skips rows whose payload does not match the row (wrong `eventId` or `eventType`, missing `correlationId` or `orderId`, or a missing `reservationId`/`reasonCode` for the event type). Their IDs are printed as `invalidIds`.
+- Resets the rest to `PENDING` with `retryCount` 0, clears the lock and last error, and makes them due immediately.
+
+The running [result outbox publisher](#result-outbox-publisher) then publishes them on its next poll, so the service does not need to be stopped. A database error stops the command with exit code 1 and changes nothing.
 
 ### Database Transactions and Credit Ledger
 
@@ -696,9 +714,9 @@ credit-service/
 │   ├── constants/
 │   ├── controllers/
 │   ├── errors/
-│   ├── integrations/
+│   ├── generated/      # Prisma client (git-ignored; npm run db:generate)
 │   ├── libs/
-│   ├── middlewares/
+│   ├── middleware/
 │   ├── routes/
 │   ├── schemas/
 │   ├── scripts/
@@ -707,20 +725,20 @@ credit-service/
 │   ├── workers/
 │   └── index.ts
 │
-├── keys/
+├── keys/               # public.pem (git-ignored)
 ├── test/
 ├── .dockerignore
 ├── .env
 ├── .env.example
 ├── .gitignore
-|── AGENTS.md
-|── compose.yaml
-|── docker-entrypoint.sh
-|── Dockerfile
-|── package-lock.json
+├── AGENTS.md
+├── compose.yaml
+├── docker-entrypoint.sh
+├── Dockerfile
+├── package-lock.json
 ├── package.json
 ├── prisma.config.ts
-|── README.md
+├── README.md
 └── tsconfig.json
 ```
 
@@ -948,6 +966,7 @@ Existing indexes on `(accountId, createdAt DESC, id DESC)` and `(accountId, type
 | 401 | `AUTHENTICATION_REQUIRED` | `Authentication required` | Missing/empty bearer authentication or unsupported authorization scheme |
 | 401 | `UNAUTHORIZED` | `Invalid token, please sign out and back in` | Invalid/expired token, signature, or required claims |
 | 403 | `FORBIDDEN` | `You do not have permission to access this resource` | Valid admin token cannot access credit reads |
+| 404 | `NOT_FOUND` | `Not found` | Unknown route |
 | 500 | `INTERNAL_SERVER_ERROR` | `An unexpected error occurred` | Unexpected failure, including database errors |
 
 Example HTTP 400:
@@ -1009,18 +1028,20 @@ Make sure the following are installed:
 
 Create a `.env` file in the root of the Credit Service and fill in the required environment variables. You can use the provided `.env.example` as a template.
 
-| Variable | Purpose |
-| --- | --- |
-`PORT` | Port used by the User Service
-`NODE_ENV` | Node environment (development, production, etc.)
-`FRONTEND_URL` | Frontend URL allowed by CORS
-`CREDIT_POSTGRES_DB` | Name of the PostgreSQL database for the Credit Service
-`CREDIT_POSTGRES_USER` | Username for the PostgreSQL database
-`CREDIT_POSTGRES_PASSWORD` | Password for the PostgreSQL database
-`DATABASE_URL` | PostgreSQL connection string
-`RABBITMQ_URL` | Broker connection URL for the background outbox publisher
-`JWT_PUBLIC_KEY_PATH` | Path to the RSA public key used to verify access tokens
-`ORDER_CREDIT_SERVICE_TOKEN` | Shared secret for internal Order → Credit requests
+The service exits at startup if any variable marked **Required** is missing (`src/config/config.ts`).
+
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `PORT` | Required | Port the Credit Service listens on (`3003`) |
+| `DATABASE_URL` | Required | PostgreSQL connection string |
+| `FRONTEND_URL` | Required | Frontend origin allowed by CORS |
+| `JWT_PUBLIC_KEY_PATH` | Required | Path to the RSA public key used to verify access tokens |
+| `ORDER_CREDIT_SERVICE_TOKEN` | Required | Shared secret for the [internal reservation API](#internal-reservation-api-disabled). That API is disabled, so nothing uses the value, but startup still checks for it. |
+| `RABBITMQ_URL` | Workers | Broker URL for the registration, settlement and reservation consumers, the result outbox publisher, and the queue redrive commands. It is read when a worker connects, so a missing value doesn't stop the HTTP server, but the workers keep failing to connect. |
+| `CREDIT_POSTGRES_DB` | Compose | PostgreSQL database name. Read only by `compose.yaml`. |
+| `CREDIT_POSTGRES_USER` | Compose | PostgreSQL user. Read only by `compose.yaml`. |
+| `CREDIT_POSTGRES_PASSWORD` | Compose | PostgreSQL password. Read only by `compose.yaml`. |
+| `NODE_ENV` | No | In `.env.example`, but Credit Service doesn't read it. |
 
 > Do not commit `.env`, private keys, or other secrets to the repository.
 
@@ -1046,9 +1067,29 @@ To inspect the database schema, run:
 npm run db:studio
 ```
 
+### Running the service
+
 Start development with `npm run dev`, or run the compiled application with `npm start`.
 
-The registration consumer starts after the HTTP server begins listening. It reconnects if RabbitMQ becomes unavailable. `GET /healthz` only confirms that the HTTP server is running; it does not check RabbitMQ or whether students have received credits.
+After the HTTP server begins listening, the service starts four background workers:
+
+- the registration consumer
+- the settlement consumer
+- the reservation-request consumer
+- the result outbox publisher
+
+Each worker reconnects if RabbitMQ becomes unavailable. On `SIGINT` or `SIGTERM`, the service stops the workers and the HTTP server, then disconnects Prisma. If that takes longer than 15 seconds, it exits with code 1.
+
+`GET /healthz` only confirms that the HTTP server is running. It does not check the database, RabbitMQ, or whether students have received credits.
+
+### Docker
+
+The root `compose.yaml` includes this folder's `compose.yaml`, which defines two containers:
+
+- **`credit-service`:** built from the `Dockerfile` (Node.js 22 Alpine). It mounts `../user-service/keys/public.pem` read-only at `JWT_PUBLIC_KEY_PATH`, so create the user-service keys first. `docker-entrypoint.sh` runs `prisma migrate deploy` and then starts `dist/index.js`. The API port isn't published to the host. In the root stack, reach it through the frontend at `http://localhost:5173/api/credits/...`.
+- **`credit-postgres`:** PostgreSQL 17 with a health check. The service waits until it is healthy.
+
+The `127.0.0.1:5436` Postgres port mapping only works when you run this folder's compose on its own, for example `docker compose up -d credit-postgres` to use with `npm run dev`. In the root stack, the database is on an internal network and isn't reachable from the host. Use `docker compose exec credit-postgres psql -U <CREDIT_POSTGRES_USER> <CREDIT_POSTGRES_DB>` instead.
 
 ## Acknowledgements
 
