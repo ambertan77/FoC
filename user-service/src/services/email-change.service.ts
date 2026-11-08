@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-09-26
+// Scope: Generated startEmailChange, resendEmailChangeOtp, verifyEmailChange and getPendingEmailChange, mirroring the registration OTP flow (rate limits, expiry, lockout).
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import { randomInt } from "node:crypto";
 import argon2 from "argon2";
 import {

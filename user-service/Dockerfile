@@ -1,3 +1,9 @@
+# AI Assistance Disclosure:
+# Tool: ChatGPT (Astra 6)
+# Date: approx. 2026-10-19
+# Scope: Generated the multi-stage Node 22 Alpine build (npm ci, Prisma generate, build, prune dev dependencies) and the slim runtime stage.
+# Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 # Source: Docker Hub Official Node.js Image — https://hub.docker.com/_/node
 # Build with Node.js 22 on the small Alpine Linux base; npm is included.
 FROM node:22-alpine AS builder

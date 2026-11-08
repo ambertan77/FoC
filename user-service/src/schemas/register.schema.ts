@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-09-25
+// Scope: Generated Zod schemas for username, email, Singapore phone normalisation, password strength, and the register/resend/verify payloads.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import { z } from "zod";
 
 export const usernameSchema = z

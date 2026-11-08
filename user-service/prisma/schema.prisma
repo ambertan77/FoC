@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-09-25
+// Scope: Helped write models for pending registrations, OTP requests, admin invitations, email changes, bootstrap state and the outbox, with unique constraints on user identities.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 

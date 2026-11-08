@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-09-26
+// Scope: Suggested route wiring for /register, /register/resend and /register/verify alongside the admin activation route.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import { Router } from "express";
 import {
     activateAdmin,

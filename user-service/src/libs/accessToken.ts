@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-09-26
+// Scope: Helped write verifyAccessToken payload validation (rejecting unknown roles) and mapping invalid or expired tokens to AppError.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import fs from "node:fs";
 import { createPublicKey } from "node:crypto";
 import jwt, { type JwtPayload } from "jsonwebtoken";

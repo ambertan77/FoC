@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-09-26
+// Scope: Generated Zod schemas for list-users pagination, role update, profile update (at least one field), email change and password change.
+// Author review: Reviewed, tested, and edited by Lim Shao Qi.
+
 import { z } from "zod";
 import {
   emailSchema,
