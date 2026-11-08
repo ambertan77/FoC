@@ -1,3 +1,11 @@
+<!--
+AI Assistance Disclosure:
+Tool: Claude Code (Claude Opus 5.5)
+Date: 2026-11-08
+Scope: Audited against the code; documented reservation processing, result events, reason codes, the reservation consumer and outbox publisher, and the disabled internal API, and corrected stale messaging claims. Fixed the startup, redrive, test, environment, project structure and error sections, and added a Docker section.
+Author review: Reviewed and edited by Lim Shao Qi.
+-->
+
 # Credit service
 
 ## Table of Contents
@@ -46,6 +54,11 @@ A reservation follows this lifecycle:
 | Order is received | `RESERVED` → `TRANSFERRED` | Requester’s reserved credits decrease; courier’s available credits increase |
 | Order is canceled or expires | `RESERVED` → `RELEASED` | Requester’s reserved credits decrease; available credits increase |
 | Order fails | `RESERVED` → `REFUNDED` | Requester’s reserved credits decrease; available credits increase |
+| Creation aborted (internal HTTP API only, [currently disabled](#internal-reservation-api-disabled)) | `RESERVED` → `ABORTED`, reason `CREATION_ABORTED` | Requester’s reserved credits decrease; available credits increase |
+
+A renewal can only use a previous reservation for the same order,
+requester and amount, and only if that reservation is `RELEASED` with
+reason `EXPIRED`. See [Order Reservation and Renewal](#order-reservation-and-renewal).
 
 The reservation and its balance and ledger changes are committed together in a database transaction. A reservation can be settled only once. Repeated delivery of the same event does not apply the balance change again, and conflicting settlement attempts are rejected.
 
@@ -96,11 +109,11 @@ Each consumer has three durable quorum queues:
 
 All queues use `reject-publish` when full and `x-delivery-limit: -1`. The retry queue uses `x-dead-letter-strategy: at-least-once`, so a retry can be delivered more than once.
 
-Retries return to the main queue by queue name, not through the topic exchange. This stops other queues bound to the same key from receiving duplicates. A retried message therefore arrives with the queue name as its routing key. When a consumer forwards a message to theretry or dead queue, it stores the original key in the `x-original-routing-key` header, and on a delayed retry it validates that header against the event type.
+Retries return to the main queue by queue name, not through the topic exchange. This stops other queues bound to the same key from receiving duplicates. A retried message therefore arrives with the queue name as its routing key. The registration and settlement consumers store the original key in the `x-original-routing-key` header when they forward a message to the retry or dead queue. On a delayed retry, they check that header against the event type. The reservation-request consumer does not set this header: its queue name and routing key are both `credit.reserve.v1`, so a retried message still matches.
 
 Publishers and consumers both declare the topology of every queue they publish to or read from, so a `mandatory` publish is never returned as unroutable because the other service has not started yet. Keep these definitions identical in all services. A mismatch fails at startup with `PRECONDITION_FAILED`.
 
-The DLQ is a consumer-side concept: it holds messages that reached the broker but could not be processed. The publisher-side equivalent is an outbox row with status `DEAD`.
+The DLQ is a consumer-side concept: it holds messages that reached the broker but could not be processed. In Credit Service's and Order Service's outboxes, the publisher-side equivalent is a row with status `DEAD`. User Service's outbox has no `DEAD` state. It keeps retrying unpublished rows indefinitely.
 
 ### Registration and Initial Credit Grant
 
@@ -269,6 +282,95 @@ A renewal request also identifies the previous reservation and carries the order
 
 Credit Service processes the request and publishes either `CREDIT_RESERVATION_SUCCEEDED` with the new reservation ID, or `CREDIT_RESERVATION_FAILED` with a reason code. The result includes a `correlationId` linking it to the request.
 
+#### How a request is processed
+
+In one database transaction, Credit Service:
+
+1. Stores the request by `eventId` with outcome `PENDING`. If that
+   `eventId` was already processed, it returns the stored outcome without
+   doing anything else. A repeat whose `requestType`, `orderId`,
+   `requesterId`, `amount` or `previousReservationId` differs is rejected
+   as a conflict.
+2. For `RENEW`, checks the previous reservation. It must exist, match the
+   request's order, requester and amount, and be `RELEASED` with reason
+   `EXPIRED`. `expectedVersion` and `expiryAt` are validated but not stored
+   or returned. Only Order Service uses them.
+3. Moves `amount` from the requester's available to reserved credits,
+   creates a `RESERVED` reservation and writes a `RESERVATION` ledger
+   entry.
+4. Sets the outcome to `SUCCEEDED` or `FAILED`, and writes the result
+   event to the `CreditOutboxEvent` table.
+
+A failed request changes no balances. The possible `reasonCode` values:
+
+| `reasonCode` | Meaning |
+| --- | --- |
+| `PREVIOUS_RESERVATION_NOT_FOUND` | `RENEW`: `previousReservationId` does not exist |
+| `PREVIOUS_RESERVATION_MISMATCH` | `RENEW`: the previous reservation has a different order, requester or amount |
+| `PREVIOUS_RESERVATION_NOT_RENEWABLE` | `RENEW`: the previous reservation is not `RELEASED` with reason `EXPIRED` |
+| `CREDIT_ACCOUNT_NOT_FOUND` | The requester has no credit account |
+| `INSUFFICIENT_AVAILABLE_CREDITS` | Available credits are below `amount`, or the reserved balance would overflow |
+
+#### Result events
+
+```json
+{
+  "eventId": "9a1d7c52-3f0e-4b8a-9c61-2e5f4d3b1a70",
+  "correlationId": "4c32dd25-ae56-4adc-92fb-a8a663b82957",
+  "orderId": "d0379a4b-657c-4aaf-a2c9-cde57bbb6482",
+  "requestType": "CREATE",
+  "eventType": "CREDIT_RESERVATION_SUCCEEDED",
+  "reservationId": "5b0e2f4c-8d17-4a39-b6e2-0c9a7d1f3e84"
+}
+```
+
+```json
+{
+  "eventId": "9a1d7c52-3f0e-4b8a-9c61-2e5f4d3b1a71",
+  "correlationId": "4c32dd25-ae56-4adc-92fb-a8a663b82958",
+  "orderId": "d0379a4b-657c-4aaf-a2c9-cde57bbb6482",
+  "requestType": "RENEW",
+  "eventType": "CREDIT_RESERVATION_FAILED",
+  "reasonCode": "PREVIOUS_RESERVATION_NOT_RENEWABLE"
+}
+```
+
+- `eventId` is a new UUID for the result. It is also the AMQP `messageId`.
+- `correlationId` is the request's `eventId`. It is also sent as the AMQP
+  `correlationId`.
+
+#### Reservation-request consumer rules
+
+The consumer of `credit.reserve.v1` processes one message at a time
+(prefetch 1):
+
+- Bodies over 64 KiB, invalid JSON, invalid fields, a `messageId` that
+  differs from `eventId`, or an unexpected routing key go straight to
+  `credit.reserve.dead.v1` with `x-credit-failure: INVALID_EVENT`. An
+  invalid `x-retry-count` header goes there as `INVALID_RETRY_COUNT`.
+- A temporary database outage closes the consumer session. The consumer
+  then reconnects without using up the message's retries.
+- **Any other processing error** is retried through
+  `credit.reserve.retry.v1` (10-second delay) up to 5 times. After that,
+  the message is dead-lettered with `RETRIES_EXHAUSTED`. This includes an
+  `eventId` reused with different data, which will not succeed on retry.
+
+#### Result outbox publisher
+
+Result events are written to the `CreditOutboxEvent` table and published
+by a background publisher in the same process:
+
+- It claims up to 30 due rows at a time with `FOR UPDATE SKIP LOCKED`
+  and a 30-second lease. When there is nothing to publish, it waits 30
+  seconds before polling again.
+- Each event is published to `credit.events` and waits for broker
+  confirmation. Only then is the row marked `PUBLISHED`.
+- A failed publish is retried with exponential backoff and jitter (1 s,
+  2 s, 4 s …, up to 60 s). After 5 failures the row becomes `DEAD`. A row
+  whose stored payload is invalid fails the same way.
+- To publish `DEAD` rows again, use `npm run redrive:credit-outbox` (see
+  [Dead-Letter Inspection and Redrive](#dead-letter-inspection-and-redrive)).
+
 Order Service consumes the result and updates its order. A successful create makes the order available as `OPEN`; a failed create is recorded as a reservation failure. A successful renewal reopens the expired order, updates its expiry time, and saves the new reservation ID. A failed renewal leaves the order expired.
 
 The renewal’s `expectedVersion` lets Order Service reject a result if the order changed after the renewal request was made. Duplicate results are checked against the previously processed result so they cannot apply the same order update twice.
@@ -344,10 +446,10 @@ The same duplicate-event and balance checks as F6 apply. No courier account is n
 
 #### Order Service responsibilities
 
-The Order producers are still pending. Order must:
+Order Service publishes all four settlement events through its outbox. For each one, it:
 
-- Authorize cancellation or expiry, then save OPEN → CANCELED/EXPIRED together with its version, status history and outbox event.
-- Protect COMPLETED → FAILED against competing manual or automatic receipt, then save the failure change and outbox event together.
+- Authorizes the cancellation or expiry, then saves OPEN → CANCELED/EXPIRED together with its version, status history and outbox event.
+- Protects COMPLETED → FAILED against a competing manual or automatic receipt, then saves the failure change and outbox event together.
 
 Credit's consumer does not complete Order's lifecycle workflow. After cancellation, expiry or failure, credits may remain unavailable until the event is delivered and processed.
 
@@ -365,7 +467,7 @@ Missing accounts or reservations, or conflicts that use up the local serializati
 
 A database outage closes the consumer session. Reconnect waits grow from 1 to 60 seconds without increasing the event's retry count. Before acknowledging an original message, retry/DLQ forwarding must be confirmed and successfully routed.
 
-The settlement consumer starts alongside registration after the HTTP server begins listening. It processes one message at a time (prefetch 1) and stops before Prisma disconnects.
+The settlement consumer starts with the other background workers after the HTTP server begins listening (see [Running the service](#running-the-service)). It processes one message at a time (prefetch 1) and stops before Prisma disconnects.
 
 #### Broker integration checks
 
@@ -389,7 +491,7 @@ npm run db:generate
 npm run build
 ```
 
-Run F4–F7 input-validation tests with `npm test` (no database or broker required). Generate the Prisma client with `npm run db:generate` after schema changes. Run PostgreSQL integration tests with:
+`npm test` needs no database or broker. It runs `test/**/*.test.ts` (F4–F7 input validation) and the unit tests next to the code in `src/**/*.test.ts` (the reservation-request event schema and the reservation-request service). Generate the Prisma client with `npm run db:generate` after schema changes. Run PostgreSQL integration tests with:
 
 ```sh
 CREDIT_TEST_DATABASE_URL="postgresql://username:password@localhost:5432/credit_test" npm run test:integration
@@ -399,7 +501,7 @@ Use a dedicated test database, never production. The database role needs permiss
 
 The F4–F7 tests cover:
 
-- **F4:** available-to-reserved balances and ledger entries, full-balance reservation, insufficient funds, concurrent holds, atomic rollback, and HTTP authentication/validation.
+- **F4:** available-to-reserved balances and ledger entries, full-balance reservation, insufficient funds, concurrent holds, atomic rollback, and HTTP authentication/validation. The HTTP checks mount the [disabled internal router](#internal-reservation-api-disabled) inside the test; the running service does not.
 - **F5:** payment of held credits to the courier, conservation of credits, duplicate/conflicting receipts, and rollback of both participants' balances.
 - **F6:** cancellation and expiry returning held credits with the correct release reason and ledger entry.
 - **F7:** failure returning held credits with a REFUND entry, without refunding an already transferred reservation.
@@ -434,9 +536,9 @@ Order failure producers, outbox and recovery, full Order/browser workflows, brok
 
 ### Reliability, Retries, and Duplicate Handling
 
-Outbox publishers claim events in a database transaction using `FOR UPDATE SKIP LOCKED`. This lets multiple publishers claim different rows without claiming the same row at the same time. A lease allows another publisher to reclaim a row if its original publisher stops before completing the work.
+Credit Service's and Order Service's outbox publishers claim events in a database transaction using `FOR UPDATE SKIP LOCKED`. This lets multiple publishers claim different rows without claiming the same row at the same time. A lease allows another publisher to reclaim a row if its original publisher stops before completing the work.
 
-Publishers send persistent messages and wait for RabbitMQ publisher confirmation. They mark an outbox row as published only after confirmation. Failed publishes are retried with backoff; events that exceed the configured retry limit are marked `DEAD` for inspection and redrive.
+Publishers send persistent messages and wait for RabbitMQ publisher confirmation. They mark an outbox row as published only after confirmation. Failed publishes are retried with backoff; events that exceed the configured retry limit are marked `DEAD` for inspection and redrive. User Service's registration outbox is simpler: a single publisher handles one row at a time and retries until it succeeds.
 
 A publisher confirmation means RabbitMQ accepted the message. It does not mean the consumer finished processing it. Consumers acknowledge a message only after their database work succeeds. If processing fails, the consumer retries or forwards the message to its dead-letter queue according to that workflow’s retry policy.
 
@@ -463,9 +565,15 @@ Redrive commands for each Credit dead-letter queue:
 | Reservation requests | `credit.reserve.dead.v1` | `npm run redrive:reservation -- --limit 10` |
 | Credit outbox (`DEAD` rows) | database | `npm run redrive:credit-outbox -- --limit 10` |
 
-Redrive means sending a dead-letter message back for another processing attempt. The command only needs `RABBITMQ_URL`; it does not start Prisma or the HTTP server.
+Redrive means sending a dead-letter message back for another processing attempt.
 
-Restart credit service afterward. Keeping its consumer paused during redrive prevents a still-failing event from returning to the dead-letter queue and being picked up again in the same run. Run one redrive command at a time.
+`redrive:prod` runs the compiled registration redrive (`dist/scripts/redrive-registration.js`). Use it where the TypeScript sources are not available, such as inside the production container: `docker compose -f compose.prod.yaml exec credit-service npm run redrive:prod -- --limit 10`.
+
+#### Queue redrive (registration, settlement, reservation requests)
+
+These commands only need `RABBITMQ_URL`. They do not start Prisma or the HTTP server.
+
+Stop credit service before running one, and restart it afterward. Keeping its consumer paused during redrive prevents a still-failing event from returning to the dead-letter queue and being picked up again in the same run. Run one redrive command at a time.
 
 The command processes the oldest available dead letters. It stops at the requested positive limit or the number of ready messages counted at startup, whichever is smaller.
 
@@ -485,6 +593,18 @@ For each message, it:
 A broker failure stops the command with exit code 1. The current unacknowledged message becomes available again when the connection closes. Invalid event bodies, identities or redrive counts also stop the command without removing the message. Investigate these separately; redrive does not rewrite events or repair accounts and reservations.
 
 A crash after forwarding but before acknowledgment can create a duplicate delivery. Credit Service's handlers are idempotent, so a duplicate cannot grant reserve, transfer, release or refund twice. A successful redrive means the message was republished; credit service may not have processed it yet.
+
+#### Outbox redrive (`redrive:credit-outbox`)
+
+This command only touches the database. It does not connect to RabbitMQ. It loads the service config, so it needs every variable that is [required at startup](#environment-variables), not only `DATABASE_URL`.
+
+In one transaction it:
+
+- Selects up to `--limit` `DEAD` reservation-result rows, oldest first.
+- Skips rows whose payload does not match the row (wrong `eventId` or `eventType`, missing `correlationId` or `orderId`, or a missing `reservationId`/`reasonCode` for the event type). Their IDs are printed as `invalidIds`.
+- Resets the rest to `PENDING` with `retryCount` 0, clears the lock and last error, and makes them due immediately.
+
+The running [result outbox publisher](#result-outbox-publisher) then publishes them on its next poll, so the service does not need to be stopped. A database error stops the command with exit code 1 and changes nothing.
 
 ### Database Transactions and Credit Ledger
 
@@ -594,9 +714,9 @@ credit-service/
 │   ├── constants/
 │   ├── controllers/
 │   ├── errors/
-│   ├── integrations/
+│   ├── generated/      # Prisma client (git-ignored; npm run db:generate)
 │   ├── libs/
-│   ├── middlewares/
+│   ├── middleware/
 │   ├── routes/
 │   ├── schemas/
 │   ├── scripts/
@@ -605,20 +725,20 @@ credit-service/
 │   ├── workers/
 │   └── index.ts
 │
-├── keys/
+├── keys/               # public.pem (git-ignored)
 ├── test/
 ├── .dockerignore
 ├── .env
 ├── .env.example
 ├── .gitignore
-|── AGENTS.md
-|── compose.yaml
-|── docker-entrypoint.sh
-|── Dockerfile
-|── package-lock.json
+├── AGENTS.md
+├── compose.yaml
+├── docker-entrypoint.sh
+├── Dockerfile
+├── package-lock.json
 ├── package.json
 ├── prisma.config.ts
-|── README.md
+├── README.md
 └── tsconfig.json
 ```
 
@@ -846,6 +966,7 @@ Existing indexes on `(accountId, createdAt DESC, id DESC)` and `(accountId, type
 | 401 | `AUTHENTICATION_REQUIRED` | `Authentication required` | Missing/empty bearer authentication or unsupported authorization scheme |
 | 401 | `UNAUTHORIZED` | `Invalid token, please sign out and back in` | Invalid/expired token, signature, or required claims |
 | 403 | `FORBIDDEN` | `You do not have permission to access this resource` | Valid admin token cannot access credit reads |
+| 404 | `NOT_FOUND` | `Not found` | Unknown route |
 | 500 | `INTERNAL_SERVER_ERROR` | `An unexpected error occurred` | Unexpected failure, including database errors |
 
 Example HTTP 400:
@@ -864,6 +985,34 @@ Example HTTP 400:
 - On a cursor error, offer to restart from the first page.
 - Show READY with no items, PROVISIONING, and request errors as separate states. Ignore stale page responses after the user changes filters or sort.
 
+### Internal reservation API (disabled)
+
+`src/routes/internal-credit.route.ts` defines a synchronous HTTP API
+that Order Service used to call to reserve credits. **It is not mounted.**
+The line `app.use("/api/internal/credits", internalCreditRouter)` is
+commented out in `src/index.ts`. Order Service now reserves credits only
+through the `RESERVE_CREDITS` command (see
+[Order Reservation and Renewal](#order-reservation-and-renewal)). Only
+the integration tests mount this router, at `/internal/credits`.
+
+For reference, if it were mounted:
+
+Method | Path | Body | Success
+------ | ---- | ---- | -------
+`POST` | `/reservations` | `{ orderId, requesterId, amount }` | `201` new reservation (each call creates another hold)
+`GET`  | `/reservations/:reservationId` | | `200` reservation
+`POST` | `/reservations/:reservationId/abort` | `{ reservationId, orderId, requesterId, amount }` | `200`. Sets `ABORTED` / `CREATION_ABORTED` and returns the hold
+
+Every request needs the header `X-Order-Credit-Service-Secret`. The
+service compares it in constant time with `ORDER_CREDIT_SERVICE_TOKEN`
+and returns `401` "Service authentication required" on a mismatch.
+Malformed JSON returns `400` "Invalid JSON body".
+
+`ORDER_CREDIT_SERVICE_TOKEN` is still **required at startup**
+(`src/config/config.ts`), even though nothing in the running service uses
+it. `ABORTED` and `CREATION_ABORTED` can't be reached in production
+while this API is disabled.
+
 ## Getting Started
 
 ### Prerequisites
@@ -879,18 +1028,20 @@ Make sure the following are installed:
 
 Create a `.env` file in the root of the Credit Service and fill in the required environment variables. You can use the provided `.env.example` as a template.
 
-| Variable | Purpose |
-| --- | --- |
-`PORT` | Port used by the User Service
-`NODE_ENV` | Node environment (development, production, etc.)
-`FRONTEND_URL` | Frontend URL allowed by CORS
-`CREDIT_POSTGRES_DB` | Name of the PostgreSQL database for the Credit Service
-`CREDIT_POSTGRES_USER` | Username for the PostgreSQL database
-`CREDIT_POSTGRES_PASSWORD` | Password for the PostgreSQL database
-`DATABASE_URL` | PostgreSQL connection string
-`RABBITMQ_URL` | Broker connection URL for the background outbox publisher
-`JWT_PUBLIC_KEY_PATH` | Path to the RSA public key used to verify access tokens
-`ORDER_CREDIT_SERVICE_TOKEN` | Shared secret for internal Order → Credit requests
+The service exits at startup if any variable marked **Required** is missing (`src/config/config.ts`).
+
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `PORT` | Required | Port the Credit Service listens on (`3003`) |
+| `DATABASE_URL` | Required | PostgreSQL connection string |
+| `FRONTEND_URL` | Required | Frontend origin allowed by CORS |
+| `JWT_PUBLIC_KEY_PATH` | Required | Path to the RSA public key used to verify access tokens |
+| `ORDER_CREDIT_SERVICE_TOKEN` | Required | Shared secret for the [internal reservation API](#internal-reservation-api-disabled). That API is disabled, so nothing uses the value, but startup still checks for it. |
+| `RABBITMQ_URL` | Workers | Broker URL for the registration, settlement and reservation consumers, the result outbox publisher, and the queue redrive commands. It is read when a worker connects, so a missing value doesn't stop the HTTP server, but the workers keep failing to connect. |
+| `CREDIT_POSTGRES_DB` | Compose | PostgreSQL database name. Read only by `compose.yaml`. |
+| `CREDIT_POSTGRES_USER` | Compose | PostgreSQL user. Read only by `compose.yaml`. |
+| `CREDIT_POSTGRES_PASSWORD` | Compose | PostgreSQL password. Read only by `compose.yaml`. |
+| `NODE_ENV` | No | In `.env.example`, but Credit Service doesn't read it. |
 
 > Do not commit `.env`, private keys, or other secrets to the repository.
 
@@ -916,9 +1067,29 @@ To inspect the database schema, run:
 npm run db:studio
 ```
 
+### Running the service
+
 Start development with `npm run dev`, or run the compiled application with `npm start`.
 
-The registration consumer starts after the HTTP server begins listening. It reconnects if RabbitMQ becomes unavailable. `GET /healthz` only confirms that the HTTP server is running; it does not check RabbitMQ or whether students have received credits.
+After the HTTP server begins listening, the service starts four background workers:
+
+- the registration consumer
+- the settlement consumer
+- the reservation-request consumer
+- the result outbox publisher
+
+Each worker reconnects if RabbitMQ becomes unavailable. On `SIGINT` or `SIGTERM`, the service stops the workers and the HTTP server, then disconnects Prisma. If that takes longer than 15 seconds, it exits with code 1.
+
+`GET /healthz` only confirms that the HTTP server is running. It does not check the database, RabbitMQ, or whether students have received credits.
+
+### Docker
+
+The root `compose.yaml` includes this folder's `compose.yaml`, which defines two containers:
+
+- **`credit-service`:** built from the `Dockerfile` (Node.js 22 Alpine). It mounts `../user-service/keys/public.pem` read-only at `JWT_PUBLIC_KEY_PATH`, so create the user-service keys first. `docker-entrypoint.sh` runs `prisma migrate deploy` and then starts `dist/index.js`. The API port isn't published to the host. In the root stack, reach it through the frontend at `http://localhost:5173/api/credits/...`.
+- **`credit-postgres`:** PostgreSQL 17 with a health check. The service waits until it is healthy.
+
+The `127.0.0.1:5436` Postgres port mapping only works when you run this folder's compose on its own, for example `docker compose up -d credit-postgres` to use with `npm run dev`. In the root stack, the database is on an internal network and isn't reachable from the host. Use `docker compose exec credit-postgres psql -U <CREDIT_POSTGRES_USER> <CREDIT_POSTGRES_DB>` instead.
 
 ## Acknowledgements
 
