@@ -1,3 +1,11 @@
+<!--
+AI Assistance Disclosure:
+Tool: Claude Code (Claude Opus 5.5)
+Date: 2026-11-08
+Scope: Audited against the code; updated the repository structure, added the services and API index, and updated the AI Use Summary.
+Author review: Reviewed and edited by Lim Shao Qi.
+-->
+
 # CS3219 — Software Design and Architecture (AY2627 Sem 1)
 
 ## Aaron
@@ -29,11 +37,18 @@ microservice (`user-service/`, `supplier-service/`, `order-service/`,
 
 ```text
 .
-├── user-service/
-├── supplier-service/
-├── order-service/
-├── credit-service/
-├── <n2h-service>/
+├── user-service/        # Accounts, auth (JWT), OTP registration, admin management
+├── supplier-service/    # Campus stores/facilities, supplier types, image uploads
+├── order-service/       # Order (errand) lifecycle, courier actions, expiry/receipt workers
+├── credit-service/      # Credit ledger, reservations and settlement
+├── frontend/            # React + Vite web app
+├── gateway/             # nginx API gateway config used in production
+├── data/csv/            # Supplier seed data, loaded by supplier-service
+├── ai/                  # AI usage log
+├── .github/workflows/   # CI (ci.yml) and CD (deploy.yml)
+├── compose.yaml         # Local stack: includes every service's compose.yaml + RabbitMQ
+├── compose.prod.yaml    # Production override: ECR images and the gateway
+├── .env.example         # Root Compose variables (RabbitMQ credentials)
 └── README.md
 ```
 
@@ -46,9 +61,34 @@ microservice (`user-service/`, `supplier-service/`, `order-service/`,
 
 ---
 
+## Services and API
+
+All browser traffic goes through one origin. Requests under `/api/...` are
+routed by path prefix to the service that owns them. In production that is
+the gateway (`gateway/nginx.conf`). Locally it is the frontend container
+(`frontend/nginx.conf`).
+
+| Service | Internal port | Gateway prefix(es) | Docs |
+| --- | --- | --- | --- |
+| user-service | 3000 | `/api/auth`, `/api/users` | [user-service/README.md](user-service/README.md) |
+| supplier-service | 3001 | `/api/suppliers` | [supplier-service/README.md](supplier-service/README.md) |
+| order-service | 3002 | `/api/orders` | [order-service/README.md](order-service/README.md) |
+| credit-service | 3003 | `/api/credits` | [credit-service/README.md](credit-service/README.md) |
+| frontend | 8080 (container) | `/` | [frontend/README.md](frontend/README.md) |
+
+- The gateway answers `GET /healthz` itself. Any other `/api/...` path
+  returns 404.
+- Request bodies are limited to 5 MB, which caps supplier image uploads.
+- Service-to-service endpoints under `/api/internal/...` are not routed by
+  the gateway. They are reachable only inside the Docker network.
+- Each service also exposes `GET /healthz` on its own port for container
+  health checks.
+
+---
+
 ## Deployment
 
-FoC is built, tested and deployed by GitHub Actions.
+The project is built, tested and deployed by GitHub Actions.
 
 - **CI** (`.github/workflows/ci.yml`) runs on every pull request into
   `main`: it builds and tests each service, lints and builds the frontend,
@@ -123,7 +163,7 @@ This local setup uses one broker node. Data survives restarts, but the setup doe
 
 ## AI Use Summary
 
-- **Tools:** ChatGPT (Astra 6)
+- **Tools:** ChatGPT (Astra 6), Claude Code (Claude Opus 5.5)
 - **Used for:**
   - Generating initial implementations:
     - user-service registration with OTP, profile, email change, password change, admin invitation and activation, and first-admin bootstrap
@@ -139,6 +179,7 @@ This local setup uses one broker node. Data survives restarts, but the setup doe
     - gateway DNS resolution after redeploys
   - Refactoring the credits history UI and the CI test steps
   - Drafting frontend README documentation
+  - Auditing and updating READMEs and API docs against the code (Claude Code)
 - **Prohibited phases avoided:** requirements elicitation; architecture/design decisions
 - **Verification:** all AI outputs reviewed, edited and tested by the authors
 - **Full log:** [/ai/usage-log.md](ai/usage-log.md)
