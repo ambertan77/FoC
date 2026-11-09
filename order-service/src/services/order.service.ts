@@ -14,10 +14,7 @@ export async function getAllOrders(input: GetAllOrdersInput) {
     const filterLocation = input.filterLocation ?? null; // supplier id we want to filter by
     const searchString: string = input.searchString ?? "";
     const startDate: Date | undefined = input.startDate; 
-    // edit time in startDate to 12am SGT 
-    startDate?.setHours(0, 0, 0, 0); 
     const endDate: Date | undefined = input.endDate; 
-    // edit time in endDate to 11:59:59pm SGT
 
     const now = new Date();
 
