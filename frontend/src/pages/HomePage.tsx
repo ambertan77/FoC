@@ -9,7 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Field } from '@/components/ui/field';
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
 import { SearchIcon } from 'lucide-react';
-import SupplierSelect from "@/features/order/components/SupplierSelect";
 import RequestActivityCard from "@/features/order/components/RequestActivityCard";
 import { useOpenOrders } from "@/features/order/hooks/useOpenOrders";
 import { useSuppliersByIds } from "@/features/order/hooks/useSuppliersByIds";
@@ -19,6 +18,7 @@ import CreateRequestDialog from "@/features/order/components/CreateRequestDialog
 import useAuth from "@/hooks/useAuth";
 import { ROLES } from "@/features/auth/types/auth.types";
 import { Spinner } from "@/components/ui/spinner";
+import SupplierSelectWithClearButton from "@/features/order/components/SupplierSelectWithClearButton";
 
 const LIMIT = 15;
 
@@ -114,7 +114,7 @@ const HomePage = () => {
                 <div className="flex flex-wrap items-end gap-4">
                     <div className="flex flex-col gap-1">
                         <label className="text-sm font-medium">Filter location</label>
-                        <SupplierSelect
+                        <SupplierSelectWithClearButton
                             className="w-48 bg-white"
                             value={supplierIdFilter ?? ""}
                             onChange={(id) => {

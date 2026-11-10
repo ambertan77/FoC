@@ -13,7 +13,7 @@ import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/in
 import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import RequestActivityCard from "@/features/order/components/RequestActivityCard";
-import SupplierSelect from "@/features/order/components/SupplierSelect";
+import SupplierSelectWithClearButton from "./SupplierSelectWithClearButton";
 import { useOrderHistory } from "@/features/order/hooks/useOrderHistory";
 import { useSuppliersByIds } from "@/features/order/hooks/useSuppliersByIds";
 import {
@@ -236,7 +236,7 @@ const AdminOrderDashboardCard = ({
 
                     <div className="flex flex-col gap-1">
                         <label className="text-sm font-medium">Filter location</label>
-                        <SupplierSelect
+                        <SupplierSelectWithClearButton
                             className="w-48 bg-white"
                             value={supplierIdFilter ?? ""}
                             onChange={(id) => {
