@@ -1,6 +1,7 @@
 import axios from "axios";
 import config from "../../config/config.js";
 import { AppError } from "../../errors/errors.js";
+import { requestContext } from "../../libs/logger.js";
 
 const supplierApi = axios.create({
     baseURL: config.supplierServiceUrl,
@@ -9,6 +10,13 @@ const supplierApi = axios.create({
         "X-Order-Supplier-Service-Secret":
             config.orderSupplierServiceToken,
     },
+});
+
+// Forward the caller's request ID so one request can be followed across services.
+supplierApi.interceptors.request.use((request) => {
+    const reqId = requestContext.getStore()?.reqId;
+    if (reqId) request.headers.set("X-Request-Id", reqId);
+    return request;
 });
 
 export async function verifySupplierExists(

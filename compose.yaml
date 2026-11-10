@@ -11,6 +11,7 @@ include:
   - credit-service/compose.yaml
   - frontend/compose.yaml
   - notification-service/compose.yaml
+  - observability/compose.yaml
 
 services:
   frontend:
