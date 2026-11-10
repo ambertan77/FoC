@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: Claude AI (Sonnet 5.5 Medium)
+// Date: 2026-09-21
+// Scope: Generated a for-loop for inserting a new opening hours row for each supplier, for each day of the week.
+// Author review: Reviewed, tested, and edited by Amber Tan Junning.
+
 import React, { useState, useEffect } from 'react';
 import { useQuery } from "@tanstack/react-query";
 import type { ParsedError } from "@/utils/errorHandler";
@@ -17,6 +23,7 @@ const SupplierPage = () => {
     // does not use URL-based page number, similar to ManageSuppliersPage.tsx
     const [currentPage, setCurrentPage] = useState<number>(1);
 
+    // session storage code was written with the help of Claude AI Opus 5.5; reviewed, edited and tested by Amber Tan Junning
     // ensure the search string and type filters are saved to session storage
     // so that filters are still present when navigating between pages
     const [searchString, setSearchString] = useState(() => sessionStorage.getItem("searchString") ?? "");
@@ -42,6 +49,7 @@ const SupplierPage = () => {
         typeFilter: typeFilter
     };
 
+    // queryKey code was implemented with the help of Claude Code Opus 5.5; reviewed, edited and tested by Amber Tan Junning
     const suppliersQuery = useQuery<SuppliersQueryResponse, ParsedError>({
         queryKey: ["suppliers", currentPage, searchString, typeFilter],
         queryFn: () => getActiveSuppliers(getSuppliersParams),

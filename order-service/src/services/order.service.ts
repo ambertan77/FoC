@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: Claude Code (Opus 5.5)
+// Date: 2026-11-05
+// Scope: Generated lines 42-51 and 73-82 to allow filtering by a date range and a subset of order statuses.
+// Author review: Reviewed, tested, and edited by Amber Tan Junning.
+
 import { AppError } from "../errors/errors.js";
 import { prisma } from "../libs/prisma.js";
 import type { GetAllOrdersInput } from "../schemas/order.schema.js";
@@ -14,10 +20,7 @@ export async function getAllOrders(input: GetAllOrdersInput) {
     const filterLocation = input.filterLocation ?? null; // supplier id we want to filter by
     const searchString: string = input.searchString ?? "";
     const startDate: Date | undefined = input.startDate; 
-    // edit time in startDate to 12am SGT 
-    startDate?.setHours(0, 0, 0, 0); 
     const endDate: Date | undefined = input.endDate; 
-    // edit time in endDate to 11:59:59pm SGT
 
     const now = new Date();
 
