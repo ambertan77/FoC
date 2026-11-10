@@ -875,7 +875,19 @@ Tools for all entries: **ChatGPT (5.6 Luna)**, **ChatGPT (Astra 6)**, **Claude C
 - **Key response:** Compared the README documentation against service source code, routes, package scripts, Docker Compose files, gateway configuration, and deployment workflows.
 - **Kept/changed:** Identified documentation inconsistencies involving service counts, ports, RabbitMQ consumers, environment setup, ECR repositories, and incorrect worker descriptions.
 - **Verification:** Cross-checked documented behavior against the implemented services and configuration files.
+  
+## 13. Cross-tab authentication synchronization
 
+- **Timestamp:** approx. 2026-11-10 22:56
+- **Tool & model:** ChatGPT (Astra 6)
+- **Mode:** implement
+- **Files:**
+  - `frontend/src/utils/authSession.ts`
+  - `frontend/src/context/AuthContext.tsx`
+- **Prompt (approx.):** "If another user logs in, explicitly log out the first user across all tabs while keeping refresh tokens secure."
+- **Key response:** Added cross-tab authentication synchronization using `localStorage` `storage` events, without sharing refresh-token values.
+- **Kept/changed:** Kept refresh tokens in HttpOnly cookies while clearing access tokens and local authentication state in other tabs after login or logout.
+- **Verification:** Reviewed the cross-tab login/logout flow and confirmed that no refresh-token data is broadcast.
 
 # Detailed AI Usage Log for Duong Ngoc Mai
 

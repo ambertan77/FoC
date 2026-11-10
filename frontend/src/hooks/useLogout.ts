@@ -7,6 +7,7 @@ import queryClient from "@/lib/queryClient";
 import type { ParsedError } from "@/utils/errorHandler";
 import { ROUTES } from "@/routes/routes";
 import { toast } from "react-toastify";
+import { broadcastAuthEvent } from "@/utils/authSession";
 
 const useLogout = () => {
     const navigate = useNavigate();
@@ -19,6 +20,7 @@ const useLogout = () => {
         onSuccess: () => {
             removeToken();
             clearAuth();
+            broadcastAuthEvent("logout");
             queryClient.clear();
             toast.success("Logged out successfully.");
             navigate(ROUTES.LOGIN);
@@ -26,6 +28,7 @@ const useLogout = () => {
         onError: () => {
             removeToken();
             clearAuth();
+            broadcastAuthEvent("logout");
             queryClient.clear();
             navigate(ROUTES.LOGIN);
         },

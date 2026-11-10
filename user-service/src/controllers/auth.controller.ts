@@ -2,7 +2,7 @@
 // Tool: Claude Code (Claude Sonnet 5.5)
 // Date: 2026-11-10
 // Scope: Later edit to this file: Replaced console.* with the pino logger and removed token and personal-data logging.
-// Author review: Reviewed, tested, checked by the author.
+// Author review: Reviewed, tested, checked by Duong Ngoc Mai.
 
 import type { Request, Response } from "express";
 import {

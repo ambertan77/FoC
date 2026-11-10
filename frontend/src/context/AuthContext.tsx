@@ -3,6 +3,12 @@
 // GitHub: https://github.com/hamidukarimi/authforge-client
 // Used for: Reference implementation for authentication-related and authorization-related client code.
 
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-11-10
+// Scope: Added secure cross-tab authentication session synchronization using browser storage events, without exposing refresh tokens.
+// Author review: Reviewed, tested, and edited by Ng See Pui.
+
 import {
     createContext,
     useEffect,
@@ -18,6 +24,9 @@ import { ENDPOINTS } from "@/api/endpoints";
 import authApi from "@/api/authApi";
 import type { AuthResult } from "@/features/auth/types/auth.types";
 import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
+import { subscribeToAuthEvents } from "@/utils/authSession";
+import { ROUTES } from "@/routes/routes";
 
 interface AuthContextValue {
     isInitializing: boolean;
@@ -33,6 +42,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [isInitializing, setIsInitializing] = useState(true);
     const setUser = useAuthStore((state) => state.setUser);
     const clearAuth = useAuthStore((state) => state.clearAuth);
+    const navigate = useNavigate();
 
     // Use a ref to store the promise of the restoreSession function,
     // to ensure that multiple calls to restoreSession do not trigger multiple requests.
@@ -97,6 +107,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         window.addEventListener("auth:logout", forcedLogout);
         return () => window.removeEventListener("auth:logout", forcedLogout);
     }, [clearAuth]);
+
+    // Handle forced logout from other tabs.
+    useEffect(() => {
+        return subscribeToAuthEvents((event) => {
+            if (event !== "login") return;
+
+            removeToken();
+            clearAuth();
+            toast.info("You were logged out because another tab signed in.");
+            navigate(ROUTES.LOGIN, { replace: true });
+        });
+    }, [clearAuth, navigate]);
 
     return (
         <AuthContext.Provider value={{ isInitializing, restoreSession }}>

@@ -2,7 +2,7 @@
 // Tool: Claude Code (Claude Sonnet 5.5)
 // Date: 2026-11-10
 // Scope: Generated the Alloy pipeline: discover project containers via Docker, parse JSON, label by service/env/level, push to Loki.
-// Author review: Reviewed, tested, checked by the author.
+// Author review: Reviewed, tested, checked by Duong Ngoc Mai.
 
 // Discover this project's containers, label each line by service, and push to Loki.
 
