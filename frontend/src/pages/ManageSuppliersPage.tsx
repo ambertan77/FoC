@@ -27,6 +27,10 @@ import {
     PaginationNext,
     PaginationPrevious,
 } from "@/components/ui/pagination";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
+
 import DeactivateModal from "@/features/supplier/components/DeactivateModal";
 import type {
     Supplier,
@@ -44,9 +48,7 @@ import SupplierForm from "@/features/supplier/components/SupplierForm";
 import SupplierModal from "@/features/supplier/components/SupplierModal";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { formatStringToTitleCase } from "@/utils/formatText";
-import { Spinner } from "@/components/ui/spinner";
-import { Skeleton } from "@/components/ui/skeleton";
+import { formatStringToTitleCase, formatStringToSentenceCase } from "@/utils/formatText";
 
 interface OpeningHourRow {
     day: SupplierDay;
@@ -80,6 +82,7 @@ const buildPayload = (
 
 const ManageSuppliersPage = () => {
     const queryClient = useQueryClient();
+    const [status, setStatus] = useState<string>("ALL");
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
@@ -135,6 +138,11 @@ const ManageSuppliersPage = () => {
         setCurrentPage(page);
     };
 
+    const handleStatusChange = (status: string) => {
+        setCurrentPage(1); // reset to the first page on any change in type filter
+        setStatus(status.toUpperCase());
+    };
+
     const handleSearchKeyInput = (event: ChangeEvent<HTMLInputElement>) => {
         setCurrentPage(1); // reset to the first page on any change in search input
         setSearchString(event.target.value);
@@ -143,6 +151,17 @@ const ManageSuppliersPage = () => {
     const handleFilterInput = (filter: string) => {
         setCurrentPage(1); // reset to the first page on any change in type filter
         setTypeFilter(filter.toUpperCase());
+    };
+
+    // Status labals
+    const SUPPLIER_TYPES: Record<string, string> = {
+        ALL: "All",
+        ...Object.fromEntries(
+            supplierTypes.map((type) => [
+                type,
+                formatStringToSentenceCase(type.type),
+            ]),
+        ),
     };
 
     const createMutation = useMutation({
@@ -224,7 +243,23 @@ const ManageSuppliersPage = () => {
                     </SupplierModal>
                 </div>
 
-                <div className="flex flex-col gap-1 w-full md:w-1/2">
+                <Tabs value={status} onValueChange={setStatus} className="w-full">
+                    <TabsList className="w-fit max-w-full h-full flex flex-nowrap items-center justify-start gap-1 overflow-x-auto overflow-y-hidden">
+                        <TabsTrigger value="ALL" onClick={() => handleStatusChange("ALL")}>
+                            All
+                        </TabsTrigger>
+
+                        <TabsTrigger value="ACTIVATED" onClick={() => handleStatusChange("ACTIVATED")}>
+                            Activated
+                        </TabsTrigger>
+
+                        <TabsTrigger value="ACTIVATED" onClick={() => handleStatusChange("DEACTIVATED")}>
+                            Deactivated
+                        </TabsTrigger>
+                    </TabsList>
+                </Tabs>
+
+                <div className="flex flex-row gap-3 w-full md:w-1/2">
                     <Field className="w-full">
                         <InputGroup className="bg-white">
                             <InputGroupAddon align="inline-start">
@@ -237,37 +272,43 @@ const ManageSuppliersPage = () => {
                                 onChange={handleSearchKeyInput} />
                         </InputGroup>
                     </Field>
+
+                    {supplierTypesIsLoading && (
+                        <Skeleton className="h-8 w-full md:w-1/2 border border-slate-200 rounded-lg" />
+                    )}
+
+                    {supplierTypesIsError && (
+                        <p className="text-red-500">
+                            Failed to load supplier types: {supplierTypesQuery.error?.message}
+                        </p>
+                    )}
+
+                    {!supplierTypesIsLoading && !supplierTypesIsError && supplierTypes.length === 0 && (
+                        <p className="text-sm text-muted-foreground">No supplier types yet.</p>
+                    )}
+
+                    {!supplierTypesIsLoading && !supplierTypesIsError && (
+                        <Select
+                            value={typeFilter}
+                            onValueChange={(value) => {
+                                handleFilterInput(value as string);
+                            }}>
+                            <SelectTrigger className="w-48 bg-white">
+                                <SelectValue placeholder="Supplier Type">
+                                    {SUPPLIER_TYPES[typeFilter]}
+                                </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent alignItemWithTrigger={false}>
+                                <SelectItem value="ALL">All</SelectItem>
+                                {supplierTypes.map((type) => (
+                                    <SelectItem key={type.type} value={type.type}>
+                                        {formatStringToTitleCase(type.type)}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    )}
                 </div>
-
-                {supplierTypesIsLoading && (
-                    <Skeleton className="h-8 w-full md:w-1/2 border border-slate-200 rounded-lg" />
-                )}
-
-                {supplierTypesIsError && (
-                    <p className="text-red-500">
-                        Failed to load supplier types: {supplierTypesQuery.error?.message}
-                    </p>
-                )}
-
-                {!supplierTypesIsLoading && !supplierTypesIsError && supplierTypes.length === 0 && (
-                    <p className="text-sm text-muted-foreground">No supplier types yet.</p>
-                )}
-
-                {!supplierTypesIsLoading && !supplierTypesIsError && (
-                    <Tabs value={typeFilter} onValueChange={setTypeFilter} className="w-full">
-                        <TabsList className="w-fit max-w-full h-full flex flex-nowrap items-center justify-start gap-1 overflow-x-auto overflow-y-hidden">
-                            <TabsTrigger value="ALL" onClick={() => handleFilterInput("ALL")}>
-                                All
-                            </TabsTrigger>
-
-                            {supplierTypes.map((type) => (
-                                <TabsTrigger key={type.id} value={type.type} onClick={() => handleFilterInput(type.type)}>
-                                    {formatStringToTitleCase(type.type)}
-                                </TabsTrigger>
-                            ))}
-                        </TabsList>
-                    </Tabs>
-                )}
             </div>
 
             <div className="px-5 md:px-10 pb-10">

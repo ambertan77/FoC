@@ -1,8 +1,10 @@
 import { z, ZodError } from "zod";
-import { Day } from "../generated/prisma/enums.js";
+import { Day, SupplierStatus } from "../generated/prisma/enums.js";
 import { AppError } from "../errors/errors.js";
 
 const dayValues = Object.values(Day) as [string, ...string[]];
+
+const supplierStatus = ["ALL", ...Object.values(SupplierStatus)];
 
 const timePattern = /^([01]\d|2[0-3]):([0-5]\d)(?::[0-5]\d)?$/;
 
@@ -32,6 +34,7 @@ export const createSupplierSchema = z.object({
 export const updateSupplierSchema = createSupplierSchema.partial();
 
 export const getSupplierSchema = z.object({
+    status: z.enum(supplierStatus).optional(),
     page: z.coerce.number().int().positive().optional(), // optional page, if null then no pagination is required
     searchString: z.string().nullable().optional(),
     typeFilter: z.string().nullable().optional(), // filter by supplier type
