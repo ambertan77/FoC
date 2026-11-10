@@ -2,7 +2,7 @@
 // Tool: Claude Code (Claude Sonnet 5.5)
 // Date: 2026-11-10
 // Scope: Later edit to this file: Added an axios interceptor that forwards X-Request-Id to supplier-service.
-// Author review: Reviewed, tested, checked by Duong Ngoc Mai.
+// Author review: Reviewed, tested, checked by the author.
 
 import axios from "axios";
 import config from "../../config/config.js";

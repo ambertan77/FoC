@@ -2,7 +2,7 @@
 # Tool: Claude Code (Claude Sonnet 5.5)
 # Date: 2026-11-10
 # Scope: Generated the Loki config: filesystem storage, tsdb schema v13, 7-day retention.
-# Author review: Reviewed, tested, checked by Duong Ngoc Mai.
+# Author review: Reviewed, tested, checked by the author.
 
 # Single-node Loki with local filesystem storage and 7-day retention.
 auth_enabled: false
