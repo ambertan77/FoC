@@ -520,11 +520,10 @@ Tools for all entries: **ChatGPT (5.6 Luna)**, **ChatGPT (Astra 6)**, **Claude C
   - `frontend/nginx.conf`
   - `frontend/.env.example`
   - `compose.yaml`
-  - `frontend/compose.yaml`
   - `credit-service/compose.yaml`
   - `order-service/compose.yaml`
   - `supplier-service/compose.yaml`
-  - `order-service/compose.yaml`
+  - `user-service/compose.yaml`
 - **Prompt (approx.):** "In the existing frontend/nginx.conf file, generate implementation code to setup a reverse proxy, such that all requests and API calls must be made through the proxy. Isolate internal communication for the backend services."
 - **Key response:** Generated implementation code for the nginx configuration file and changed the `BASE_URL` variables in `.env.example` to `/api`. Added internal backend Docker networks, one container per database and removed published ports for backend containers.
 - **Kept/changed:** Removed unnecessary fields such as `absolute_redirect off` (removed trailing slashes from the location blocks instead). No substantial changes were made, other than the addition of code comments for code readability.
