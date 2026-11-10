@@ -416,7 +416,11 @@ deadline. supplier-service exits immediately.
     - frontend auth, profile, user-management and credits features
     - Dockerfiles, Compose files and GitHub Actions CI/CD workflows
     - Migration of supplier images from AWS EC2 to S3, while using local storage when running the app locally
-  - Writing the user-service, supplier-service and order-service unit tests
+    - Redrive scripts for failing RabbitMQ messages
+    - Refactor RabbitMQ functionality
+    - Backend notification status
+    - Frontend SSE integration for notification-service
+  - Writing the user-service, supplier-service, order-service, credit-service, notification-service unit tests
   - Debugging:
     - stale credit data across sessions
     - phone prefix display
@@ -436,9 +440,10 @@ deadline. supplier-service exits immediately.
   - Refactoring the credits history UI and the CI test steps
   - Writing a fix to run deployment only in the upstream repository
   - Drafting frontend README documentation
-  - Auditing and suggesting updates for order service README
+  - Auditing and suggesting updates for order and notification service README
   - Auditing and updating READMEs and API docs against the code (Claude Code)
   - Centralized logging (Claude Code): pino logger and request-ID middleware in all five services, the Loki/Alloy/Grafana stack in `observability/`, deploy workflow changes, the architecture diagram and the Grafana access steps
+  - Verifying notifications services Dockerfile and compose files
 - **Prohibited phases avoided:** requirements elicitation; architecture/design decisions
 - **Verification:** review and test details are recorded per contributor in the shared usage log.
 - **Full log:** [/ai/usage-log.md](ai/usage-log.md)

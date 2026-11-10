@@ -510,34 +510,6 @@ Create a `.env` file in the root of the Supplier Service and fill in the require
 
 > Do not commit `.env`, private keys, or other secrets to the repository.
 
-### Database Setup
-
-From the repository root:
-
-```sh
-cd supplier-service
-npm ci
-```
-
-Apply the database migrations, generate the Prisma client, then seed the
-database. The seed script imports the generated client, so generate first:
-
-```sh
-npx prisma migrate deploy
-npm run db:generate
-npx prisma db seed
-```
-
-To inspect the database schema, run:
-
-```sh
-npm run db:studio
-```
-
-Start development with `npm run dev`, or run the compiled application with `npm start`.
-
-`GET /healthz` only confirms that the HTTP server is running.
-
 ### Testing
 
 Tests use Node's built-in test runner (`node:test`) executed through `tsx`, so

@@ -1000,37 +1000,6 @@ service will not start without them.
 
 > Do not commit `.env`, private keys, or other secrets to the repository.
 
-### Database Setup
-
-From the repository root:
-
-```sh
-cd user-service
-npm ci
-```
-
-Apply the database migrations and generate the Prisma client:
-
-```sh
-npm run db:deploy
-npm run db:generate
-```
-
-To inspect the database schema, run:
-
-```sh
-npm run db:studio
-```
-
-Start development with `npm run dev`, or run the compiled application with `npm start`.
-
-On startup, the service runs the [first-admin bootstrap](#first-administrator-setup)
-before it starts listening. Once the HTTP server is listening, it starts the
-[outbox publisher](#credit-provisioning-outbox). The publisher reconnects
-if RabbitMQ becomes unavailable. `GET /healthz` only confirms that the
-HTTP server is running. It does not check RabbitMQ or whether students
-have received credits.
-
 #### npm scripts
 
 Script        | What it does
@@ -1043,6 +1012,13 @@ Script        | What it does
 `db:migrate`  | Create and apply a new migration in development (`prisma migrate dev`)
 `db:generate` | Generate the Prisma client
 `db:studio`   | Open Prisma Studio
+
+On startup, the service runs the [first-admin bootstrap](#first-administrator-setup)
+before it starts listening. Once the HTTP server is listening, it starts the
+[outbox publisher](#credit-provisioning-outbox). The publisher reconnects
+if RabbitMQ becomes unavailable. `GET /healthz` only confirms that the
+HTTP server is running. It does not check RabbitMQ or whether students
+have received credits.
 
 ## Credit provisioning outbox
 
@@ -1291,25 +1267,6 @@ Failed migrations stop startup instead of serving against an incorrect schema.
 
 Refresh cookies retain the original behavior: `secure` is enabled when
 `NODE_ENV=production`. They remain HttpOnly and signed.
-
-### Local Prisma Studio
-
-When this directory's Compose file runs on its own
-(`cd user-service && docker compose up -d user-postgres`), PostgreSQL is
-published on `127.0.0.1:5434`. The root stack doesn't publish it. Set `DATABASE_URL` in `user-service/.env` to
-`postgresql://USER:PASSWORD@localhost:5434/DATABASE?sslmode=disable`, using
-the same credentials and database as `USER_POSTGRES_*`. Compose overrides
-this URL inside the API container to use `user-postgres:5432`.
-
-With the database container running, open Studio on your laptop:
-
-```sh
-cd user-service
-npm run db:studio
-```
-
-Studio accesses the existing container database and its persisted records.
-Remove PostgreSQL's host port mapping for the final isolated deployment.
 
 ## Acknowledgements
 
