@@ -1,8 +1,9 @@
 # AI Assistance Disclosure:
-# Tool: ChatGPT (Astra 6)
-# Date: approx. 2026-10-21
-# Scope: Generated the root compose file that includes each service's compose file and wires shared networks and startup dependencies; helped debug service startup ordering.
-# Author review: Reviewed, tested, and edited by Lim Shao Qi.
+# Tool: ChatGPT (Astra 6), Claude Code (Opus 5.5)
+# Date: approx. 2026-10-21, 2026-11-08
+# Scope: Generated the root compose file that includes each service's compose file and wires shared networks and startup dependencies; helped debug service startup ordering. Debugged 
+# an error where image upload was failing as supplier service could not reach AWS credentials (line 66).
+# Author review: Reviewed, tested, and edited by Lim Shao Qi, Amber Tan Junning (Line 66).
 
 include:
   - supplier-service/compose.yaml

@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: Claude Code (Opus 5.5)
+// Date: 2026-11-06
+// Scope: Refactored shadcn/ui Range Picker code to use props passed in from AdminOrderDashboardCard.tsx. 
+// Author review: Reviewed, tested, and edited by Amber Tan Junning.
+
 import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";

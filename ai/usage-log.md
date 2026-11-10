@@ -5,13 +5,18 @@
 
 Tool for entries 1–27: **ChatGPT (Astra 6)**. Tool for entry 28: **Claude Code (Claude Opus 5.5)**. Every AI output was reviewed, edited and tested by Lim Shao Qi before it was committed.
 
-2.
+2. Amber Tan Junning
+   > Logged on 2026-11-08 to 2026-11-10 for work done 2026-09- to 2026-11-08; dates and prompts are approximate. 
+
+Tools for all entries: **Claude AI and Claude Code** (as specified in the detailed log). Every AI output was reviewed, edited and tested by Amber Tan Junning before it was committed. 
 
 3.
 
 4.
 
 ---
+
+# Detailed AI Usage Log for Lim Shao Qi
 
 ## 1. Registration UI and client-side validation
 
@@ -340,10 +345,244 @@ Tool for entries 1–27: **ChatGPT (Astra 6)**. Tool for entry 28: **Claude Code
 - **Kept/changed:** _To fill in after review._
 - **Verification:** _To fill in after review._
 
-## 29. Migration of supplier images from AWS EC2 to S3, while using local storage when running the app locally
+# Detailed AI Usage Log for Amber Tan Junning
+
+## 1. Replicating opening hours for all days of the week in Supplier database
+
+- **Timestamp**: 2026-09-21 21:38
+- **Tool & model**: Claude AI (Sonnet 5.5 Medium)
+- **Mode:** generate
+- **Files:** `supplier-service/prisma/seed.ts`
+- **Prompt (approx.):** "I have a CSV file which lists the opening time and closing time for each supplier. When seeding the database using Prisma, the OpeningHours table has to be filled with the supplier's id, opening time and closing time for every day of the week, where each day of the week is a new row in the table. How can this be done?"
+- **Key response:** Generated code that created a new row of opening hours for each day of the week, for each supplier present in the CSV file used for seeding. 
+- **Kept/changed:** Used Prisma's `upsert` instead of `create` to ensure that no duplicate records are added to the table.
+- **Verification:** Prisma database seeding was successful. Data was verified by running `npx prisma studio` to check the rows in the tables.
+
+## 2. Debugging queries not rerunning when state changes
+
+- **Timestamp**: 2026-09-23 16:28
+- **Tool & model**: Claude Code (Opus 5.5)
+- **Mode:** generate
+- **Files:** `frontend/src/pages/SupplierPage.tsx`
+- **Prompt (approx.):** "When I apply a type filter on the frontend, the queries do not rerun and show the updated list of suppliers. Fix this issue."
+- **Key response:** Added `searchString` and `typeFilter` to the queryKeys, as the queries rely on these two values.  
+- **Kept/changed:** Changes kept as-is.
+- **Verification:** Supplier records were updated after search strings and type filters were used.
+
+## 3. Adding filters to session storage in Supplier Page
+
+- **Timestamp**: 2026-09-23 17:35
+- **Tool & model**: Claude AI (Opus 5.5 Medium)
+- **Mode:** generate
+- **Files:** `frontend/src/pages/SupplierPage.tsx`
+- **Prompt (approx.):** "How do I add a variable to session storage, so that the page will use existing filters applied upon reload?"
+- **Key response:** Generated template code that added variables to sessionStorage. 
+- **Kept/changed:** Added `typeFilter` and `searchString` to session storage. 
+- **Verification:** Page reloads still apply existing filters when the application was ran on localhost.
+
+## 4. Prisma query for counting associated suppliers for each type
+
+- **Timestamp**: 2026-09-23 23:51
+- **Tool & model**: Claude AI (Opus 5.5 Medium)
+- **Mode:** generate
+- **Files:** `supplier-service/src/services/supplier.type.service.ts`
+- **Prompt (approx.):** "In Prisma and PostgreSQL, I have some foreign key relation for suppliers and the type of suppliers. How can I find the number of suppliers associated with a specific type?"
+- **Key response:** Generated template code that got each supplier type together with its count using `_count`.
+- **Kept/changed:** Changed the template code to use the column names in the supplier database.
+- **Verification:** Function returned the expected values when localhost was running and the associated endpoint was tested on Postman.
+
+## 4. Debugging images not rendering on the frontend
+
+- **Timestamp**: 2026-09-24 01:07
+- **Tool & model**: Claude Code (Opus 5.5)
+- **Mode:** debug
+- **Files:** `data/csv/supplier-seed-data.csv`
+- **Prompt (approx.):** "I have a few images which are stored on GitHub and in the database table (which stores the seed data in `data/csv/supplier-seed-data.csv`), it stores the link to images on GitHub. However, when the application is run on localhost, there is an error that occurs and an alternative text is shown instead. Why is this so?"
+- **Key response:** Explained that for web frameworks like React, the images need to be stored under the `frontend/public` directory so that they can be accessed directly via <app-domain>/<image_path.ext>.
+- **Kept/changed:** Moved all images to `frontend/public` and changed the `imageUrl` in the `supplier-seed-data.csv` to reflect the file path of the images, rather than using the Github links.
+- **Verification:** Images are now rendered when the application runs on local host. 
+- **Note:** AI assitance disclosure header was not added for the supplier seed data file, as comments cannot be added to CSV.
+
+## 5. Generating OR condition for supplier filtering 
+
+- **Timestamp**: 2026-10-14 00:29
+- **Tool & model**: Claude AI (Opus 5.5 High)
+- **Mode:** generate
+- **Files:** `order-service/src/services/order.courier.service.ts`
+- **Prompt (approx.):** "How do I write an OR condition (in the where clause) for prisma, if a variable is not undefined?"
+- **Key response:** Generated template code using a conditional spread and the correct prisma syntax.
+- **Kept/changed:** Added column names `deliverSupplierId` and `pickupSupplierId` corresponding to the names of the column in the supplier database. 
+- **Verification:** Function returns the expected values when localhost was running and the associated endpoint was tested using Postman.
+
+## 6. Courier order history pagination fix
+
+- **Timestamp**: 2026-10-14 15:34
+- **Tool & model**: Claude Code (Opus 5.5)
+- **Mode:** debug
+- **Files:** `frontend/src/features/order/services/order.courier.service.ts`
+- **Prompt (approx.):** "Why does totalPages return undefined when the backend microservice always returns a number?"
+- **Key response:** Explained that the returned value was in `data.data` but the frontend was currently reading `data`. 
+- **Kept/changed:** Applied fixes to use `response.data.data` in the frontend, when fetching API responses. 
+- **Verification:** All test jobs passed, and user testing on localhost was successful. 
+
+## 7. Ensure vertical alignment of fields on the Home Page
+
+- **Timestamp**: 2026-10-14 21:34
+- **Tool & model**: Claude Code (Opus 5.5)
+- **Mode:** debug
+- **Files:** `frontend/src/pages/HomePage.tsx`
+- **Prompt (approx.):** "On the frontend, the filter inputs are not aligned vertically. Fix this issue."
+- **Key response:** Replaced `space-y-1` with `flex flex-col gap-1` in the Tailwind CSS classes for SupplierSelect, Sort By Select and Sort Order Select.
+- **Kept/changed:** Kept fix.
+- **Verification:** Browser displays vertically aligned selectors when running the application on localhost.  
+
+## 8. Add optional pagination for fetchAllSuppliers
+
+- **Timestamp**: 2026-10-17 00:03
+- **Tool & model**: Claude Code (Opus 5.5)
+- **Mode:** refactor
+- **Files:** `supplier-service/src/services/supplier.service.ts`
+- **Prompt (approx.):** "When page is not a null value, use pagination, but if it's null, return null for the `page` and `limit` in the pagination fields. "
+- **Key response:** Used a conditional spread for `take` and `skip` and implemented the specified return values as above.
+- **Kept/changed:** Kept changes. 
+- **Verification:** The endpoint returned the expected values when  queried via Postman. 
+
+## 9. Supplier service containerization
+
+- **Timestamp**: 2026-10-17 23:04
+- **Tool & model**: Claude Code (Opus 5.5)
+- **Mode:** refactor
+- **Files:** 
+  - `supplier-service/Dockerfile`
+  - `supplier-service/compose.yaml`
+  - `supplier-service/docker-entrypoint.sh`
+- **Prompt (approx.):** "Review the Dockerfile I created and add the automatic seeding of the database on container startup."
+- **Key response:** Added the `supplier-service` and `supplier-uploads` volume to the compose.yaml file and corrected errors in the Dockerfile. Generated implementation code for seeding the database in `docker-entrypoint.yaml`.
+- **Kept/changed:** Removed hard-coded `/app/keys/public.pem` to use `${JWT_PUBLIC_KEY_PATH}`. Removed unnecessary commands to keep the Dockerfile as simple as possible. 
+- **Verification:** The Docker container starts up and runs locally. 
+
+## 10. Add reverse proxy
+
+- **Timestamp**: 2026-10-21 17:41
+- **Tool & model**: Claude Code (Opus 5.5)
+- **Mode:** generate
+- **Files:** 
+  - `frontend/nginx.conf`
+  - `frontend/.env.example`
+- **Prompt (approx.):** "In the existing frontend/nginx.conf file, generate implementation code to setup a reverse proxy, such that all requests and API calls must be made through the proxy."
+- **Key response:** Generated implementation code for the nginx configuration file and changed the `BASE_URL` variables in `.env.example` to `/api`.
+- **Kept/changed:** No substantial changes were made, other than the addition of code comments for code readability.
+- **Verification:** Tested the application by running Docker locally, and verified that all requests go through the `http://localhost:5173`, rather than the internal backend services' URL.
+
+## 13. Order service containerization documentation
+
+- **Timestamp**: 2026-10-23 13:02
+- **Tool & model**: Claude Code (Opus 5.5)
+- **Mode:** audit
+- **Files:** `order-service/README.md`
+- **Prompt (approx.):** "Check if the containerization section in the README file is accurate."
+- **Key response:** Suggested the addition of specific commands, such as `docker compose up --build order-service`, to start up only the order service, and to add that the Bearer token has to be added to request made to the API endpoints. 
+- **Kept/changed:** Personally applied the suggested changes. 
+- **Verification:** Checked the accuracy of suggested changes before applying them.
+
+## 14. Unit test cases for supplier service 
+
+- **Timestamp**: 2026-10-28 09:25
+- **Tool & model**: Claude Code (Opus 5.5)
+- **Mode:** generate
+- **Files:** 
+  - `supplier-service/src/services/supplier.service.test.ts`
+  - `supplier-service/src/services/supplier.type.service.test.ts`
+- **Prompt (approx.):** "Generate boilerplate code for unit test cases for the `fetchActiveSuppliers` and `fetchAllSuppliers` functions, and for functions related to supplier types. Ensure that the mock Prisma object captures the arguments passed into prisma functions and the number of calls made to each function. Also ensure that all possible outputs and errors from each function are covered by a test case."
+- **Key response:** `useSharedMockPrisma` was generated based on the existing mock prisma setup and test cases related to the `fetchActiveSuppliers` and `fetchAllSuppliers` functions were generated.
+- **Kept/changed:** Reformatted all test cases and added additional assertions to ensure all tests have the same structure: (1) arguments passed into prisma calls, (2) results returned by the function and (3) the number of calls made to each prisma function. Renamed variables for readability. Test cases for `getSuppliersByIdsService` and `getSupplierByIdService` were created based on test cases provided by Claude. 
+- **Verification:** `npm run test` shows that all tests in the supplier service were successful.
+
+## 15. Fix supplierTypeSchema accepting invalid strings
+
+- **Timestamp**: 2026-10-28 14:00
+- **Tool & model**: Claude Code (Opus 5.5)
+- **Mode:** debug
+- **Files:** `supplier-service/src/schemas/supplier.type.schema.ts`
+- **Prompt (approx.):** "The test case where an empty string is passed into the `supplierTypeSchema` is failing because the schema accepts an empty string. How can I fix this?"
+- **Key response:** Explained that the schema did not have a minimum length requirement for the `type` field and that strings with whitespaces only could also be accepted. Suggested to use `z.string().trim().min(1).toUpperCase()`. 
+- **Kept/changed:** Applied fixes to use `z.string().trim().min(1).toUpperCase()` instead of `z.string().toUpperCase()`. 
+- **Verification:** All test jobs passed.
+
+## 16. Unit test cases for order service 
+
+- **Timestamp**: 2026-10-28 16:12
+- **Tool & model**: Claude Code (Opus 5.5)
+- **Mode:** generate
+- **Files:** `order-service/src/services/order.courier.service.test.ts`
+- **Prompt (approx.):** "Generate boilerplate code to mock Prisma for the order service and unit test the courier service file. Ensure that the mock Prisma object captures the arguments passed into prisma functions and the number of calls made to each function. Also ensure that all possible outputs and errors from each function are covered by a test case."
+- **Key response:** Test cases were generated for the functions related to courier actions, namely, `acceptOpenOrder`, `completePickedUpOrder`, `dropAcceptedOrder`, `getAllOpenOrders`, `getCourierAcceptanceHistory` and `pickUpAcceptedOrder`. 
+- **Kept/changed:** Reformatted all test cases and added additional assertions to ensure all tests have the same structure: (1) arguments passed into prisma calls, (2) results returned by the function and (3) the number of calls made to each prisma function. Renamed variables for readability and added reusable constants `VALID_GET_OPEN_ORDERS_INPUT`, `VALID_DEFAULT_COURIER_ACCEPTANCE_INPUT`, `MOCK_ACCEPTED_ORDER`, `MOCK_PICKED_UP_ORDER` and `MOCK_COMPLETED_ORDER`. 
+- **Verification:** `npm run test` shows that all tests in the order service were successful.
+
+## 17. Running deployment only on the upstream repository
+
+- **Timestamp**: 2026-10-29 12:17
+- **Tool & model**: Claude Code (Opus 5.5)
+- **Mode:** debug
+- **Files:** `.github/workflows/deploy.yml`
+- **Prompt (approx.):** "Why do deployments always fail in the forked repositories, even though they succeed in the upstream repository?"
+- **Key response:** Explained that deployments always fail in the forked repositories as they do not have AWS secrets. Suggested creating an if-condition to only run the deployment action when the repository is the upstream repository. I personally added the fix to the `jobs` level, but Claude moved it to the `build-push` level to ensure other jobs still run in the forked repositories. 
+- **Kept/changed:** Fixes kept as-is. 
+- **Verification:** Github actions for both upstream and forked repositories were successful. 
+
+## 18. Debugging frontend showing stale orders when tabs are switched
+
+- **Timestamp**: 2026-11-03 21:39
+- **Tool & model**: Claude Code (Opus 5.5)
+- **Mode:** debug
+- **Files:** `frontend/src/features/order/hooks/useOrderHistory.ts`
+- **Prompt (approx.):** "Fix this bug where status tabs in the order history show the wrong orders. The order status had updated but specific status tabs were still showing the old version of the orders."
+- **Key response:** Added `staleTime: 0` in the `useOrderHistory` hook.
+- **Kept/changed:** Fixes kept as-is. 
+- **Verification:** Stale orders were no longer shown on the application deployed on localhost, after switching tabs in the order history.
+
+## 20. Debugging auto-receipt for orders
+
+- **Timestamp**: 2026-11-05 21:16
+- **Tool & model**: Claude Code (Opus 5.5)
+- **Mode:** debug
+- **Files:** `order-service/src/services/order-receipt.service.ts`
+- **Prompt (approx.):** "Why are credits not transferred when the order has already been reflected as AUTO_RECEIVED?"
+- **Key response:** Explained that event payload was missing a `courierId` and suggested this one-line fix. 
+- **Kept/changed:** Personally added the missing `courierId` field. 
+- **Verification:** User testing on localhost and cloud is successful.
+
+## 21. Unit tests for automated order receipt
+
+- **Timestamp**: 2026-11-05 21:41
+- **Tool & model**: Claude Code (Opus 5.5)
+- **Mode:** generate
+- **Files:** `order-service/src/services/order-receipt.service.test.ts`
+- **Prompt (approx.):** "Generate boilerplate code for `order-receipt.service.ts`, while keeping to the convention and structure outlined in `order.courier.service.test.ts`."
+- **Key response:** Explained that the returned value was in `data.data` but the frontend was currently reading `data`. 
+- **Kept/changed:** Merged two test cases which tested receiving one order and receiving multiple orders separately. Renamed constants for ease of reading. 
+- **Verification:** `npm run test` shows all test cases ran successfully.
+
+## 22. Order dashboard date range filter
+
+- **Timestamp**: 2026-11-06 09:51
+- **Tool & model**: Claude Code (Opus 5.5)
+- **Mode:** refactor
+- **Files:** 
+  - `frontend/src/components/ui/date-range.tsx`
+  - `frontend/src/features/order/components/AdminOrderDashboardCard.tsx`
+  - `order-service/src/schemas/order.schema.ts`
+  - `order-service/src/services/order.service.ts`
+- **Prompt (approx.):** "The current code has a date-range UI component. Refactor the components such that props can be passed from the parent component. For the related backend function, allow filtering by date range of the `createdAt` column. I also want to be able to filter by an array of statuses."
+- **Key response:** Refactored shadcn's date-range component in `frontend/src/components/ui/date-range.tsx` to allow props to be passed in. Values were added as props and passed in from `AdminOrderDashboardCard.tsx`. In the `WHERE` clause of the Prisma query in `order-service/src/services/order.service.ts`, new lines of code was added to allow orders to be filtered by their date range, as well as by a set of statuses. 
+- **Kept/changed:** Rewrote the picker to use `startDate` and `endDate` instead of `DateRange`. 
+- **Verification:** All test jobs passed, and user testing on localhost was successful. Functionalities also work on the cloud-deployed application.
+
+## 23. Migration of supplier images from AWS EC2 to S3, while using local storage when running the app locally
 
 - **Timestamp**: 2026-11-08 18:50
-- **Tool & model**: Claude (Opus 5.5)
+- **Tool & model**: Claude Code (Opus 5.5)
 - **Mode:** generate
 - **Files:** 
   - `supplier-service/src/controllers/supplier.asset.controller.ts`
@@ -355,4 +594,14 @@ Tool for entries 1–27: **ChatGPT (Astra 6)**. Tool for entry 28: **Claude Code
 - **Follow-up Prompt (approx.):** "Move the multer checking of file size and file extensions into `upload.middleware.ts`."
 - **Key response:** Generated the code based that fulfilled the above description. A test file `supplier.asset.service.test.ts` was also generated. 
 - **Kept/changed:** `requestOrigin` was originally kept, but I removed it as all .env files will have the `ASSETS_PUBLIC_URL` variable set, which would already contain the base URL for image fetching. I also removed `ASSETS_DIR` and `defaultAssetsDir`, which were generated by Claude, as we can directly resolve the file path for local image storage. 
-- **Verification:** All test jobs passed, and user testing on localhost was successful. User testing on cloud was also successful once a small fix (placing `supplier-service` on the default Docker network to allow S3 credentials to be reached) was applied. 
+- **Verification:** All test jobs passed, and user testing on localhost was successful. 
+
+## 24. Debugging image upload errors on cloud
+- **Timestamp**: 2026-11-08 21:36
+- **Tool & model**: Claude Code (Opus 5.5)
+- **Mode:** generate
+- **Files:** `compose.yaml`
+- **Prompt (approx.):** "The logs on AWS show that credentials cannot be loaded from the provider, hence image upload is failing on the cloud-deployed application. The functionality works on localhost. What is causing this error?"
+- **Key response:** Suggested to add the supplier-service container to the default network, so that supplier-service has network access to load the AWS credentials and 
+- **Kept/changed:** Personally applied the one-line fix. Rebuilt the `supplier-service` container to ensure that changes in `.env` has been applied. 
+- **Verification:** AUser testing on the cloud-deployed application was successful. 
