@@ -402,7 +402,7 @@ deadline. supplier-service exits immediately.
     - supplier-service: adding duplicate opening hours rows in table for different days of the week, using session storage, generating Prisma count query, adding optional pagination
     - supplier service refactoring
     - credit-service ledger, initial credit grant, balance and history endpoints
-    - order-service prisma query, adding date range filter for order dashboard
+    - order-service prisma query, adding date range filter for order dashboard, refactoring optimistic concurrency control
     - RabbitMQ outbox publisher, registration consumer and redrive script
     - frontend auth, profile, user-management and credits features
     - Dockerfiles, Compose files and GitHub Actions CI/CD workflows
@@ -412,9 +412,11 @@ deadline. supplier-service exits immediately.
     - stale credit data across sessions
     - phone prefix display
     - service startup ordering
+    - ui alignment, tab and button fixes
     - supplier images not rendering on frontend on browser
     - supplier service queries not rerunning during state changes
     - order service pagination returning undefined
+    - fixing event payload having missing field
     - stale orders displaying
     - fix unaligned frontend components 
     - fix missing fields in event payloads
