@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: Claude Code (Claude Sonnet 5.5)
+// Date: 2026-11-10
+// Scope: Later edit to this file: Removed per-request user logging (PII); auth failures now log at debug through the pino logger.
+// Author review: Pending review by the author.
+
 import fs from "node:fs";
 import jwt, { type JwtPayload } from "jsonwebtoken";
 import type { Response, NextFunction } from "express";

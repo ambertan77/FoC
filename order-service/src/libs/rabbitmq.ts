@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: Claude Code (Claude Sonnet 5.5)
+// Date: 2026-11-10
+// Scope: Later edit to this file: Replaced console.* with the pino logger.
+// Author review: Pending review by the author.
+
 import { OrderEventType } from "../generated/prisma/client.js";
 import { connect, type Channel, type ChannelModel, type ConfirmChannel, type Options } from "amqplib";
 import config from "../config/config.js";

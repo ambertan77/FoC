@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: Claude Code (Claude Sonnet 5.5)
+// Date: 2026-11-10
+// Scope: Later edit to this file: Replaced console.* with the pino logger and removed token and personal-data logging.
+// Author review: Pending review by the author.
+
 import argon2 from "argon2";
 import { AppError } from "../errors/errors.js";
 import { prisma } from "../libs/prisma.js";

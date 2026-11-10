@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: Claude Code (Claude Sonnet 5.5)
+// Date: 2026-11-10
+// Scope: Later edit to this file: Mounted the request logger first and replaced console.* with the pino logger.
+// Author review: Pending review by the author.
+
 import express from "express";
 import type { Request, Response } from "express";
 import cors from "cors";

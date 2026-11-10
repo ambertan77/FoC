@@ -369,7 +369,7 @@ deadline. supplier-service exits immediately.
 
 ## AI Use Summary
 
-- **Tools:** ChatGPT (Astra 6), Claude Code (Claude Opus 5.5)
+- **Tools:** ChatGPT (Astra 6), Claude Code (Claude Opus 5.5, Claude Sonnet 5.5)
 - **Used for:**
   - Generating initial implementations:
     - user-service registration with OTP, profile, email change, password change, admin invitation and activation, and first-admin bootstrap
@@ -401,6 +401,7 @@ deadline. supplier-service exits immediately.
   - Drafting frontend README documentation
   - Auditing and suggesting updates for order service README
   - Auditing and updating READMEs and API docs against the code (Claude Code)
+  - Centralized logging (Claude Code): pino logger and request-ID middleware in all five services, the Loki/Alloy/Grafana stack in `observability/`, deploy workflow changes, the architecture diagram and the Grafana access steps
 - **Prohibited phases avoided:** requirements elicitation; architecture/design decisions
 - **Verification:** all AI outputs reviewed, edited and tested by the authors
 - **Full log:** [/ai/usage-log.md](ai/usage-log.md)
