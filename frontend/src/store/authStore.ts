@@ -1,3 +1,8 @@
+// Code Reference:
+// "AuthForge Client"
+// GitHub: https://github.com/hamidukarimi/authforge-client
+// Used for: Reference implementation for authentication-related and authorization-related client code.
+
 // AI Assistance Disclosure:
 // Tool: ChatGPT (Astra 6)
 // Date: approx. 2026-10-12

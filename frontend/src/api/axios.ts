@@ -1,3 +1,8 @@
+// Code Reference:
+// "AuthForge Client"
+// GitHub: https://github.com/hamidukarimi/authforge-client
+// Used for: Reference implementation for authentication-related and authorization-related client code.
+
 import axios from "axios";
 import type { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from "axios";
 import { getToken, setToken, removeToken } from "@/utils/token";

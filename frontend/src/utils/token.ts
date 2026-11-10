@@ -1,3 +1,8 @@
+// Code Reference:
+// "AuthForge Client"
+// GitHub: https://github.com/hamidukarimi/authforge-client
+// Used for: Reference implementation for authentication-related and authorization-related client code.
+
 const ACCESS_TOKEN_KEY = "access_token";
 
 export const getToken = (): string | null => {

@@ -10,11 +10,13 @@ Tool for entries 1–27: **ChatGPT (Astra 6)**. Tool for entry 28: **Claude Code
 
 Tools for all entries: **Claude AI and Claude Code** (as specified in the detailed log). Every AI output was reviewed, edited and tested by Amber Tan Junning before it was committed. 
 
-3.
+3. Ng See Pui
+   > Logged on 2026-11-10 for work done 2026-10-30 to 2026-11-10; dates and prompts are approximate.
+
+Tools for all entries: **ChatGPT (5.6 Luna)**, **ChatGPT (Astra 6)**, **Claude Code (Claude Sonnet 5.5)**. Every AI output was reviewed, edited and tested by Ng See Pui before it was committed.
 
 4.
 
----
 
 # Detailed AI Usage Log for Lim Shao Qi
 
@@ -400,7 +402,7 @@ Tools for all entries: **Claude AI and Claude Code** (as specified in the detail
 - **Prompt (approx.):** "I have a few images which are stored on GitHub and in the database table (which stores the seed data in `data/csv/supplier-seed-data.csv`), it stores the link to images on GitHub. However, when the application is run on localhost, there is an error that occurs and an alternative text is shown instead. Why is this so?"
 - **Key response:** Explained that for web frameworks like React, the images need to be stored under the `frontend/public` directory so that they can be accessed directly via <app-domain>/<image_path.ext>.
 - **Kept/changed:** Moved all images to `frontend/public` and changed the `imageUrl` in the `supplier-seed-data.csv` to reflect the file path of the images, rather than using the Github links.
-- **Verification:** Images are now rendered when the application runs on local host. 
+- **Verification:** Images are now rendered when the application runs on local host.
 - **Note:** AI assitance disclosure header was not added for the supplier seed data file, as comments cannot be added to CSV.
 
 ## 5. Generating OR condition for supplier filtering 
@@ -584,7 +586,7 @@ Tools for all entries: **Claude AI and Claude Code** (as specified in the detail
 - **Timestamp**: 2026-11-08 18:50
 - **Tool & model**: Claude Code (Opus 5.5)
 - **Mode:** generate
-- **Files:** 
+- **Files:**
   - `supplier-service/src/controllers/supplier.asset.controller.ts`
   - `supplier-service/src/services/supplier.asset.service.test.ts`
   - `supplier-service/src/services/supplier.asset.service.ts`
@@ -597,11 +599,151 @@ Tools for all entries: **Claude AI and Claude Code** (as specified in the detail
 - **Verification:** All test jobs passed, and user testing on localhost was successful. 
 
 ## 24. Debugging image upload errors on cloud
+
 - **Timestamp**: 2026-11-08 21:36
 - **Tool & model**: Claude Code (Opus 5.5)
 - **Mode:** generate
 - **Files:** `compose.yaml`
 - **Prompt (approx.):** "The logs on AWS show that credentials cannot be loaded from the provider, hence image upload is failing on the cloud-deployed application. The functionality works on localhost. What is causing this error?"
-- **Key response:** Suggested to add the supplier-service container to the default network, so that supplier-service has network access to load the AWS credentials and 
-- **Kept/changed:** Personally applied the one-line fix. Rebuilt the `supplier-service` container to ensure that changes in `.env` has been applied. 
-- **Verification:** AUser testing on the cloud-deployed application was successful. 
+- **Key response:** Suggested to add the supplier-service container to the default network, so that supplier-service has network access to load the AWS credentials and
+- **Kept/changed:** Personally applied the one-line fix. Rebuilt the `supplier-service` container to ensure that changes in `.env` has been applied.
+- **Verification:** AUser testing on the cloud-deployed application was successful.
+
+# Detailed AI Usage Log for Ng See Pui
+
+## 1. Redrive scirpts for failing RabbitMQ messages
+
+- **Timestamp:** 2026-10-30 15:47
+- **Tool & model:** ChatGPT (5.6 Luna)
+- **Mode:** generate
+- **Files:**
+  - `order-service/src/scripts/redrive-credit-reservation-results.ts`
+  - `order-service/src/scripts/redrive-order-outbox.ts`
+  - `credit-service/src/scripts/redrive-credit-outbox.ts`
+  - `credit-service/src/scripts/redrive-reservation-request.ts`
+- **Prompt (approx.):** "Generate the redrive scripts for credit reservation results, credit outbox, order outbox, and reservation request."
+- **Key response:** Generated scripts to redrive failed credit reservation results, credit outbox, order outbox, and reservation request events, including validation, retry handling, message republishing, and status updates.
+- **Kept/changed:** Reviewed and edited event validation, republishing, retry handling, and status updates.
+- **Verification:** Reviewed the scripts and tested the affected redrive workflows.
+
+## 2. Unit tests for order service and credit service
+
+- **Timestamp:** 2026-11-04 09:00
+- **Tool & model:** ChatGPT (Astra 6)
+- **Mode:** generate
+- **Files:**
+  - `order-service/src/schemas/credit-reservation-result.schema.test.ts`
+  - `order-service/src/schemas/order.requester.schema.test.ts`
+  - `order-service/src/services/credit-reservation.service.test.ts`
+  - `order-service/src/services/order-expiry.service.test.ts`
+  - `order-service/src/services/order.requester.service.test.ts`
+  - `credit-service/src/schemas/reservation-request-event.schema.test.ts`
+  - `credit-service/src/services/reservation-request.service.test.ts`
+- **Prompt (approx.):** "Write node:test unit tests (run with tsx and --experimental-test-module-mocks) for my order-service and credit-service. Cover the schemas and services, including the credit reservation flow, order expiry, and order requester. Mock Prisma with `mock.module`."
+- **Key response:** Produced the seven test files with boilerplate and specific test cases for the schemas and services, including credit reservation, order expiry, and order requester.
+- **Kept/changed:** Fixed mocks that didn't match the real Prisma call shapes. Added additional test cases for edge cases and error handling.
+- **Verification:** `npm test` in `order-service` and `credit-service` (all passing); the tests also run in CI.
+
+## 3. Refactor RabbitMQ functionality
+
+- **Timestamp:** 2026-11-05 13:00
+- **Tool & model:** ChatGPT (5.6 Luna)
+- **Mode:** refactor
+- **Files:**
+  - `user-service/src/libs/rabbitmq.ts`
+  - `order-service/src/libs/rabbitmq.ts`
+  - `credit-service/src/libs/rabbitmq.ts`
+- **Prompt (approx.):** "Refactor RabbitMQ such that the functions are reusable."
+- **Key response:** Refactored RabbitMQ connection, channel, publishing, consuming, and retry-related functions into reusable utilities.
+- **Kept/changed:** Preserved existing messaging behavior while reducing duplication and improving reuse across credit-service workflows.
+- **Verification:** Reviewed the refactored implementation and tested the affected RabbitMQ workflows.
+
+## 4. Backend notification service
+
+- **Timestamp:** 2026-11-09 01:00
+- **Tool & model:** ChatGPT (Astra 6),  Claude Code (Claude Sonnet 5.5)
+- **Mode:** generate
+- **Files:**
+  - `notification-service/src/controllers/notification.controller.ts`
+  - `notification-service/src/schemas/notification.schema.ts`
+  - `notification-service/src/schemas/order-status-event.schema.ts`
+  - `notification-service/src/services/notification.service.ts`
+  - `notification-service/src/services/notification-rules.ts`
+  - `notification-service/sse/hub.ts`
+- **Prompt (approx.):** "Generate a notification service that listens to order status events and sends notifications to users based on their preferences. Include SSE support for real-time updates."
+- **Key response:** Generated the notification service with controllers, schemas, services, and SSE hub for real-time notifications. Implemented order status event handling and user preference-based notification rules.
+- **Kept/changed:** Preserved the existing order status event flow while adding notification logic and SSE support. Added comments for clarity.
+- **Verification:** Reviewed the implementation and tested the notification service with simulated order status events and user preferences using a local frontend client.
+
+## 5. Frontend SSE integration for notification service
+
+- **Timestamp:** 2026-11-09 03:00
+- **Tool & model:** ChatGPT (Astra 6),  Claude Code (Claude Sonnet 5.5)
+- **Mode:** generate
+- **Files:**
+  - `frontend/src/contexts/NotificationProvider.tsx`
+  - `frontend/src/features/notification/services/sse.ts`
+- **Prompt (approx.):** "Generate the frontend notification service, including notification state management using react provider and Server-Sent Events handling."
+- **Key response:** Produced the notification provider and SSE client for real-time notification delivery.
+- **Kept/changed:**  Reviewed and edited connection handling, reconnection behavior, unread state updates, read-state synchronization, and notification state management.
+- **Verification:**  Tested the frontend notification service with the backend notification service and verified real-time updates, state management, and SSE reconnection behavior.
+
+## 6. Unit tests for notification service
+
+- **Timestamp:** 2026-11-09 15:00
+- **Tool & model:** ChatGPT (Astra 6)
+- **Mode:** generate
+- **Files:**
+  - `notification-service/src/schemas/notification.schema.test.ts`
+  - `notification-service/src/schemas/order-status-event.schema.test.ts`
+  - `notification-service/src/services/notification.service.test.ts`
+  - `notification-service/src/services/notification-rules.test.ts`
+- **Prompt (approx.):** "Write node:test unit tests (run with tsx and --experimental-test-module-mocks) for my notification-service. Cover the schemas and services, including order status event handling and notification rules. Mock Prisma with `mock.module`."
+- **Key response:** Produced the four test files with boilerplate and specific test cases for the schemas and services, including order status event handling and notification rules.
+- **Kept/changed:**  Reviewed and edited test cases to match the service logic and expected notification outcomes.
+- **Verification:** `npm test` in `notification-service` (all passing); the tests also run in CI.
+
+## 7. Redrive order status events script
+
+- **Timestamp:** 2026-11-10 10:30 
+- **Tool & model:** ChatGPT (Astra 6)
+- **Mode:** generate
+- **Files:**
+  - `notification-service/src/scripts/redrive-order-status-events.ts`
+- **Prompt (approx.):** "Generate the redrive scripts for order status events."
+- **Key response:** Generated scripts to redrive failed order status events, including validation, retry handling, message republishing, and status updates.
+- **Kept/changed:** Reviewed and edited event validation, republishing, retry handling, and status updates.
+- **Verification:** Reviewed the scripts and tested the affected redrive workflows.
+
+## 8. Verify and edit errors for notification service README
+
+- **Timestamp:** 2026-11-10 12:00
+- **Tool & model:** ChatGPT (Astra 6)
+- **Mode:** audit
+- **Files:**
+  - `notification-service/README.md`
+- **Prompt (approx.):** "Verify and edit errors for notification service README."
+- **Key response:** Reviewed the README for accuracy, clarity, and completeness. Suggested edits for grammar, formatting, and technical details.
+- **Kept/changed:** Applied suggested edits to improve readability and accuracy of the README.
+- **Verification:** Reviewed the updated README for clarity and correctness.
+
+## 9. Check and verify all notification service Dockerfiles and compose files
+
+- **Timestamp:** 2026-11-10 14:00
+- **Tool & model:** ChatGPT (Astra 6)
+- **Mode:** audit
+- **Files:**
+  - `notification-service/Dockerfile`
+  - `notification-service/compose.yaml`
+  - `notification-service/docker-entrypoint.sh`
+  - `compose.yaml`
+  - `compose.prod.yaml`
+  - `gateway/nginx.conf`
+  - `.github/workflows/ci.yml`
+  - `.github/workflows/deploy.yml`
+- **Prompt (approx.):** "Check and verify all notification service Dockerfiles and compose files.
+- **Key response:** Reviewed the Docker configuration for correctness and consistency with the notification service.
+- **Kept/changed:** Nothing changed; verified that the Dockerfiles and compose files are correct and consistent.
+- **Verification:** Compared the Docker files against the notification service setup and runtime requirements.
+
+
