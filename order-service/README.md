@@ -19,6 +19,7 @@ Author review: Reviewed and edited by Amber Tan Junning. -->
 - [API Reference](#api-reference)
 - [Getting Started](#getting-started)
 - [Acknowledgements](#acknowledgements)
+- [Code References](#code-references)
 
 ## About
 
@@ -1094,3 +1095,7 @@ To go through the frontend proxy, go to the root folder `foc` and run `docker co
 - [JSON Web Token](https://jwt.io/)
 - [RabbitMQ](https://www.rabbitmq.com/)
 - [Docker](https://www.docker.com/)
+
+## Code References
+
+- [Transactional Outbox Pattern in Node.js: Building Reliable ...](https://www.linkedin.com/pulse/transactional-outbox-pattern-nodejs-building-reliable-sex5c/): Referenced for transactional outbox polling, event claiming, retries, and reliable message publishing.

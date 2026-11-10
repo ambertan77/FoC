@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (5.6 Luna), Claude Code (Claude Sonnet 5.5)
+// Date: approx. 2026-11-05
+// Scope: Refactored RabbitMQ functionality so its connection, channel, publishing, consuming, and retry-related functions are reusable.
+// Author review: Reviewed, tested, and edited by Ng See Pui.
+
 import "dotenv/config";
 import {
   connect,

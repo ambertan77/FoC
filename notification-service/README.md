@@ -1,3 +1,10 @@
+<!-- AI Assistance Disclosure:
+Tool: ChatGPT (Astra 6)
+Date: approx. 2026-11-10
+Scope: Verified and edited errors in the notification service README.
+Author review: Reviewed, tested, and edited by Ng See Pui.
+-->
+
 # Notification Service
 
 ## Table of Contents

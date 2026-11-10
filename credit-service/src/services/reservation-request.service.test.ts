@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-11-04
+// Scope: Generated unit test cases for the order and credit services.
+// Author review: Reviewed, tested, and edited by Ng See Pui.
+
 import test, { mock, type TestContext } from "node:test";
 import assert from "node:assert/strict";
 import { Prisma, type PrismaClient } from "../generated/prisma/client.js";
