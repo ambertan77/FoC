@@ -2,7 +2,7 @@
 // Tool: Claude Code (Claude Sonnet 5.5)
 // Date: 2026-11-10
 // Scope: Later edit to this file: Replaced console.* with the pino logger.
-// Author review: Pending review by the author.
+// Author review: Reviewed, tested, checked by the author.
 
 import { AppError } from "../errors/errors.js";
 import { prisma } from "../libs/prisma.js";

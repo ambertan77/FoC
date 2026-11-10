@@ -2,7 +2,7 @@
 // Tool: Claude Code (Claude Sonnet 5.5)
 // Date: 2026-11-10
 // Scope: Later edit to this file: Logs unhandled and 5xx errors through the pino logger instead of console.
-// Author review: Pending review by the author.
+// Author review: Reviewed, tested, checked by the author.
 
 import type { ErrorRequestHandler } from "express";
 
