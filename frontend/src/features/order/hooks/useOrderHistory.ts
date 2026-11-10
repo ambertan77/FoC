@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: Claude Code (Opus 5.5)
+// Date: 2026-11-03
+// Scope: Debugged status tabs showing stale orders by adding staleTime:0
+// Author review: Reviewed and edited by Amber Tan Junning.
+
 import { useQuery } from "@tanstack/react-query";
 import type { OrderHistoryParams, OrderHistoryResponse } from "@/features/order/types/order.types";
 import { getOrderHistoryService } from "@/features/order/services/order.service";

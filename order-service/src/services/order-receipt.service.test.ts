@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: Claude Code (Opus 5.5)
+// Date: 2026-11-05
+// Scope: Generated boilerplate code for test cases checking if the function in order-receipt.service.ts runs successfully.
+// Author review: Reviewed, tested, and edited by Amber Tan Junning.
+
 import test from "node:test";
 import assert from "node:assert/strict";
 import { mock, type TestContext } from "node:test";

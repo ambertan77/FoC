@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: Claude Code (Opus 5.5)
+// Date: 2026-11-06
+// Scope: Added line 99 to fix an issue regarding credits not getting transferred when an order is reflected as AUTO_RECEIVED.
+// Author review: Reviewed, tested, and edited by Amber Tan Junning.
+
 import { AppError } from "../errors/errors.js";
 import { prisma } from "../libs/prisma.js";
 import { OrderEventType, OrderStatus } from "../generated/prisma/client.js";
@@ -92,7 +98,7 @@ export async function updateOrdersAsReceived(): Promise<number> {
                         reservationId: order.creditReservationId,
                         orderId: order.id,
                         requesterId: order.requesterId,
-                        courierId: order.courierId,
+                        courierId: order.courierId, // this line was suggested by AI then personally added by Amber Tan Junning.
                         amount: order.offeredCredits,
                     }
                 }

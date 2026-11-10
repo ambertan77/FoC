@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: Claude Code (Opus 5.5)
+// Date: 2026-10-28
+// Scope: Generated boilerplate code for setting up mock Prisma and unit testing for all functions related to supplier types.
+// Author review: Reviewed, tested, and edited by Amber Tan Junning.
+
 import test from "node:test";
 import assert from "node:assert/strict";
 import { mock, type TestContext } from "node:test";

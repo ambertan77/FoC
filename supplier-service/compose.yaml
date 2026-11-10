@@ -1,3 +1,9 @@
+# AI Assistance Disclosure:
+# Tool: Claude Code (Opus 5.5)
+# Date: 2026-10-21
+# Scope: Generated implementation code for containerization of supplier service.
+# Author review: Reviewed, tested, and edited by Amber Tan Junning.
+
 services:
   # reference for postgres: https://www.prisma.io/docs/guides/deployment/docker
   supplier-postgres:
