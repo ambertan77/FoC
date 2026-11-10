@@ -6,6 +6,14 @@ Scope: Audited against the code; documented reservation processing, result event
 Author review: Reviewed and edited by Lim Shao Qi.
 -->
 
+<!--
+AI Assistance Disclosure:
+Tool: Claude Code (Claude Opus 5.5)
+Date: 2026-11-11
+Scope: Audited against the code; fixed the production redrive command and the NODE_ENV/LOG_LEVEL environment rows.
+Author review: Reviewed and edited by Lim Shao Qi.
+-->
+
 # Credit service
 
 ## Table of Contents
@@ -568,7 +576,7 @@ Redrive commands for each Credit dead-letter queue:
 
 Redrive means sending a dead-letter message back for another processing attempt.
 
-`redrive:prod` runs the compiled registration redrive (`dist/scripts/redrive-registration.js`). Use it where the TypeScript sources are not available, such as inside the production container: `docker compose -f compose.prod.yaml exec credit-service npm run redrive:prod -- --limit 10`.
+`redrive:prod` runs the compiled registration redrive (`dist/scripts/redrive-registration.js`). Use it where the TypeScript sources are not available, such as inside the production container: `docker compose -f compose.yaml -f compose.prod.yaml exec credit-service npm run redrive:prod -- --limit 10`.
 
 #### Queue redrive (registration, settlement, reservation requests)
 
@@ -1042,7 +1050,8 @@ The service exits at startup if any variable marked **Required** is missing (`sr
 | `CREDIT_POSTGRES_DB` | Compose | PostgreSQL database name. Read only by `compose.yaml`. |
 | `CREDIT_POSTGRES_USER` | Compose | PostgreSQL user. Read only by `compose.yaml`. |
 | `CREDIT_POSTGRES_PASSWORD` | Compose | PostgreSQL password. Read only by `compose.yaml`. |
-| `NODE_ENV` | No | In `.env.example`, but Credit Service doesn't read it. |
+| `NODE_ENV` | No | Only read by the logger: `test` silences logs. |
+| `LOG_LEVEL` | No | Log level (`debug`, `info`, `warn`, `error`). Defaults to `info`. |
 
 > Do not commit `.env`, private keys, or other secrets to the repository.
 

@@ -14,6 +14,14 @@ Scope: Audited against the code; replaced the Vite template text and rewrote the
 Author review: Reviewed and edited by Lim Shao Qi.
 -->
 
+<!--
+AI Assistance Disclosure:
+Tool: Claude Code (Claude Opus 5.5)
+Date: 2026-11-11
+Scope: Audited against the code; corrected the /suppliers access and added notifications to the code layout.
+Author review: Reviewed and edited by Lim Shao Qi.
+-->
+
 # Frontend
 
 The Aaron web app is a React 19 + TypeScript single-page app built with Vite.
@@ -105,7 +113,7 @@ Defined in `src/routes/routes.ts` and `src/routes/AppRouter.tsx`.
 | `/register` | Student registration with email OTP | Public |
 | `/activate-admin` | Admin account activation from an invitation link | Public |
 | `/home` | Home | Student, Admin |
-| `/suppliers` | Supplier list | Student, Admin |
+| `/suppliers` | Supplier list | Student |
 | `/profile` | Profile, email change, password change | Student, Admin |
 | `/credits` | Credit balance and history | Student |
 | `/requester-activity` | Requests I've made | Student |
@@ -119,10 +127,10 @@ Defined in `src/routes/routes.ts` and `src/routes/AppRouter.tsx`.
 
 ```text
 src/
-├── api/          # Axios clients (authApi, supplierApi, orderApi, creditApi) and endpoints.ts
+├── api/          # Axios clients (authApi, supplierApi, orderApi, creditApi, notificationApi) and endpoints.ts
 ├── components/   # Shared layout, navbar and shadcn/ui components
 ├── context/      # AuthContext (restores the session on load)
-├── features/     # auth, credit, order, supplier, user. Each has its own components/, hooks/, services/, schemas/ and types/ as needed
+├── features/     # auth, credit, notification, order, supplier, user. Each has its own components/, hooks/, services/, schemas/ and types/ as needed
 ├── hooks/        # App-wide hooks (useAuth, useLogout)
 ├── lib/          # TanStack Query client, utilities
 ├── pages/        # One component per route

@@ -14,6 +14,14 @@ Scope: README documentation verification
 Author review: Reviewed and edited by Ng See Pui.
 -->
 
+<!--
+AI Assistance Disclosure:
+Tool: Claude Code (Claude Opus 5.5)
+Date: 2026-11-11
+Scope: Audited against the code; corrected notification-service RabbitMQ/key/shutdown details, the order-service consumer list, the backend port range, the Grafana secret, the repository structure and typos.
+Author review: Reviewed and edited by Lim Shao Qi.
+-->
+
 # CS3219 — Software Design and Architecture (AY2627 Sem 1)
 
 ## Aaron
@@ -24,6 +32,8 @@ campus, and other students can fulfil (and deliver) those requests. The
 platform runs on a closed credit economy — credits cannot be bought,
 withdrawn, or exchanged for money, and only circulate within the platform.
 
+**Live deployment:** <https://www.cs3219.rocks/>
+
 ---
 
 ## Team Members
@@ -31,7 +41,7 @@ withdrawn, or exchanged for money, and only circulate within the platform.
 | Name | Role |
 | --------- | -------------- |
 | Amber Tan Junning | Supplier Service, Order Service, Viewing Live and Past Orders (N2H) |
-| Duong Ngoc Mai | Supplier Service, Credit Service, Centralised Logging (N2H) |
+| Duong Ngoc Mai | Supplier Service, Credit Service, Centralized Logging (N2H) |
 | Lim Shao Qi | User Service, Credit Service, CI/CD + Cloud Deployment (N2H) |
 | Ng See Pui | User Service, Order Service, Credit Service (credits reservation async) Order History & Reordering + Real-time status update push notifications (N2H) |
 
@@ -51,10 +61,13 @@ microservice (`user-service/`, `supplier-service/`, `order-service/`, `credit-se
 ├── notification-service/ # Real-time notifications
 ├── frontend/            # React + Vite web app
 ├── gateway/             # nginx API gateway config used in production
+├── observability/       # Centralized logging: Loki, Alloy and Grafana config
 ├── data/csv/            # Supplier seed data, loaded by supplier-service
+├── docs/                # Project documentation
+├── scripts/             # Helper scripts
 ├── ai/                  # AI usage log
 ├── .github/workflows/   # CI (ci.yml) and CD (deploy.yml)
-├── compose.yaml         # Local stack: includes every service's compose.yaml + RabbitMQ
+├── compose.yaml         # Local stack: includes every service's compose.yaml, observability/ + RabbitMQ
 ├── compose.prod.yaml    # Production override: ECR images and the gateway
 ├── .env.example         # Root Compose variables (RabbitMQ credentials)
 └── README.md
@@ -159,6 +172,7 @@ The deploy workflow reads these repository settings
 | `EC2_HOST`    | The server's Elastic IP                |
 | `EC2_USER`    | SSH user, e.g. `ubuntu`                |
 | `EC2_SSH_KEY` | Private key of the deploy SSH key pair |
+| `GRAFANA_ADMIN_PASSWORD` | Grafana admin password, written to the server `.env` if it has none |
 
 ### One-time AWS and server setup
 
@@ -190,7 +204,7 @@ The workflow assumes this already exists:
 ## Run Locally with Docker
 
 The whole stack can run in Docker: five services, five Postgres
-databases, RabbitMQ and the frontend. Start Docker Desktop or the Docker
+databases, RabbitMQ, the frontend, and Loki, Alloy and Grafana for logging. Start Docker Desktop or the Docker
 engine first.
 
 ### One-time setup
@@ -212,12 +226,12 @@ engine first.
    supplier-service, Compose overrides `DATABASE_URL` and the JWT key paths.
    Make sure the database credentials in each `.env` match its
    `*_POSTGRES_*` / `POSTGRES_*` values. Use the same RabbitMQ credentials in
-   the root `.env` and in the `RABBITMQ_URL` of user-service, order-service
-   and credit-service. URL-encode any special characters in the credentials.
+   the root `.env` and in the `RABBITMQ_URL` of user-service, order-service,
+   credit-service and notification-service. URL-encode any special characters in the credentials.
 
 2. Generate the RS256 key pair used for access tokens. user-service signs
    tokens with the private key. The other services verify them with the
-   public key. order-service and credit-service mount
+   public key. order-service, credit-service and notification-service mount
    `user-service/keys/public.pem` directly. supplier-service needs its own
    copy:
 
@@ -259,7 +273,7 @@ Only the frontend and Grafana are published, both on `127.0.0.1`:
 
 Nothing else is reachable from the host:
 
-- The backend services (3000–3003) don't publish their ports.
+- The backend services (3000–3004) don't publish their ports.
 - Postgres and RabbitMQ run only on `internal: true` networks (see
   `compose.yaml`). Docker doesn't publish ports for those containers, so the
   `ports:` entries in the compose files have no effect in the full stack.
@@ -301,15 +315,15 @@ service stdout (JSON) → Docker → Alloy → Loki → Grafana
 
 ## RabbitMQ and Service Startup
 
-RabbitMQ is only used by user-service, order-service and credit-service.
-supplier-service does not use it. The publishers, consumers and workers
+RabbitMQ is used by user-service, order-service, credit-service and
+notification-service. supplier-service does not use it. The publishers, consumers and workers
 run inside each service's process. You do not need separate worker
 commands.
 
 | Service | Runs in-process | Publishes to | Consumes from |
 | --- | --- | --- | --- |
 | user-service | Outbox publisher | `user.events` (`user.registered.v1`) | — |
-| order-service | Outbox publisher, credit-result consumer, order-expiry worker, order-receipt worker | `credit.commands` (`credit.reserve.v1`), `order.events` (`order.received.v1`, `order.canceled.v1`, `order.expired.v1`, `order.failed.v1`, `order.status.changed.v1`) | `order.credit-events.v1`, `notification.order-events.v1` |
+| order-service | Outbox publisher, credit-result consumer, order-expiry worker, order-receipt worker | `credit.commands` (`credit.reserve.v1`), `order.events` (`order.received.v1`, `order.canceled.v1`, `order.expired.v1`, `order.failed.v1`, `order.status.changed.v1`) | `order.credit-events.v1` |
 | credit-service | Registration consumer, settlement consumer, reservation-request consumer, outbox publisher | `credit.events` (`credit.reservation.succeeded.v1`, `credit.reservation.failed.v1`) | `credit.user-registered.v1`, `credit.order-events.v1`, `credit.reserve.v1` |
 | notification-service | Notification worker | — | `notification.order-events.v1` |
 
@@ -375,8 +389,8 @@ before `db seed`, because the seed script imports the generated client:
 Then run `npm start` or `npm run dev` from each service directory, each in
 its own terminal.
 
-Stop services with Ctrl+C. user-service, order-service and credit-service
-try to finish work already in progress before a 15-second shutdown
+Stop services with Ctrl+C. user-service, order-service, credit-service and
+notification-service try to finish work already in progress before a 15-second shutdown
 deadline. supplier-service exits immediately.
 
 ## AI Use Summary
@@ -393,7 +407,7 @@ deadline. supplier-service exits immediately.
     - frontend auth, profile, user-management and credits features
     - Dockerfiles, Compose files and GitHub Actions CI/CD workflows
     - Migration of supplier images from AWS EC2 to S3, while using local storage when running the app locally
-  - Writing the user-service, supplier-service and ordeer-service unit tests
+  - Writing the user-service, supplier-service and order-service unit tests
   - Debugging:
     - stale credit data across sessions
     - phone prefix display
