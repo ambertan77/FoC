@@ -6,7 +6,7 @@
 Tool for entries 1–27: **ChatGPT (Astra 6)**. Tool for entry 28: **Claude Code (Claude Opus 5.5)**. Every AI output was reviewed, edited and tested by Lim Shao Qi before it was committed.
 
 2. Amber Tan Junning
-   > Logged on 2026-11-08 to 2026-11-10 for work done 2026-09- to 2026-11-08; dates and prompts are approximate. 
+   > Logged on 2026-11-08 to 2026-11-10 for work done 2026-09-21 to 2026-11-08; dates and prompts are approximate. 
 
 Tools for all entries: **Claude AI and Claude Code** (as specified in the detailed log). Every AI output was reviewed, edited and tested by Amber Tan Junning before it was committed. 
 
