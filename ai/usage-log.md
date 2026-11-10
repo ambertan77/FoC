@@ -734,7 +734,7 @@ Model for supplier and credit entries 2–8: **GPT-6.1-Sol (high)**, as confirme
 - **Key response:** Adjusted the supplier selector height to respond appropriately across different screen sizes.
 - **Verification:** Reviewed the responsive styling and tested the component layout.
 
-## 3. Redrive scirpts for failing RabbitMQ messages
+## 3. Redrive scripts for failing RabbitMQ messages
 
 - **Timestamp:** 2026-10-30 15:47
 - **Tool & model:** ChatGPT (5.6 Luna)
