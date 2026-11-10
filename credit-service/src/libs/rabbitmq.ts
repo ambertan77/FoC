@@ -2,13 +2,20 @@
 // Tool: Claude Code (Claude Sonnet 5.5)
 // Date: 2026-11-10
 // Scope: Later edit to this file: Replaced console.* with the pino logger.
-// Author review: Reviewed, tested, checked by Duong Ngoc Mai.
+// Author review: Reviewed, tested, checked by the author.
 
 // AI Assistance Disclosure:
 // Tool: ChatGPT (5.6 Luna), Claude Code (Claude Sonnet 5.5)
 // Date: approx. 2026-11-05
 // Scope: Refactored RabbitMQ functionality so its connection, channel, publishing, consuming, and retry-related functions are reusable.
 // Author review: Reviewed, tested, and edited by Ng See Pui.
+
+// AI Assistance Disclosure:
+// Tool & model: GPT-6.1-Sol (high)
+// Disclosure date: 2026-11-11 (retrospective; original development dates not supplied)
+// Contributor: Duong Ngoc Mai
+// Scope: Settlement event topology and messaging used by transfer, release and refund operations only.
+// Usage log: /ai/usage-log.md, Detailed AI Usage Log for Duong Ngoc Mai.
 
 import "dotenv/config";
 import {

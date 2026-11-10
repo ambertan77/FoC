@@ -10,6 +10,15 @@ Date: 2026-11-11
 Scope: Audited against the code; fixed the setup commands, key mount, internal endpoint response, environment variables, response examples, test list, project structure and typos.
 Author review: Reviewed and edited by Lim Shao Qi. -->
 
+<!--
+AI Assistance Disclosure:
+Tool & model: GPT-6.1-Sol (high)
+Disclosure date: 2026-11-11 (retrospective; original development dates not supplied)
+Contributor: Duong Ngoc Mai
+Scope: Added the retrospective feature AI usage summary for Duong Ngoc Mai.
+Usage log: /ai/usage-log.md, Detailed AI Usage Log for Duong Ngoc Mai.
+-->
+
 # Supplier Service
 
 ## Table of Contents
@@ -21,6 +30,7 @@ Author review: Reviewed and edited by Lim Shao Qi. -->
 - [Project Structure](#project-structure)
 - [API Reference](#api-reference)
 - [Getting Started](#getting-started)
+- [AI Use Summary](#ai-use-summary)
 - [Acknowledgements](#acknowledgements)
 
 ## About
@@ -552,6 +562,14 @@ The root `compose.yaml` includes this folder's `compose.yaml`, which defines two
 - **`supplier-postgres`:** PostgreSQL 17 with a health check. The service waits until it is healthy.
 
 The `127.0.0.1:5433` Postgres port mapping only works when you run this folder's compose on its own, for example `docker compose up -d supplier-postgres` to use with `npm run dev`. In the root stack, the database is on an internal network and isn't reachable from the host. Use `docker compose exec supplier-postgres psql -U <POSTGRES_USER> suppliers` instead.
+
+## AI Use Summary
+
+- **Contributor:** Duong Ngoc Mai.
+- **Tool & model:** GPT-6.1-Sol (high).
+- **Scope:** AI assisted Duong Ngoc Mai with creating, updating, deactivating and activating suppliers, including the admin UI, validation, persistence and related tests.
+- **Disclosure:** recorded retrospectively on 2026-11-11 because Duong Ngoc Mai periodically deletes historical Codex data to save storage space on her device. Original development dates and exact prompts are no longer available; Kept/changed entries summarize the current files. Historical review/test results were not supplied. Existing contributor disclosures remain in place.
+- **Full log:** [Detailed AI Usage Log for Duong Ngoc Mai](../ai/usage-log.md#detailed-ai-usage-log-for-duong-ngoc-mai).
 
 ## Acknowledgements
 

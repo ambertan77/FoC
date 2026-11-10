@@ -4,6 +4,13 @@
 // Scope: Added conditional spread for optional pagination for fetchAllSuppliers function.
 // Author review: Reviewed, tested, and edited by Amber Tan Junning.
 
+// AI Assistance Disclosure:
+// Tool & model: GPT-6.1-Sol (high)
+// Disclosure date: 2026-11-11 (retrospective; original development dates not supplied)
+// Contributor: Duong Ngoc Mai
+// Scope: Create, update, deactivate and activate suppliers, including validation and opening-hours persistence.
+// Usage log: /ai/usage-log.md, Detailed AI Usage Log for Duong Ngoc Mai.
+
 import { AppError } from "../errors/errors.js";
 import type { Prisma, PrismaClient } from "../generated/prisma/client.js";
 import type { Day, SupplierStatus } from "../generated/prisma/enums.js";

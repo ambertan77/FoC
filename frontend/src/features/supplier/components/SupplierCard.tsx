@@ -1,3 +1,10 @@
+// AI Assistance Disclosure:
+// Tool & model: GPT-6.1-Sol (high)
+// Disclosure date: 2026-11-11 (retrospective; original development dates not supplied)
+// Contributor: Duong Ngoc Mai
+// Scope: Supplier edit, deactivate and activate actions.
+// Usage log: /ai/usage-log.md, Detailed AI Usage Log for Duong Ngoc Mai.
+
 import { ClockIcon, LogOutIcon, MapIcon, MapPinIcon, PencilIcon, RotateCcwIcon, StoreIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";

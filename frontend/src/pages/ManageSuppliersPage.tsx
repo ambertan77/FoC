@@ -4,6 +4,13 @@
 // Scope: Fixed status tab not selected on the UI by default
 // Author review: Reviewed, tested, and edited by Amber Tan Junning.
 
+// AI Assistance Disclosure:
+// Tool & model: GPT-6.1-Sol (high)
+// Disclosure date: 2026-11-11 (retrospective; original development dates not supplied)
+// Contributor: Duong Ngoc Mai
+// Scope: Admin UI and mutations for creating, updating, deactivating and activating suppliers.
+// Usage log: /ai/usage-log.md, Detailed AI Usage Log for Duong Ngoc Mai.
+
 import { useState, useEffect } from "react";
 import type { ChangeEvent } from "react";
 import { PlusIcon, SearchIcon } from "lucide-react";

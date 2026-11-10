@@ -3,6 +3,13 @@
 
 // Get a free hosted Postgres database in seconds: `npx create-db`
 
+// AI Assistance Disclosure:
+// Tool & model: GPT-6.1-Sol (high)
+// Disclosure date: 2026-11-11 (retrospective; original development dates not supplied)
+// Contributor: Duong Ngoc Mai
+// Scope: Supplier fields, activation status and opening-hours models used by supplier management.
+// Usage log: /ai/usage-log.md, Detailed AI Usage Log for Duong Ngoc Mai.
+
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
