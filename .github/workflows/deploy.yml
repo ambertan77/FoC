@@ -62,7 +62,7 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: "compose.yaml,compose.prod.yaml,gateway/nginx.conf,data/csv,user-service/compose.yaml,supplier-service/compose.yaml,order-service/compose.yaml,credit-service/compose.yaml,frontend/compose.yaml"
+          source: "compose.yaml,compose.prod.yaml,gateway/nginx.conf,data/csv,user-service/compose.yaml,supplier-service/compose.yaml,order-service/compose.yaml,credit-service/compose.yaml,notification-service/compose.yaml,frontend/compose.yaml"
           target: ${{ vars.EC2_APP_DIR }}
       - name: Pull images and restart the stack
         uses: appleboy/ssh-action@v1.2.0
