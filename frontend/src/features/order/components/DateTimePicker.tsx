@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (5.6 Luna)
+// Date: approx. 2026-10-12
+// Scope: Adjusted the date-time picker popover content width relative to its trigger element.
+// Author review: Reviewed, tested, and edited by Ng See Pui.
+
 import { format, parse } from "date-fns";
 import { useState } from "react";
 

@@ -1,3 +1,8 @@
+// Code Reference:
+// "AuthForge Client"
+// GitHub: https://github.com/hamidukarimi/authforge-client
+// Used for: Reference implementation for authentication-related and authorization-related client code.
+
 import { useMutation } from "@tanstack/react-query";
 import { useLocation, useNavigate } from "react-router-dom";
 import { loginService } from "@/features/auth/services/auth.service";

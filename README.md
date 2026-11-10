@@ -6,6 +6,14 @@ Scope: Audited against the code; updated the repository structure, added the ser
 Author review: Reviewed and edited by Lim Shao Qi.
 -->
 
+<!--
+AI Assistance Disclosure:
+Tool: ChatGPT (Astra 6)
+Date: 2026-11-10
+Scope: README documentation verification
+Author review: Reviewed and edited by Ng See Pui.
+-->
+
 # CS3219 — Software Design and Architecture (AY2627 Sem 1)
 
 ## Aaron
@@ -25,15 +33,14 @@ withdrawn, or exchanged for money, and only circulate within the platform.
 | Amber Tan Junning | Supplier Service, Order Service, Viewing Live and Past Orders (N2H) |
 | Duong Ngoc Mai | Supplier Service, Credit Service, Centralised Logging (N2H) |
 | Lim Shao Qi | User Service, Credit Service, CI/CD + Cloud Deployment (N2H) |
-| Ng See Pui | User Service, Order Service, Order History + Reordering (N2H) |
+| Ng See Pui | User Service, Order Service, Credit Service (credits reservation async) Order History & Reordering + Real-time status update push notifications (N2H) |
 
 ---
 
 ## Repository Structure
 
 This repository follows a **one-service-per-folder** structure: each
-microservice (`user-service/`, `supplier-service/`, `order-service/`,
-`credit-service/`) lives in its own top-level folder.
+microservice (`user-service/`, `supplier-service/`, `order-service/`, `credit-service/`, `notification-service/`) lives in its own top-level folder.
 
 ```text
 .
@@ -41,6 +48,7 @@ microservice (`user-service/`, `supplier-service/`, `order-service/`,
 ├── supplier-service/    # Campus stores/facilities, supplier types, image uploads
 ├── order-service/       # Order (errand) lifecycle, courier actions, expiry/receipt workers
 ├── credit-service/      # Credit ledger, reservations and settlement
+├── notification-service/ # Real-time notifications
 ├── frontend/            # React + Vite web app
 ├── gateway/             # nginx API gateway config used in production
 ├── data/csv/            # Supplier seed data, loaded by supplier-service
@@ -67,6 +75,7 @@ the gateway (`gateway/nginx.conf`). Locally it is the frontend container
 | supplier-service | 3001 | `/api/suppliers` | [supplier-service/README.md](supplier-service/README.md) |
 | order-service | 3002 | `/api/orders` | [order-service/README.md](order-service/README.md) |
 | credit-service | 3003 | `/api/credits` | [credit-service/README.md](credit-service/README.md) |
+| notification-service | 3004 | `/api/notifications` | [notification-service/README.md](notification-service/README.md) |
 | frontend | 8080 (container) | `/` | [frontend/README.md](frontend/README.md) |
 
 - The gateway answers `GET /healthz` itself. Any other `/api/...` path
@@ -111,7 +120,7 @@ skipped. You can also start it by hand from the Actions tab
 queue instead of cancelling it. The jobs:
 
 1. **`ci`** reruns the full CI workflow.
-2. **`build-push`** builds the four backend images and pushes them to
+2. **`build-push`** builds the five backend images and pushes them to
    Amazon ECR as `foc/<service>:<commit-sha>` and `:latest`. It only runs
    in `AY2627S1-CS3219-P20/FoC`, so on forks it and the rest of the deploy
    are skipped.
@@ -159,7 +168,7 @@ The workflow assumes this already exists:
   repository. It can push to ECR, sync to `S3_BUCKET` and create
   CloudFront invalidations. No long-lived AWS keys are stored in GitHub.
 - **ECR repositories**: `foc/user-service`, `foc/supplier-service`,
-  `foc/order-service`, `foc/credit-service`.
+  `foc/order-service`, `foc/credit-service`, `foc/notification-service`.
 - **EC2 host**:
   - Docker with the Compose plugin and the AWS CLI are installed
   - the instance can pull from ECR
@@ -180,7 +189,7 @@ The workflow assumes this already exists:
 
 ## Run Locally with Docker
 
-The whole stack can run in Docker: four services, four Postgres
+The whole stack can run in Docker: five services, five Postgres
 databases, RabbitMQ and the frontend. Start Docker Desktop or the Docker
 engine first.
 
@@ -192,7 +201,7 @@ engine first.
 
    ```sh
    cp .env.example .env
-   for d in user-service supplier-service order-service credit-service frontend; do
+   for d in user-service supplier-service order-service credit-service notification-service frontend; do
      cp "$d/.env.example" "$d/.env"
    done
    ```
@@ -300,8 +309,9 @@ commands.
 | Service | Runs in-process | Publishes to | Consumes from |
 | --- | --- | --- | --- |
 | user-service | Outbox publisher | `user.events` (`user.registered.v1`) | — |
-| order-service | Outbox publisher, credit-result consumer, order-expiry worker, order-receipt worker | `credit.commands` (`credit.reserve.v1`), `order.events` (`order.received.v1`, `order.canceled.v1`, `order.expired.v1`, `order.failed.v1`) | `order.credit-events.v1` |
+| order-service | Outbox publisher, credit-result consumer, order-expiry worker, order-receipt worker | `credit.commands` (`credit.reserve.v1`), `order.events` (`order.received.v1`, `order.canceled.v1`, `order.expired.v1`, `order.failed.v1`, `order.status.changed.v1`) | `order.credit-events.v1`, `notification.order-events.v1` |
 | credit-service | Registration consumer, settlement consumer, reservation-request consumer, outbox publisher | `credit.events` (`credit.reservation.succeeded.v1`, `credit.reservation.failed.v1`) | `credit.user-registered.v1`, `credit.order-events.v1`, `credit.reserve.v1` |
+| notification-service | Notification worker | — | `notification.order-events.v1` |
 
 Each consumer queue has a matching `.retry.v1` and `.dead.v1` queue.
 Messages that keep failing end up in the dead queue. Each service README
@@ -309,6 +319,7 @@ explains how to replay them with its redrive scripts:
 
 - order-service: `npm run redrive:credit-reservation-results`, `npm run redrive:order-outbox`
 - credit-service: `npm run redrive:registration`, `redrive:settlement`, `redrive:reservation`, `redrive:credit-outbox` (and `redrive:prod`, the compiled registration redrive)
+- notification-service: `npm run redrive:order-status-events`
 
 Services can start in any order. Each connection sets up the exchanges,
 queues and bindings it needs before processing messages. The HTTP servers
@@ -330,7 +341,7 @@ internal networks, so start them separately:
 
 ```sh
 # Postgres: each service's own compose file publishes its database
-# (supplier 5433, user 5434, order 5435, credit 5436)
+# (supplier 5433, user 5434, order 5435, credit 5436, notification 5437)
 (cd user-service && docker compose up -d user-postgres)
 
 # RabbitMQ: a standalone broker on 5672, with the management UI on 15672
@@ -358,6 +369,7 @@ before `db seed`, because the seed script imports the generated client:
 (cd supplier-service && npm ci && npx prisma migrate deploy && npm run db:generate && npx prisma db seed && npm run build)
 (cd order-service && npm ci && npm run db:deploy && npm run db:generate && npm run build)
 (cd credit-service && npm ci && npm run db:deploy && npm run db:generate && npm run build)
+(cd notification-service && npm ci && npm run db:deploy && npm run db:generate && npm run build)
 ```
 
 Then run `npm start` or `npm run dev` from each service directory, each in

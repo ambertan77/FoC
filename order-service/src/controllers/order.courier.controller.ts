@@ -42,7 +42,7 @@ export async function acceptOrder(req: AuthRequest, res: Response) {
 
     return res.status(200).json({
         success: true,
-        message: `Order ${updatedOrder.id} accepted by courier ${updatedOrder.courierId}`,
+        message: `Order successfully accepted by courier`,
         data: updatedOrder,
     });
 }
@@ -61,7 +61,7 @@ export async function pickUpOrder(req: AuthRequest, res: Response) {
 
     return res.status(200).json({
         success: true,
-        message: `Order ${updatedOrder.id} picked up by courier ${updatedOrder.courierId}`,
+        message: `Order successfully picked up by courier`,
         data: updatedOrder,
     });
 }
@@ -80,7 +80,7 @@ export async function completeOrder(req: AuthRequest, res: Response) {
     
     return res.status(200).json({
         success: true,
-        message: `Order ${updatedOrder.id} completed by courier ${updatedOrder.courierId}`,
+        message: `Order successfully completed by courier`,
         data: updatedOrder,
     });
 }
@@ -99,7 +99,7 @@ export async function dropOrder(req: AuthRequest, res: Response) {
     
     return res.status(200).json({
         success: true,
-        message: `Order ${updatedOrder.id} dropped by courier ${courierId}`,
+        message: `Order successfully dropped by courier`,
         data: updatedOrder,
     });
 }
@@ -116,7 +116,7 @@ export async function getCourierOrderHistory(req: AuthRequest, res: Response) {
 
     return res.status(200).json({
         success: true,
-        message: `${result.orders.length} orders previously accepted by courier ${courierId} retrieved`,
+        message: `Courier order history retrieved successfully`,
         data: result,
     });
 }

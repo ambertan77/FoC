@@ -1,7 +1,7 @@
 <!-- AI Assistance Disclosure:
 Tool: Claude Code (Opus 5.5)
 Date: 2026-10-23
-Scope: Checked accuracy README.md in the Containerization section, and suggested edits to better improve documentation. 
+Scope: Checked accuracy of documentation related to outbox messages and containerization, and suggested edits to better improve documentation. 
 Author review: Reviewed and edited by Amber Tan Junning. -->
 
 # Order Service
@@ -19,6 +19,7 @@ Author review: Reviewed and edited by Amber Tan Junning. -->
 - [API Reference](#api-reference)
 - [Getting Started](#getting-started)
 - [Acknowledgements](#acknowledgements)
+- [Code References](#code-references)
 
 ## About
 
@@ -599,7 +600,7 @@ Authorization: Bearer <access-token>
 ```json
 {
     "success": true,
-    "message": "0 orders previously accepted by courier 5bb703e8-b4f5-4568-bb14-5a2bf9a392b0 retrieved",
+    "message": "Courier order history retrieved successfully",
     "data": {
         "orders": [ <full order information of all orders accepted by the caller> ],
         "pagination": {
@@ -836,7 +837,7 @@ Renews an expired request by changing the order status from EXPIRED back to OPEN
 Authorization: Bearer <access-token>
 ```
 
-#### Query Parameters
+#### Example Request Body
 
 ```json
 {
@@ -875,12 +876,20 @@ Accepts an OPEN order. This action can be done by any authenticated student, exc
 Authorization: Bearer <access-token>
 ```
 
+#### Example Request Body
+
+```json
+{
+    "expectedVersion": 4
+}
+```
+
 #### Successful Response
 
 ```json
 {
     "success": true,
-    "message": "Order e94ee4b9-2839-4fbd-b80e-89d1a324b96e accepted by courier bfef7411-c83b-4299-82b9-20ab9c52106f",
+    "message": "Order successfully picked up by courier",
     "data": { <full order information of the accepted order> }
 }
 ```
@@ -906,12 +915,20 @@ Drop an ACCEPTED order. This action can only be done by the courier.
 Authorization: Bearer <access-token>
 ```
 
+#### Example Request Body
+
+```json
+{
+    "expectedVersion": 4
+}
+```
+
 #### Successful Response
 
 ```json
 {
     "success": true,
-    "message": "Order e94ee4b9-2839-4fbd-b80e-89d1a324b96e dropped by courier bfef7411-c83b-4299-82b9-20ab9c52106f",
+    "message": "Order successfully dropped by courier",
     "data": { <full order information of the dropped order> }
 }
 ```
@@ -937,12 +954,20 @@ Mark an ACCEPTED order as PICKED_UP. This action can only be done by the assigne
 Authorization: Bearer <access-token>
 ```
 
+#### Example Request Body
+
+```json
+{
+    "expectedVersion": 4
+}
+```
+
 #### Successful Response
 
 ```json
 {
     "success": true,
-    "message": "Order e94ee4b9-2839-4fbd-b80e-89d1a324b96e picked up by courier bfef7411-c83b-4299-82b9-20ab9c52106f",
+    "message": "Order successfully picked up by courier",
     "data": { <full order information of the picked up order> }
 }
 ```
@@ -968,12 +993,20 @@ Mark a PICKED_UP order as COMPLETED. This action can only be done by the assigne
 Authorization: Bearer <access-token>
 ```
 
+#### Example Request Body
+
+```json
+{
+    "expectedVersion": 4
+}
+```
+
 #### Successful Response
 
 ```json
 {
     "success": true,
-    "message": "Order e94ee4b9-2839-4fbd-b80e-89d1a324b96e completed by courier bfef7411-c83b-4299-82b9-20ab9c52106f",
+    "message": "Order successfully completed by courier",
     "data": { <full order information of the completed order> }
 }
 ```
@@ -1075,15 +1108,16 @@ npm run db:studio
 
 Start development with `npm run dev`, or run the compiled application with `npm start`.
 
-The registration consumer starts after the HTTP server begins listening. It reconnects if RabbitMQ becomes unavailable. `GET /healthz` only confirms that the HTTP server is running; it does not check RabbitMQ or whether students have received credits.
+The consumers starts after the HTTP server begins listening. It reconnects if RabbitMQ becomes unavailable. `GET /healthz` only confirms that the HTTP server is running; it does not check RabbitMQ or whether students have received credits.
 
-### Containerization
+### Docker
 
-The Order Service has been containerized with Docker. Use `docker compose up --build order-service` in the root folder to build only the `order-service` container and its dependencies `order-postgres` and `rabbitmq`.
+The root `compose.yaml` includes this folder's `compose.yaml`, which defines two containers:
 
-However, building the Order Service container does not mean the API endpoints for the service can be called directly. The Order Service runs on the Docker `backend` and `order-db` networks, which are both internal networks. All calls to the Order Service must be done through the frontend proxy.
+- **`order-service`:** built from the `Dockerfile` (Node.js 22 Alpine). It mounts `../user-service/keys/public.pem` read-only at `JWT_PUBLIC_KEY_PATH`, so create the user-service keys first. `docker-entrypoint.sh` runs `prisma migrate deploy` and then starts `dist/index.js`. The API port isn't published to the host. In the root stack, reach it through the frontend at `http://localhost:5173/api/orders/...`.
+- **`order-postgres`:** PostgreSQL 17 with a health check. The service waits until it is healthy.
 
-To go through the frontend proxy, go to the root folder `foc` and run `docker compose up --build`. Then from Postman or the browser's dev tools, add the Bearer authentication token, call `http://localhost:5173/api/orders` or the relevant order service endpoints.
+The `127.0.0.1:5435` Postgres port mapping only works when you run this folder's compose on its own, for example `docker compose up -d order-postgres` to use with `npm run dev`. In the root stack, the database is on an internal network and isn't reachable from the host. Use `docker compose exec order-postgres psql -U <ORDER_POSTGRES_USER> <ORDER_POSTGRES_DB>` instead.
 
 ## Acknowledgements
 
@@ -1094,3 +1128,7 @@ To go through the frontend proxy, go to the root folder `foc` and run `docker co
 - [JSON Web Token](https://jwt.io/)
 - [RabbitMQ](https://www.rabbitmq.com/)
 - [Docker](https://www.docker.com/)
+
+## Code References
+
+- [Transactional Outbox Pattern in Node.js: Building Reliable ...](https://www.linkedin.com/pulse/transactional-outbox-pattern-nodejs-building-reliable-sex5c/): Referenced for transactional outbox polling, event claiming, retries, and reliable message publishing.

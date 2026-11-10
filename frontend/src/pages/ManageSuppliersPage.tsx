@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: Claude AI (Sonnet 5.5 Medium)
+// Date: 2026-11-07
+// Scope: Fixed status tab not selected on the UI by default
+// Author review: Reviewed, tested, and edited by Amber Tan Junning.
+
 import { useState, useEffect } from "react";
 import type { ChangeEvent } from "react";
 import { PlusIcon, SearchIcon } from "lucide-react";

@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6),  Claude Code (Claude Sonnet 5.5)
+// Date: approx. 2026-11-09
+// Scope: Generated the backend notification service, including notification rules, event processing, persistence, unread counts, read-state updates, and SSE replay support.
+// Author review: Reviewed, tested, and edited by Ng See Pui.
+
 import { z } from "zod";
 
 export const listQuerySchema = z.object({

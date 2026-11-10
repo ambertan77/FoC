@@ -1,7 +1,8 @@
 # AI Assistance Disclosure:
 # Tool: Claude Code (Opus 5.5)
-# Date: 2026-10-21
-# Scope: Generated implementation code for containerization of supplier service.
+# Date: 2026-10-17, 2026-10-21
+# Scope: Generated implementation code for containerization of supplier service. Updated names of variables based on new database container name given.
+#        Add internal backend Docker networks to isolate internal communication.
 # Author review: Reviewed, tested, and edited by Amber Tan Junning.
 
 services:

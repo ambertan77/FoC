@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-11-10
+// Scope: Generated the redrive scripts for failing RabbitMQ messages.
+// Author review: Reviewed, tested, and edited by Ng See Pui.
+
 import {
     connectOrderStatusMessaging,
     ORDER_STATUS_MESSAGING,

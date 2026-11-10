@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: Claude Code (Opus 5.5)
+// Date: 2026-11-03
+// Scope: Check for undefined Courier ID before printing out courier details
+// Author review: Reviewed, tested, and edited by Amber Tan Junning.
+
 import { useState } from "react";
 import { format } from "date-fns";
 import { useForm } from "@tanstack/react-form";
@@ -424,6 +430,7 @@ const RequestActivityDetailsDialog = ({
                         <div className="space-y-2 border-t pt-4">
                             <p className="font-medium text-base">Courier Details</p>
 
+                            {/* Undefined courier ID check written with the help of Claude Code Opus 5.5, reviewed and edited by Amber Tan Junning */}
                             {!order.courierId ? (
                                 <p className="text-sm text-muted-foreground">
                                     No courier has accepted this request yet.

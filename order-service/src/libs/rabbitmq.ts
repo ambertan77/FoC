@@ -4,6 +4,11 @@
 // Scope: Later edit to this file: Replaced console.* with the pino logger.
 // Author review: Pending review by the author.
 
+// Tool: ChatGPT (5.6 Luna), Claude Code (Claude Sonnet 5.5)
+// Date: approx. 2026-11-05
+// Scope: Refactored RabbitMQ functionality so its connection, channel, publishing, consuming, and retry-related functions are reusable.
+// Author review: Reviewed, tested, and edited by Ng See Pui.
+
 import { OrderEventType } from "../generated/prisma/client.js";
 import { connect, type Channel, type ChannelModel, type ConfirmChannel, type Options } from "amqplib";
 import config from "../config/config.js";

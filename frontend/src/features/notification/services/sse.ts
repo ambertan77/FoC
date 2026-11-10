@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6), Claude Code (Claude Sonnet 5.5)
+// Date: approx. 2026-11-09
+// Scope: Generated the frontend notification service, including notification state management and Server-Sent Events handling.
+// Author review: Reviewed, tested, and edited by Ng See Pui.
+
 export interface SseMessage {
     id?: string;
     event: string;

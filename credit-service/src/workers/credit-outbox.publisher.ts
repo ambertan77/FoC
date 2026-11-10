@@ -4,6 +4,11 @@
 // Scope: Later edit to this file: Replaced console.* with the pino logger.
 // Author review: Pending review by the author.
 
+// Code Reference:
+// "Transactional Outbox Pattern in Node.js: Building Reliable ..."
+// LinkedIn, https://www.linkedin.com/pulse/transactional-outbox-pattern-nodejs-building-reliable-sex5c/
+// Used for: Transactional outbox polling, event claiming, retries, and reliable message publishing.
+
 import { setTimeout as delay } from "node:timers/promises";
 import {
     CreditOutboxEventStatus,

@@ -20,6 +20,7 @@ Author review: Reviewed and edited by Lim Shao Qi.
 - [API Reference](#api-reference)
 - [Getting Started](#getting-started)
 - [Acknowledgements](#acknowledgements)
+- [Code References](#code-references)
 
 ## About
 
@@ -1100,3 +1101,7 @@ The `127.0.0.1:5436` Postgres port mapping only works when you run this folder's
 - [JSON Web Token](https://jwt.io/)
 - [RabbitMQ](https://www.rabbitmq.com/)
 - [Docker](https://www.docker.com/)
+
+## Code References
+
+- [Transactional Outbox Pattern in Node.js: Building Reliable ...](https://www.linkedin.com/pulse/transactional-outbox-pattern-nodejs-building-reliable-sex5c/): Referenced for transactional outbox polling, event claiming, retries, and reliable message publishing.

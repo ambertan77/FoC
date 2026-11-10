@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: Claude Code (Opus 5.5)
+// Date: 2026-10-14
+// Scope: Debug error 404 and "acceptRequest is not a function" error when orders were accepted on frontend
+// Author review: Reviewed, tested, and edited by Amber Tan Junning.
+
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { CourierUpdateStatusPayload, Order } from "../types/order.types";
 import type { ParsedError } from "@/utils/errorHandler";
