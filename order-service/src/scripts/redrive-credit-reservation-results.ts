@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (5.6 Luna)
+// Date: approx. 2026-10-30
+// Scope: Generated the redrive scripts for failing RabbitMQ messages.
+// Author review: Reviewed, tested, and edited by Ng See Pui.
+
 import { creditReservationResultSchema } from "../schemas/credit-reservation-result.schema.js";
 import {
     connectReservationResultMessaging,

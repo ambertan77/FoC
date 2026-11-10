@@ -10,7 +10,10 @@ Tool for entries 1–27: **ChatGPT (Astra 6)**. Tool for entry 28: **Claude Code
 
 Tools for all entries: **Claude AI and Claude Code** (as specified in the detailed log). Every AI output was reviewed, edited and tested by Amber Tan Junning before it was committed. 
 
-3.
+3. Ng See Pui
+   > Logged on 2026-11-10 for work done 2026-10-30 to 2026-11-10; dates and prompts are approximate.
+
+Tools for all entries: **ChatGPT (5.6 Luna)**, **ChatGPT (Astra 6)**, **Claude Code (Claude Sonnet 5.5)**. Every AI output was reviewed, edited and tested by Ng See Pui before it was committed.
 
 4.
 
@@ -354,7 +357,7 @@ Tools for all entries: **Claude AI and Claude Code** (as specified in the detail
 - **Mode:** generate
 - **Files:** `supplier-service/prisma/seed.ts`
 - **Prompt (approx.):** "I have a CSV file which lists the opening time and closing time for each supplier. When seeding the database using Prisma, the OpeningHours table has to be filled with the supplier's id, opening time and closing time for every day of the week, where each day of the week is a new row in the table. How can this be done?"
-- **Key response:** Generated code that created a new row of opening hours for each day of the week, for each supplier present in the CSV file used for seeding. 
+- **Key response:** Generated code that created a new row of opening hours for each day of the week, for each supplier present in the CSV file used for seeding.
 - **Kept/changed:** Used Prisma's `upsert` instead of `create` to ensure that no duplicate records are added to the table.
 - **Verification:** Prisma database seeding was successful. Data was verified by running `npx prisma studio` to check the rows in the tables.
 
@@ -376,8 +379,8 @@ Tools for all entries: **Claude AI and Claude Code** (as specified in the detail
 - **Mode:** generate
 - **Files:** `frontend/src/pages/SupplierPage.tsx`
 - **Prompt (approx.):** "How do I add a variable to session storage, so that the page will use existing filters applied upon reload?"
-- **Key response:** Generated template code that added variables to sessionStorage. 
-- **Kept/changed:** Added `typeFilter` and `searchString` to session storage. 
+- **Key response:** Generated template code that added variables to sessionStorage.
+- **Kept/changed:** Added `typeFilter` and `searchString` to session storage.
 - **Verification:** Page reloads still apply existing filters when the application was ran on localhost.
 
 ## 4. Prisma query for counting associated suppliers for each type
@@ -400,10 +403,10 @@ Tools for all entries: **Claude AI and Claude Code** (as specified in the detail
 - **Prompt (approx.):** "I have a few images which are stored on GitHub and in the database table (which stores the seed data in `data/csv/supplier-seed-data.csv`), it stores the link to images on GitHub. However, when the application is run on localhost, there is an error that occurs and an alternative text is shown instead. Why is this so?"
 - **Key response:** Explained that for web frameworks like React, the images need to be stored under the `frontend/public` directory so that they can be accessed directly via <app-domain>/<image_path.ext>.
 - **Kept/changed:** Moved all images to `frontend/public` and changed the `imageUrl` in the `supplier-seed-data.csv` to reflect the file path of the images, rather than using the Github links.
-- **Verification:** Images are now rendered when the application runs on local host. 
+- **Verification:** Images are now rendered when the application runs on local host.
 - **Note:** AI assitance disclosure header was not added for the supplier seed data file, as comments cannot be added to CSV.
 
-## 5. Generating OR condition for supplier filtering 
+## 5. Generating OR condition for supplier filtering
 
 - **Timestamp**: 2026-10-14 00:29
 - **Tool & model**: Claude AI (Opus 5.5 High)
@@ -411,7 +414,7 @@ Tools for all entries: **Claude AI and Claude Code** (as specified in the detail
 - **Files:** `order-service/src/services/order.courier.service.ts`
 - **Prompt (approx.):** "How do I write an OR condition (in the where clause) for prisma, if a variable is not undefined?"
 - **Key response:** Generated template code using a conditional spread and the correct prisma syntax.
-- **Kept/changed:** Added column names `deliverSupplierId` and `pickupSupplierId` corresponding to the names of the column in the supplier database. 
+- **Kept/changed:** Added column names `deliverSupplierId` and `pickupSupplierId` corresponding to the names of the column in the supplier database.
 - **Verification:** Function returns the expected values when localhost was running and the associated endpoint was tested using Postman.
 
 ## 6. Courier order history pagination fix
@@ -421,9 +424,9 @@ Tools for all entries: **Claude AI and Claude Code** (as specified in the detail
 - **Mode:** debug
 - **Files:** `frontend/src/features/order/services/order.courier.service.ts`
 - **Prompt (approx.):** "Why does totalPages return undefined when the backend microservice always returns a number?"
-- **Key response:** Explained that the returned value was in `data.data` but the frontend was currently reading `data`. 
-- **Kept/changed:** Applied fixes to use `response.data.data` in the frontend, when fetching API responses. 
-- **Verification:** All test jobs passed, and user testing on localhost was successful. 
+- **Key response:** Explained that the returned value was in `data.data` but the frontend was currently reading `data`.
+- **Kept/changed:** Applied fixes to use `response.data.data` in the frontend, when fetching API responses.
+- **Verification:** All test jobs passed, and user testing on localhost was successful.
 
 ## 7. Ensure vertical alignment of fields on the Home Page
 
@@ -444,29 +447,29 @@ Tools for all entries: **Claude AI and Claude Code** (as specified in the detail
 - **Files:** `supplier-service/src/services/supplier.service.ts`
 - **Prompt (approx.):** "When page is not a null value, use pagination, but if it's null, return null for the `page` and `limit` in the pagination fields. "
 - **Key response:** Used a conditional spread for `take` and `skip` and implemented the specified return values as above.
-- **Kept/changed:** Kept changes. 
-- **Verification:** The endpoint returned the expected values when  queried via Postman. 
+- **Kept/changed:** Kept changes.
+- **Verification:** The endpoint returned the expected values when  queried via Postman.
 
 ## 9. Supplier service containerization
 
 - **Timestamp**: 2026-10-17 23:04
 - **Tool & model**: Claude Code (Opus 5.5)
 - **Mode:** refactor
-- **Files:** 
+- **Files:**
   - `supplier-service/Dockerfile`
   - `supplier-service/compose.yaml`
   - `supplier-service/docker-entrypoint.sh`
 - **Prompt (approx.):** "Review the Dockerfile I created and add the automatic seeding of the database on container startup."
 - **Key response:** Added the `supplier-service` and `supplier-uploads` volume to the compose.yaml file and corrected errors in the Dockerfile. Generated implementation code for seeding the database in `docker-entrypoint.yaml`.
-- **Kept/changed:** Removed hard-coded `/app/keys/public.pem` to use `${JWT_PUBLIC_KEY_PATH}`. Removed unnecessary commands to keep the Dockerfile as simple as possible. 
-- **Verification:** The Docker container starts up and runs locally. 
+- **Kept/changed:** Removed hard-coded `/app/keys/public.pem` to use `${JWT_PUBLIC_KEY_PATH}`. Removed unnecessary commands to keep the Dockerfile as simple as possible.
+- **Verification:** The Docker container starts up and runs locally.
 
 ## 10. Add reverse proxy
 
 - **Timestamp**: 2026-10-21 17:41
 - **Tool & model**: Claude Code (Opus 5.5)
 - **Mode:** generate
-- **Files:** 
+- **Files:**
   - `frontend/nginx.conf`
   - `frontend/.env.example`
 - **Prompt (approx.):** "In the existing frontend/nginx.conf file, generate implementation code to setup a reverse proxy, such that all requests and API calls must be made through the proxy."
@@ -481,21 +484,21 @@ Tools for all entries: **Claude AI and Claude Code** (as specified in the detail
 - **Mode:** audit
 - **Files:** `order-service/README.md`
 - **Prompt (approx.):** "Check if the containerization section in the README file is accurate."
-- **Key response:** Suggested the addition of specific commands, such as `docker compose up --build order-service`, to start up only the order service, and to add that the Bearer token has to be added to request made to the API endpoints. 
-- **Kept/changed:** Personally applied the suggested changes. 
+- **Key response:** Suggested the addition of specific commands, such as `docker compose up --build order-service`, to start up only the order service, and to add that the Bearer token has to be added to request made to the API endpoints.
+- **Kept/changed:** Personally applied the suggested changes.
 - **Verification:** Checked the accuracy of suggested changes before applying them.
 
-## 14. Unit test cases for supplier service 
+## 14. Unit test cases for supplier service
 
 - **Timestamp**: 2026-10-28 09:25
 - **Tool & model**: Claude Code (Opus 5.5)
 - **Mode:** generate
-- **Files:** 
+- **Files:**
   - `supplier-service/src/services/supplier.service.test.ts`
   - `supplier-service/src/services/supplier.type.service.test.ts`
 - **Prompt (approx.):** "Generate boilerplate code for unit test cases for the `fetchActiveSuppliers` and `fetchAllSuppliers` functions, and for functions related to supplier types. Ensure that the mock Prisma object captures the arguments passed into prisma functions and the number of calls made to each function. Also ensure that all possible outputs and errors from each function are covered by a test case."
 - **Key response:** `useSharedMockPrisma` was generated based on the existing mock prisma setup and test cases related to the `fetchActiveSuppliers` and `fetchAllSuppliers` functions were generated.
-- **Kept/changed:** Reformatted all test cases and added additional assertions to ensure all tests have the same structure: (1) arguments passed into prisma calls, (2) results returned by the function and (3) the number of calls made to each prisma function. Renamed variables for readability. Test cases for `getSuppliersByIdsService` and `getSupplierByIdService` were created based on test cases provided by Claude. 
+- **Kept/changed:** Reformatted all test cases and added additional assertions to ensure all tests have the same structure: (1) arguments passed into prisma calls, (2) results returned by the function and (3) the number of calls made to each prisma function. Renamed variables for readability. Test cases for `getSuppliersByIdsService` and `getSupplierByIdService` were created based on test cases provided by Claude.
 - **Verification:** `npm run test` shows that all tests in the supplier service were successful.
 
 ## 15. Fix supplierTypeSchema accepting invalid strings
@@ -505,19 +508,19 @@ Tools for all entries: **Claude AI and Claude Code** (as specified in the detail
 - **Mode:** debug
 - **Files:** `supplier-service/src/schemas/supplier.type.schema.ts`
 - **Prompt (approx.):** "The test case where an empty string is passed into the `supplierTypeSchema` is failing because the schema accepts an empty string. How can I fix this?"
-- **Key response:** Explained that the schema did not have a minimum length requirement for the `type` field and that strings with whitespaces only could also be accepted. Suggested to use `z.string().trim().min(1).toUpperCase()`. 
-- **Kept/changed:** Applied fixes to use `z.string().trim().min(1).toUpperCase()` instead of `z.string().toUpperCase()`. 
+- **Key response:** Explained that the schema did not have a minimum length requirement for the `type` field and that strings with whitespaces only could also be accepted. Suggested to use `z.string().trim().min(1).toUpperCase()`.
+- **Kept/changed:** Applied fixes to use `z.string().trim().min(1).toUpperCase()` instead of `z.string().toUpperCase()`.
 - **Verification:** All test jobs passed.
 
-## 16. Unit test cases for order service 
+## 16. Unit test cases for order service
 
 - **Timestamp**: 2026-10-28 16:12
 - **Tool & model**: Claude Code (Opus 5.5)
 - **Mode:** generate
 - **Files:** `order-service/src/services/order.courier.service.test.ts`
 - **Prompt (approx.):** "Generate boilerplate code to mock Prisma for the order service and unit test the courier service file. Ensure that the mock Prisma object captures the arguments passed into prisma functions and the number of calls made to each function. Also ensure that all possible outputs and errors from each function are covered by a test case."
-- **Key response:** Test cases were generated for the functions related to courier actions, namely, `acceptOpenOrder`, `completePickedUpOrder`, `dropAcceptedOrder`, `getAllOpenOrders`, `getCourierAcceptanceHistory` and `pickUpAcceptedOrder`. 
-- **Kept/changed:** Reformatted all test cases and added additional assertions to ensure all tests have the same structure: (1) arguments passed into prisma calls, (2) results returned by the function and (3) the number of calls made to each prisma function. Renamed variables for readability and added reusable constants `VALID_GET_OPEN_ORDERS_INPUT`, `VALID_DEFAULT_COURIER_ACCEPTANCE_INPUT`, `MOCK_ACCEPTED_ORDER`, `MOCK_PICKED_UP_ORDER` and `MOCK_COMPLETED_ORDER`. 
+- **Key response:** Test cases were generated for the functions related to courier actions, namely, `acceptOpenOrder`, `completePickedUpOrder`, `dropAcceptedOrder`, `getAllOpenOrders`, `getCourierAcceptanceHistory` and `pickUpAcceptedOrder`.
+- **Kept/changed:** Reformatted all test cases and added additional assertions to ensure all tests have the same structure: (1) arguments passed into prisma calls, (2) results returned by the function and (3) the number of calls made to each prisma function. Renamed variables for readability and added reusable constants `VALID_GET_OPEN_ORDERS_INPUT`, `VALID_DEFAULT_COURIER_ACCEPTANCE_INPUT`, `MOCK_ACCEPTED_ORDER`, `MOCK_PICKED_UP_ORDER` and `MOCK_COMPLETED_ORDER`.
 - **Verification:** `npm run test` shows that all tests in the order service were successful.
 
 ## 17. Running deployment only on the upstream repository
@@ -527,9 +530,9 @@ Tools for all entries: **Claude AI and Claude Code** (as specified in the detail
 - **Mode:** debug
 - **Files:** `.github/workflows/deploy.yml`
 - **Prompt (approx.):** "Why do deployments always fail in the forked repositories, even though they succeed in the upstream repository?"
-- **Key response:** Explained that deployments always fail in the forked repositories as they do not have AWS secrets. Suggested creating an if-condition to only run the deployment action when the repository is the upstream repository. I personally added the fix to the `jobs` level, but Claude moved it to the `build-push` level to ensure other jobs still run in the forked repositories. 
-- **Kept/changed:** Fixes kept as-is. 
-- **Verification:** Github actions for both upstream and forked repositories were successful. 
+- **Key response:** Explained that deployments always fail in the forked repositories as they do not have AWS secrets. Suggested creating an if-condition to only run the deployment action when the repository is the upstream repository. I personally added the fix to the `jobs` level, but Claude moved it to the `build-push` level to ensure other jobs still run in the forked repositories.
+- **Kept/changed:** Fixes kept as-is.
+- **Verification:** Github actions for both upstream and forked repositories were successful.
 
 ## 18. Debugging frontend showing stale orders when tabs are switched
 
@@ -539,7 +542,7 @@ Tools for all entries: **Claude AI and Claude Code** (as specified in the detail
 - **Files:** `frontend/src/features/order/hooks/useOrderHistory.ts`
 - **Prompt (approx.):** "Fix this bug where status tabs in the order history show the wrong orders. The order status had updated but specific status tabs were still showing the old version of the orders."
 - **Key response:** Added `staleTime: 0` in the `useOrderHistory` hook.
-- **Kept/changed:** Fixes kept as-is. 
+- **Kept/changed:** Fixes kept as-is.
 - **Verification:** Stale orders were no longer shown on the application deployed on localhost, after switching tabs in the order history.
 
 ## 20. Debugging auto-receipt for orders
@@ -549,8 +552,8 @@ Tools for all entries: **Claude AI and Claude Code** (as specified in the detail
 - **Mode:** debug
 - **Files:** `order-service/src/services/order-receipt.service.ts`
 - **Prompt (approx.):** "Why are credits not transferred when the order has already been reflected as AUTO_RECEIVED?"
-- **Key response:** Explained that event payload was missing a `courierId` and suggested this one-line fix. 
-- **Kept/changed:** Personally added the missing `courierId` field. 
+- **Key response:** Explained that event payload was missing a `courierId` and suggested this one-line fix.
+- **Kept/changed:** Personally added the missing `courierId` field.
 - **Verification:** User testing on localhost and cloud is successful.
 
 ## 21. Unit tests for automated order receipt
@@ -560,8 +563,8 @@ Tools for all entries: **Claude AI and Claude Code** (as specified in the detail
 - **Mode:** generate
 - **Files:** `order-service/src/services/order-receipt.service.test.ts`
 - **Prompt (approx.):** "Generate boilerplate code for `order-receipt.service.ts`, while keeping to the convention and structure outlined in `order.courier.service.test.ts`."
-- **Key response:** Explained that the returned value was in `data.data` but the frontend was currently reading `data`. 
-- **Kept/changed:** Merged two test cases which tested receiving one order and receiving multiple orders separately. Renamed constants for ease of reading. 
+- **Key response:** Explained that the returned value was in `data.data` but the frontend was currently reading `data`.
+- **Kept/changed:** Merged two test cases which tested receiving one order and receiving multiple orders separately. Renamed constants for ease of reading.
 - **Verification:** `npm run test` shows all test cases ran successfully.
 
 ## 22. Order dashboard date range filter
@@ -569,14 +572,14 @@ Tools for all entries: **Claude AI and Claude Code** (as specified in the detail
 - **Timestamp**: 2026-11-06 09:51
 - **Tool & model**: Claude Code (Opus 5.5)
 - **Mode:** refactor
-- **Files:** 
+- **Files:**
   - `frontend/src/components/ui/date-range.tsx`
   - `frontend/src/features/order/components/AdminOrderDashboardCard.tsx`
   - `order-service/src/schemas/order.schema.ts`
   - `order-service/src/services/order.service.ts`
 - **Prompt (approx.):** "The current code has a date-range UI component. Refactor the components such that props can be passed from the parent component. For the related backend function, allow filtering by date range of the `createdAt` column. I also want to be able to filter by an array of statuses."
-- **Key response:** Refactored shadcn's date-range component in `frontend/src/components/ui/date-range.tsx` to allow props to be passed in. Values were added as props and passed in from `AdminOrderDashboardCard.tsx`. In the `WHERE` clause of the Prisma query in `order-service/src/services/order.service.ts`, new lines of code was added to allow orders to be filtered by their date range, as well as by a set of statuses. 
-- **Kept/changed:** Rewrote the picker to use `startDate` and `endDate` instead of `DateRange`. 
+- **Key response:** Refactored shadcn's date-range component in `frontend/src/components/ui/date-range.tsx` to allow props to be passed in. Values were added as props and passed in from `AdminOrderDashboardCard.tsx`. In the `WHERE` clause of the Prisma query in `order-service/src/services/order.service.ts`, new lines of code was added to allow orders to be filtered by their date range, as well as by a set of statuses.
+- **Kept/changed:** Rewrote the picker to use `startDate` and `endDate` instead of `DateRange`.
 - **Verification:** All test jobs passed, and user testing on localhost was successful. Functionalities also work on the cloud-deployed application.
 
 ## 23. Migration of supplier images from AWS EC2 to S3, while using local storage when running the app locally
@@ -584,7 +587,7 @@ Tools for all entries: **Claude AI and Claude Code** (as specified in the detail
 - **Timestamp**: 2026-11-08 18:50
 - **Tool & model**: Claude Code (Opus 5.5)
 - **Mode:** generate
-- **Files:** 
+- **Files:**
   - `supplier-service/src/controllers/supplier.asset.controller.ts`
   - `supplier-service/src/services/supplier.asset.service.test.ts`
   - `supplier-service/src/services/supplier.asset.service.ts`
@@ -592,16 +595,156 @@ Tools for all entries: **Claude AI and Claude Code** (as specified in the detail
   - `supplier-service/src/middleware/upload.middleware.ts`
 - **Prompt (approx.):** "Create a storage.ts file under libs where there's an interface implemented. If running localhost, there's an attribute in the .env file that will say "local" and the image get and post will just be on some local storage, but if the attribute is "s3" then it will pull and post to AWS S3. The service functions (e.g. uploadImage) will still work the same way since the storage is hidden behind some interace. Place the upload functions into `supplier.asset.service.ts` and remove the `upload.ts` file in the `libs` directory."
 - **Follow-up Prompt (approx.):** "Move the multer checking of file size and file extensions into `upload.middleware.ts`."
-- **Key response:** Generated the code based that fulfilled the above description. A test file `supplier.asset.service.test.ts` was also generated. 
-- **Kept/changed:** `requestOrigin` was originally kept, but I removed it as all .env files will have the `ASSETS_PUBLIC_URL` variable set, which would already contain the base URL for image fetching. I also removed `ASSETS_DIR` and `defaultAssetsDir`, which were generated by Claude, as we can directly resolve the file path for local image storage. 
-- **Verification:** All test jobs passed, and user testing on localhost was successful. 
+- **Key response:** Generated the code based that fulfilled the above description. A test file `supplier.asset.service.test.ts` was also generated.
+- **Kept/changed:** `requestOrigin` was originally kept, but I removed it as all .env files will have the `ASSETS_PUBLIC_URL` variable set, which would already contain the base URL for image fetching. I also removed `ASSETS_DIR` and `defaultAssetsDir`, which were generated by Claude, as we can directly resolve the file path for local image storage.
+- **Verification:** All test jobs passed, and user testing on localhost was successful.
 
 ## 24. Debugging image upload errors on cloud
+
 - **Timestamp**: 2026-11-08 21:36
 - **Tool & model**: Claude Code (Opus 5.5)
 - **Mode:** generate
 - **Files:** `compose.yaml`
 - **Prompt (approx.):** "The logs on AWS show that credentials cannot be loaded from the provider, hence image upload is failing on the cloud-deployed application. The functionality works on localhost. What is causing this error?"
-- **Key response:** Suggested to add the supplier-service container to the default network, so that supplier-service has network access to load the AWS credentials and 
-- **Kept/changed:** Personally applied the one-line fix. Rebuilt the `supplier-service` container to ensure that changes in `.env` has been applied. 
-- **Verification:** AUser testing on the cloud-deployed application was successful. 
+- **Key response:** Suggested to add the supplier-service container to the default network, so that supplier-service has network access to load the AWS credentials and
+- **Kept/changed:** Personally applied the one-line fix. Rebuilt the `supplier-service` container to ensure that changes in `.env` has been applied.
+- **Verification:** AUser testing on the cloud-deployed application was successful.
+
+# Detailed AI Usage Log for Ng See Pui
+
+## 1. Redrive scirpts for failing RabbitMQ messages
+
+- **Timestamp:** 2026-10-30 15:47
+- **Tool & model:** ChatGPT (5.6 Luna)
+- **Mode:** generate
+- **Files:**
+  - `order-service/src/scripts/redrive-credit-reservation-results.ts`
+  - `order-service/src/scripts/redrive-order-outbox.ts`
+  - `credit-service/src/scripts/redrive-credit-outbox.ts`
+  - `credit-service/src/scripts/redrive-reservation-request.ts`
+- **Prompt (approx.):** "Generate the redrive scripts for credit reservation results, credit outbox, order outbox, and reservation request."
+- **Key response:** Generated scripts to redrive failed credit reservation results, credit outbox, order outbox, and reservation request events, including validation, retry handling, message republishing, and status updates.
+- **Kept/changed:** Reviewed and edited event validation, republishing, retry handling, and status updates.
+- **Verification:** Reviewed the scripts and tested the affected redrive workflows.
+
+## 2. Unit tests for order service and credit service
+
+- **Timestamp:** 2026-11-04 09:00
+- **Tool & model:** ChatGPT (Astra 6)
+- **Mode:** generate
+- **Files:**
+  - `order-service/src/schemas/credit-reservation-result.schema.test.ts`
+  - `order-service/src/schemas/order.requester.schema.test.ts`
+  - `order-service/src/services/credit-reservation.service.test.ts`
+  - `order-service/src/services/order-expiry.service.test.ts`
+  - `order-service/src/services/order.requester.service.test.ts`
+  - `credit-service/src/schemas/reservation-request-event.schema.test.ts`
+  - `credit-service/src/services/reservation-request.service.test.ts`
+- **Prompt (approx.):** "Write node:test unit tests (run with tsx and --experimental-test-module-mocks) for my order-service and credit-service. Cover the schemas and services, including the credit reservation flow, order expiry, and order requester. Mock Prisma with `mock.module`."
+- **Key response:** Produced the seven test files with boilerplate and specific test cases for the schemas and services, including credit reservation, order expiry, and order requester.
+- **Kept/changed:** Fixed mocks that didn't match the real Prisma call shapes. Added additional test cases for edge cases and error handling.
+- **Verification:** `npm test` in `order-service` and `credit-service` (all passing); the tests also run in CI.
+
+## 3. Refactor RabbitMQ functionality
+
+- **Timestamp:** 2026-11-05 13:00
+- **Tool & model:** ChatGPT (5.6 Luna)
+- **Mode:** refactor
+- **Files:**
+  - `user-service/src/libs/rabbitmq.ts`
+  - `order-service/src/libs/rabbitmq.ts`
+  - `credit-service/src/libs/rabbitmq.ts`
+- **Prompt (approx.):** "Refactor RabbitMQ such that the functions are reusable."
+- **Key response:** Refactored RabbitMQ connection, channel, publishing, consuming, and retry-related functions into reusable utilities.
+- **Kept/changed:** Preserved existing messaging behavior while reducing duplication and improving reuse across credit-service workflows.
+- **Verification:** Reviewed the refactored implementation and tested the affected RabbitMQ workflows.
+
+## 4. Backend notification service
+
+- **Timestamp:** 2026-11-09 01:00
+- **Tool & model:** ChatGPT (Astra 6),  Claude Code (Claude Sonnet 5.5)
+- **Mode:** generate
+- **Files:**
+  - `notification-service/src/controllers/notification.controller.ts`
+  - `notification-service/src/schemas/notification.schema.ts`
+  - `notification-service/src/schemas/order-status-event.schema.ts`
+  - `notification-service/src/services/notification.service.ts`
+  - `notification-service/src/services/notification-rules.ts`
+  - `notification-service/sse/hub.ts`
+- **Prompt (approx.):** "Generate a notification service that listens to order status events and sends notifications to users based on their preferences. Include SSE support for real-time updates."
+- **Key response:** Generated the notification service with controllers, schemas, services, and SSE hub for real-time notifications. Implemented order status event handling and user preference-based notification rules.
+- **Kept/changed:** Preserved the existing order status event flow while adding notification logic and SSE support. Added comments for clarity.
+- **Verification:** Reviewed the implementation and tested the notification service with simulated order status events and user preferences using a local frontend client.
+
+## 5. Frontend SSE integration for notification service
+
+- **Timestamp:** 2026-11-09 03:00
+- **Tool & model:** ChatGPT (Astra 6),  Claude Code (Claude Sonnet 5.5)
+- **Mode:** generate
+- **Files:**
+  - `frontend/src/contexts/NotificationProvider.tsx`
+  - `frontend/src/features/notification/services/sse.ts`
+- **Prompt (approx.):** "Generate the frontend notification service, including notification state management using react provider and Server-Sent Events handling."
+- **Key response:** Produced the notification provider and SSE client for real-time notification delivery.
+- **Kept/changed:**  Reviewed and edited connection handling, reconnection behavior, unread state updates, read-state synchronization, and notification state management.
+- **Verification:**  Tested the frontend notification service with the backend notification service and verified real-time updates, state management, and SSE reconnection behavior.
+
+## 6. Unit tests for notification service
+
+- **Timestamp:** 2026-11-09 15:00
+- **Tool & model:** ChatGPT (Astra 6)
+- **Mode:** generate
+- **Files:**
+  - `notification-service/src/schemas/notification.schema.test.ts`
+  - `notification-service/src/schemas/order-status-event.schema.test.ts`
+  - `notification-service/src/services/notification.service.test.ts`
+  - `notification-service/src/services/notification-rules.test.ts`
+- **Prompt (approx.):** "Write node:test unit tests (run with tsx and --experimental-test-module-mocks) for my notification-service. Cover the schemas and services, including order status event handling and notification rules. Mock Prisma with `mock.module`."
+- **Key response:** Produced the four test files with boilerplate and specific test cases for the schemas and services, including order status event handling and notification rules.
+- **Kept/changed:**  Reviewed and edited test cases to match the service logic and expected notification outcomes.
+- **Verification:** `npm test` in `notification-service` (all passing); the tests also run in CI.
+
+## 7. Redrive order status events script
+
+- **Timestamp:** 2026-11-10 10:30 
+- **Tool & model:** ChatGPT (Astra 6)
+- **Mode:** generate
+- **Files:**
+  - `notification-service/src/scripts/redrive-order-status-events.ts`
+- **Prompt (approx.):** "Generate the redrive scripts for order status events."
+- **Key response:** Generated scripts to redrive failed order status events, including validation, retry handling, message republishing, and status updates.
+- **Kept/changed:** Reviewed and edited event validation, republishing, retry handling, and status updates.
+- **Verification:** Reviewed the scripts and tested the affected redrive workflows.
+
+## 8. Verify and edit errors for notification service README
+
+- **Timestamp:** 2026-11-10 12:00
+- **Tool & model:** ChatGPT (Astra 6)
+- **Mode:** audit
+- **Files:**
+  - `notification-service/README.md`
+- **Prompt (approx.):** "Verify and edit errors for notification service README."
+- **Key response:** Reviewed the README for accuracy, clarity, and completeness. Suggested edits for grammar, formatting, and technical details.
+- **Kept/changed:** Applied suggested edits to improve readability and accuracy of the README.
+- **Verification:** Reviewed the updated README for clarity and correctness.
+
+## 9. Check and verify all notification service Dockerfiles and compose files
+
+- **Timestamp:** 2026-11-10 14:00
+- **Tool & model:** ChatGPT (Astra 6)
+- **Mode:** audit
+- **Files:**
+  - `notification-service/Dockerfile`
+  - `notification-service/compose.yaml`
+  - `notification-service/docker-entrypoint.sh`
+  - `compose.yaml`
+  - `compose.prod.yaml`
+  - `gateway/nginx.conf`
+  - `.github/workflows/ci.yml`
+  - `.github/workflows/deploy.yml`
+- **Prompt (approx.):** "Check and verify all notification service Dockerfiles and compose files.
+- **Key response:** Reviewed the Docker configuration for correctness and consistency with the notification service.
+- **Kept/changed:** Nothing changed; verified that the Dockerfiles and compose files are correct and consistent.
+- **Verification:** Compared the Docker files against the notification service setup and runtime requirements.
+
+

@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (Astra 6)
+// Date: approx. 2026-11-04
+// Scope: Generated unit test cases for the order and credit services.
+// Author review: Reviewed, tested, and edited by Ng See Pui.
+
 import test from "node:test";
 import assert from "node:assert/strict";
 import { reservationRequestEventSchema } from "./reservation-request-event.schema.js";
