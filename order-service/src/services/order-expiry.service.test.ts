@@ -3,7 +3,6 @@ import assert from "node:assert/strict";
 import { mock, type TestContext } from "node:test";
 
 import { prisma as sharedPrisma } from "../libs/prisma.js";
-import { AppError } from "../errors/errors.js";
 import {
     OrderEventType,
     OrderStatus,
@@ -12,6 +11,7 @@ import { updateExpiredOrders } from "./order-expiry.service.js";
 
 const openOrder = {
     id: "order-open",
+    name: "Open order",
     requesterId: "requester-1",
     courierId: null,
     status: OrderStatus.OPEN,
@@ -22,6 +22,7 @@ const openOrder = {
 
 const acceptedOrder = {
     id: "order-accepted",
+    name: "Accepted order",
     requesterId: "requester-2",
     courierId: "courier-1",
     status: OrderStatus.ACCEPTED,
@@ -32,6 +33,7 @@ const acceptedOrder = {
 
 const pickedUpOrder = {
     id: "order-picked-up",
+    name: "Picked up order",
     requesterId: "requester-3",
     courierId: "courier-2",
     status: OrderStatus.PICKED_UP,
@@ -57,6 +59,29 @@ function firstArgument<T>(calls: readonly MockCall[]): T {
     assert.ok(argument, "Expected mock argument");
 
     return argument as T;
+}
+
+function statusEventFrom(
+    calls: readonly MockCall[],
+): {
+    eventType: string;
+    payload: Record<string, unknown>;
+} {
+    const event = calls
+        .map((call) => {
+            const args = call.arguments[0] as {
+                data: {
+                    eventType: string;
+                    payload: Record<string, unknown>;
+                };
+            };
+
+            return args.data;
+        })
+        .find((eventData) => eventData.eventType === "ORDER_STATUS_CHANGED");
+
+    assert.ok(event, "Expected ORDER_STATUS_CHANGED outbox event");
+    return event;
 }
 
 function createMockPrisma(config: MockConfig = {}) {
@@ -202,7 +227,7 @@ test("updateExpiredOrders expires an open order without a courier", async (t) =>
 
     const expiredAt = updateArgs.data.expiredAt;
     assert.ok(expiredAt instanceof Date);
-    
+
     const historyArgs = firstArgument<{
         data: Record<string, unknown>;
     }>(orderStatusHistory.create.mock.calls);
@@ -235,6 +260,22 @@ test("updateExpiredOrders expires an open order without a courier", async (t) =>
         requesterId: openOrder.requesterId,
         amount: openOrder.offeredCredits,
     });
+
+    assert.equal(outboxEvent.create.mock.calls.length, 2);
+
+    const statusEvent = statusEventFrom(outboxEvent.create.mock.calls);
+
+    assert.equal(statusEvent.payload.orderId, openOrder.id);
+    assert.equal(statusEvent.payload.orderName, openOrder.name);
+    assert.equal(statusEvent.payload.requesterId, openOrder.requesterId);
+    assert.equal(statusEvent.payload.courierId, openOrder.courierId);
+    assert.equal(statusEvent.payload.fromStatus, OrderStatus.OPEN);
+    assert.equal(statusEvent.payload.toStatus, OrderStatus.EXPIRED);
+    assert.equal(statusEvent.payload.version, openOrder.version + 1);
+    assert.equal(statusEvent.payload.offeredCredits, openOrder.offeredCredits);
+    assert.equal(statusEvent.payload.eventType, "ORDER_STATUS_CHANGED");
+    assert.equal(typeof statusEvent.payload.eventId, "string");
+    assert.equal(typeof statusEvent.payload.occurredAt, "string");
 });
 
 test("updateExpiredOrders fails an accepted order", async (t) => {
@@ -259,7 +300,6 @@ test("updateExpiredOrders fails an accepted order", async (t) => {
 
     assert.ok(updateArgs.data.failedAt instanceof Date);
     assert.equal(orderStatusHistory.create.mock.calls.length, 1);
-    assert.equal(outboxEvent.create.mock.calls.length, 1);
 
     const historyArgs = firstArgument<{
         data: Record<string, unknown>;
@@ -268,20 +308,30 @@ test("updateExpiredOrders fails an accepted order", async (t) => {
     assert.equal(historyArgs.data.fromStatus, OrderStatus.ACCEPTED);
     assert.equal(historyArgs.data.toStatus, OrderStatus.AUTO_FAILED);
 
-    const outboxArgs = firstArgument<{
+    const creditEvent = outboxEvent.create.mock.calls[0]!.arguments[0] as {
         data: {
             eventType: OrderEventType;
         };
-    }>(outboxEvent.create.mock.calls);
+    };
 
-    assert.equal(
-        outboxArgs.data.eventType,
-        OrderEventType.ORDER_FAILED,
-    );
+    assert.equal(creditEvent.data.eventType, OrderEventType.ORDER_FAILED);
+
+    assert.equal(outboxEvent.create.mock.calls.length, 2);
+
+    const statusEvent = statusEventFrom(outboxEvent.create.mock.calls);
+
+    assert.equal(statusEvent.payload.orderId, acceptedOrder.id);
+    assert.equal(statusEvent.payload.orderName, acceptedOrder.name);
+    assert.equal(statusEvent.payload.requesterId, acceptedOrder.requesterId);
+    assert.equal(statusEvent.payload.courierId, acceptedOrder.courierId);
+    assert.equal(statusEvent.payload.fromStatus, OrderStatus.ACCEPTED);
+    assert.equal(statusEvent.payload.toStatus, OrderStatus.AUTO_FAILED);
+    assert.equal(statusEvent.payload.version, acceptedOrder.version + 1);
+    assert.equal(statusEvent.payload.offeredCredits, acceptedOrder.offeredCredits);
 });
 
 test("updateExpiredOrders fails a picked-up order", async (t) => {
-    const { order } = useMockPrisma(t, {
+    const { order, orderStatusHistory, outboxEvent } = useMockPrisma(t, {
         candidateOrders: [pickedUpOrder],
     });
 
@@ -297,6 +347,15 @@ test("updateExpiredOrders fails a picked-up order", async (t) => {
     assert.equal(updateArgs.where.status, OrderStatus.PICKED_UP);
     assert.equal(updateArgs.data.status, OrderStatus.AUTO_FAILED);
     assert.ok(updateArgs.data.failedAt instanceof Date);
+    assert.equal(orderStatusHistory.create.mock.calls.length, 1);
+    assert.equal(outboxEvent.create.mock.calls.length, 2);
+
+    const statusEvent = statusEventFrom(outboxEvent.create.mock.calls);
+
+    assert.equal(statusEvent.payload.orderId, pickedUpOrder.id);
+    assert.equal(statusEvent.payload.fromStatus, OrderStatus.PICKED_UP);
+    assert.equal(statusEvent.payload.toStatus, OrderStatus.AUTO_FAILED);
+    assert.equal(statusEvent.payload.version, pickedUpOrder.version + 1);
 });
 
 test("updateExpiredOrders skips an order changed concurrently", async (t) => {
@@ -327,5 +386,45 @@ test("updateExpiredOrders processes multiple expired orders", async (t) => {
     assert.equal(result, 3);
     assert.equal(order.updateMany.mock.calls.length, 3);
     assert.equal(orderStatusHistory.create.mock.calls.length, 3);
-    assert.equal(outboxEvent.create.mock.calls.length, 3);
+    assert.equal(outboxEvent.create.mock.calls.length, 6);
+    
+    const statusEvents = outboxEvent.create.mock.calls
+        .map((call) => {
+            const args = call.arguments[0] as {
+                data: {
+                    eventType: string;
+                    payload: Record<string, unknown>;
+                };
+            };
+
+            return args.data;
+        })
+        .filter((event) => event.eventType === "ORDER_STATUS_CHANGED");
+
+    assert.equal(statusEvents.length, 3);
+
+    assert.deepEqual(
+        statusEvents.map((event) => ({
+            orderId: event.payload.orderId,
+            fromStatus: event.payload.fromStatus,
+            toStatus: event.payload.toStatus,
+        })),
+        [
+            {
+                orderId: openOrder.id,
+                fromStatus: OrderStatus.OPEN,
+                toStatus: OrderStatus.EXPIRED,
+            },
+            {
+                orderId: acceptedOrder.id,
+                fromStatus: OrderStatus.ACCEPTED,
+                toStatus: OrderStatus.AUTO_FAILED,
+            },
+            {
+                orderId: pickedUpOrder.id,
+                fromStatus: OrderStatus.PICKED_UP,
+                toStatus: OrderStatus.AUTO_FAILED,
+            },
+        ],
+    );
 });
