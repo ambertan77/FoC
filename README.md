@@ -22,10 +22,10 @@ withdrawn, or exchanged for money, and only circulate within the platform.
 
 | Name | Role |
 | --------- | -------------- |
-| Amber Tan Junning | Your ownership |
-| Duong Ngoc Mai | Your ownership |
-| Lim Shao Qi | Your ownership |
-| Ng See Pui | Your ownership |
+| Amber Tan Junning | Supplier Service, Order Service, Viewing Live and Past Orders (N2H) |
+| Duong Ngoc Mai | Supplier Service, Credit Service, Centralised Logging (N2H) |
+| Lim Shao Qi | User Service, Credit Service, CI/CD + Cloud Deployment (N2H) |
+| Ng See Pui | User Service, Order Service, Order History + Reordering (N2H) |
 
 ---
 
@@ -51,13 +51,6 @@ microservice (`user-service/`, `supplier-service/`, `order-service/`,
 ├── .env.example         # Root Compose variables (RabbitMQ credentials)
 └── README.md
 ```
-
-- Any **nice-to-have (N2H)** feature that warrants its own service should
-  be added as an **additional folder** at the same level, following the
-  same per-service structure.
-- Files for agentic coding tools (e.g. agent configs, prompts, skills)
-  may be added as needed, but must still **respect the
-  one-service-per-folder skeleton** for core implementation.
 
 ---
 
@@ -349,19 +342,33 @@ deadline. supplier-service exits immediately.
 - **Used for:**
   - Generating initial implementations:
     - user-service registration with OTP, profile, email change, password change, admin invitation and activation, and first-admin bootstrap
+    - supplier-service: adding duplicate opening hours rows in table for different days of the week, using session storage, generating Prisma count query, adding optional pagination
+    - supplier service refactoring
     - credit-service ledger, initial credit grant, balance and history endpoints
+    - order-service prisma query, adding date range filter for order dashboard
     - RabbitMQ outbox publisher, registration consumer and redrive script
     - frontend auth, profile, user-management and credits features
     - Dockerfiles, Compose files and GitHub Actions CI/CD workflows
     - Migration of supplier images from AWS EC2 to S3, while using local storage when running the app locally
-  - Writing the user-service unit tests
+  - Writing the user-service, supplier-service and ordeer-service unit tests
   - Debugging:
     - stale credit data across sessions
     - phone prefix display
     - service startup ordering
+    - supplier images not rendering on frontend on browser
+    - supplier service queries not rerunning during state changes
+    - order service pagination returning undefined
+    - stale orders displaying
+    - fix unaligned frontend components 
+    - fix missing fields in event payloads
     - gateway DNS resolution after redeploys
+    - fix image upload errors on cloud
+  - Writing initial implementation code for supplier service containerization
+  - Writing initial implementation code for reverse proxy configuration using nginx
   - Refactoring the credits history UI and the CI test steps
+  - Writing a fix to run deployment only in the upstream repository
   - Drafting frontend README documentation
+  - Auditing and suggesting updates for order service README
   - Auditing and updating READMEs and API docs against the code (Claude Code)
 - **Prohibited phases avoided:** requirements elicitation; architecture/design decisions
 - **Verification:** all AI outputs reviewed, edited and tested by the authors

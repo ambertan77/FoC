@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: Claude AI (Sonnet 5.5 Medium)
+// Date: 2026-09-23
+// Scope: Generated template prisma query code for countForEachType()
+// Author review: Reviewed, tested, and edited by Amber Tan Junning.
+
 import { AppError } from "../errors/errors.js";
 import { prisma } from "../libs/prisma.js";
 import type { GetCourierOrderHistoryInput, GetOpenOrdersInput, CourierUpdateStatusInput } from "../schemas/order.courier.schema.js";

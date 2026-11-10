@@ -1,3 +1,9 @@
+# AI Assistance Disclosure:
+# Tool: Claude Code (Opus 5.5)
+# Date: 2026-10-21
+# Scope: Check and corrected errors in Dockerfile
+# Author review: Reviewed, tested, and edited by Amber Tan Junning.
+
 # use multi-stage build
 
 # ---------- build stage ----------

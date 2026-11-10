@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: Claude Code (Opus 5.5)
+// Date: 2026-10-17
+// Scope: Added conditional spread for optional pagination for fetchAllSuppliers function.
+// Author review: Reviewed, tested, and edited by Amber Tan Junning.
+
 import { AppError } from "../errors/errors.js";
 import type { Prisma, PrismaClient } from "../generated/prisma/client.js";
 import type { Day } from "../generated/prisma/enums.js";
@@ -77,6 +83,7 @@ async function findSupplierByName(
 
 // supplier service functions
 
+// Conditional spread for take and skip (lines 106-109) were implemented by Claude Code; reviewed, edited and tested by Amber Tan Junning
 export async function fetchAllSuppliers(page?: number, searchString?: string | null, typeFilter?: string | null) {
     const search = searchString ?? "";
     let type = "";

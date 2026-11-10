@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: Claude Code (Opus 5.5)
+// Date: 2026-10-14
+// Scope: Modified classes in lines 115, 128 and 152 to vertically align all selectors. 
+// Author review: Reviewed, tested, and edited by Amber Tan Junning.
+
 import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Field } from '@/components/ui/field';
