@@ -1,7 +1,7 @@
 // AI Assistance Disclosure:
-// Tool: Claude AI (Sonnet 5.5 Medium)
-// Date: 2026-09-23
-// Scope: Generated template prisma query code for countForEachType()
+// Tool: Claude Code (Opus 5.5)
+// Date: 2026-10-19
+// Scope: Ensure that order status updates are atomic
 // Author review: Reviewed, tested, and edited by Amber Tan Junning.
 
 import { AppError } from "../errors/errors.js";

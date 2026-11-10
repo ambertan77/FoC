@@ -1,7 +1,7 @@
 <!-- AI Assistance Disclosure:
 Tool: Claude Code (Opus 5.5)
 Date: 2026-10-23
-Scope: Checked accuracy README.md in the Containerization section, and suggested edits to better improve documentation. 
+Scope: Checked accuracy of documentation related to outbox messages and containerization, and suggested edits to better improve documentation. 
 Author review: Reviewed and edited by Amber Tan Junning. -->
 
 # Order Service

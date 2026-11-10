@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: Claude Code (Opus 5.5)
+// Date: 2026-10-15
+// Scope: Fixed issues with UI and dialog not closing.
+// Author review: Reviewed, tested, and edited by Amber Tan Junning.
+
 import { useForm } from "@tanstack/react-form";
 import { Button } from "@/components/ui/button";
 import {

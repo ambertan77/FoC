@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: Claude Code (Opus 5.5)
+// Date: 2026-11-04
+// Scope: Fix compilation time errors in the payload of the mutationFn
+// Author review: Reviewed, tested, and edited by Amber Tan Junning.
+
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { CourierUpdateStatusPayload, Order } from "../types/order.types";
 import type { ParsedError } from "@/utils/errorHandler";

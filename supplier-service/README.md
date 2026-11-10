@@ -1,3 +1,9 @@
+<!-- AI Assistance Disclosure:
+Tool: Claude Code (Opus 5.5)
+Date: 2026-11-06
+Scope: Audited README and suggested changes to keep documentation up-to-date. 
+Author review: Reviewed and edited by Amber Tan Junning. -->
+
 # Supplier Service
 
 ## Table of Contents

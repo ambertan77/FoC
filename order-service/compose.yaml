@@ -1,8 +1,9 @@
 # AI Assistance Disclosure:
-# Tool: ChatGPT (Astra 6)
+# Tool: ChatGPT (Astra 6), Claude Code (Opus 5.5)
 # Date: approx. 2026-10-21
 # Scope: Generated the compose services for order-service and its Postgres 17 database with a healthcheck and depends_on: service_healthy.
-# Author review: Reviewed, tested, and edited by Lim Shao Qi.
+#        Add internal backend Docker networks to isolate internal communication.
+# Author review: Reviewed, tested, and edited by Lim Shao Qi; Amber Tan Junning.
 
 services:
   # Source: Docker Hub Official Postgres Image — https://hub.docker.com/_/postgres

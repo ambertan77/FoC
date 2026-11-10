@@ -438,18 +438,55 @@ Tools for all entries: **ChatGPT (5.6 Luna)**, **ChatGPT (Astra 6)**, **Claude C
 - **Kept/changed:** Kept fix.
 - **Verification:** Browser displays vertically aligned selectors when running the application on localhost.  
 
-## 8. Add optional pagination for fetchAllSuppliers
+## 8. Debug order acceptance
+
+- **Timestamp**: 2026-10-14 23:51
+- **Tool & model**: Claude Code (Opus 5.5)
+- **Mode:** debug
+- **Files:** `frontend/src/pages/HomePage.tsx`
+- **Prompt (approx.):** "I'm getting an error 404 on the browser when I try to accept an order. Fix this issue."
+- **Key response:** Fixed the returned mutation as `acceptRequest` and used a PUT endpoint to follow the expected HTTP method by the backend.
+- **Kept/changed:** Kept fix.
+- **Verification:** Functionality works on browser when running on localhost. 
+
+## 9. Fix UI and cancel button not closing dialog
+
+- **Timestamp**: 2026-10-15 12:35
+- **Tool & model**: Claude Code (Opus 5.5)
+- **Mode:** debug
+- **Files:** `frontend/src/features/order/components/StatusUpdateDialog.tsx`
+- **Prompt (approx.):** "The cancel button is not closing the dialog. The field label is also taking up the entire row and pushing the selector to the far end. Fix both issues."
+- **Key response:** Use the `closeDialog()` function so that the parent component gets the change in the `open` variable, and add a new class in Tailwind to fix the UI.
+- **Kept/changed:** Asked Claude to keep the original classes used and add to it, rather than replacing all the classes with new classes. Kept the second attempt.
+- **Verification:** Functionality works on browser and UI was fixed when running on localhost. 
+
+## 10. Add optional pagination for fetchAllSuppliers
 
 - **Timestamp**: 2026-10-17 00:03
 - **Tool & model**: Claude Code (Opus 5.5)
 - **Mode:** refactor
 - **Files:** `supplier-service/src/services/supplier.service.ts`
-- **Prompt (approx.):** "When page is not a null value, use pagination, but if it's null, return null for the `page` and `limit` in the pagination fields. "
+- **Prompt (approx.):** "When page is not a null value, use pagination, but if it's null, return null for the `page` and `limit` in the pagination fields."
 - **Key response:** Used a conditional spread for `take` and `skip` and implemented the specified return values as above.
 - **Kept/changed:** Kept changes. 
-- **Verification:** The endpoint returned the expected values when  queried via Postman. 
+- **Verification:** The endpoint returned the expected values when queried via Postman. 
 
-## 9. Supplier service containerization
+## 11. Supplier service API endpoints refactoring
+
+- **Timestamp**: 2026-10-17 01:24
+- **Tool & model**: Claude Code (Opus 5.5)
+- **Mode:** refactor, audit
+- **Files:** 
+  - `frontend/src/features/order/components/SupplierSelect.tsx`
+  - `frontend/src/pages/SupplierPage.tsx`
+  - `supplier-service/README.md`
+- **Prompt (approx.):** "I refactored the Supplier API endpoints. Give me a list of callers and imports that need to be updated."
+- **Follow-up Prompt (approx.):** "Have the SupplierPage track the page number, rather than adding the page number in the URL. Check whether all documentations are up-to-date."
+- **Key response:** List of callers that need to be changed on the frontend provided. Corrected a wrong type import in `SupplierSelect.tsx`. Suggested changes to be made to the documentation to keep it updated, including updates to API endpoints methods and routes, and fixing roles for API endpoints.
+- **Kept/changed:** Asked Claude to minimise the changes made to the SupplierPage (use old functions in favour of creating new functions) and then kept changes as-is. Personally applied changes that need to be made on the frontend and README documentation.
+- **Verification:** All refactored endpoints worked when tested via Postman. All documentation suggestions were checked before adding into README.md
+
+## 12. Supplier service containerization
 
 - **Timestamp**: 2026-10-17 23:04
 - **Tool & model**: Claude Code (Opus 5.5)
@@ -458,12 +495,23 @@ Tools for all entries: **ChatGPT (5.6 Luna)**, **ChatGPT (Astra 6)**, **Claude C
   - `supplier-service/Dockerfile`
   - `supplier-service/compose.yaml`
   - `supplier-service/docker-entrypoint.sh`
-- **Prompt (approx.):** "Review the Dockerfile I created and add the automatic seeding of the database on container startup."
-- **Key response:** Added the `supplier-service` and `supplier-uploads` volume to the compose.yaml file and corrected errors in the Dockerfile. Generated implementation code for seeding the database in `docker-entrypoint.yaml`.
-- **Kept/changed:** Removed hard-coded `/app/keys/public.pem` to use `${JWT_PUBLIC_KEY_PATH}`. Removed unnecessary commands to keep the Dockerfile as simple as possible. 
+- **Prompt (approx.):** "Review the Dockerfile I created and add the automatic seeding of the database on container startup. Write code in the existing compose.yaml and docker-entrypoint.sh files added."
+- **Key response:** Generated the relevant files and added the `supplier-service` and `supplier-uploads` volume to the compose.yaml file and corrected errors in the Dockerfile. Generated implementation code for seeding the database in `docker-entrypoint.yaml`. Updated the `DATABASE_URL` and `depends_on` fields to the follow new `supplier-postgres` name in the `compose.yaml` file.
+- **Kept/changed:** Removed hard-coded `/app/keys/public.pem` to use `${JWT_PUBLIC_KEY_PATH}`. Removed unnecessary commands to keep the Dockerfile as simple as possible. Renamed the supplier database container to `supplier-postgres`.
 - **Verification:** The Docker container starts up and runs locally. 
 
-## 10. Add reverse proxy
+## 13. Ensure atomicity of order status updates
+
+- **Timestamp**: 2026-10-19 21:11
+- **Tool & model**: Claude Code (Opus 5.5)
+- **Mode:** refactor
+- **Files:** `order-service/src/services/order.courier.service.ts`
+- **Prompt (approx.):** "Check if the current code ensures atomicity of status updates"
+- **Key response:** Added `version: order.version` to the `where` clause for each Prisma `update` function, and refactored the version update to `{ increment: 1 }`.
+- **Kept/changed:** Kept to using Prisma's `update` instead of `updateMany` that was suggested by Claude.
+- **Verification:** User testing on browser was successful.
+
+## 14. Add reverse proxy
 
 - **Timestamp**: 2026-10-21 17:41
 - **Tool & model**: Claude Code (Opus 5.5)
@@ -471,23 +519,29 @@ Tools for all entries: **ChatGPT (5.6 Luna)**, **ChatGPT (Astra 6)**, **Claude C
 - **Files:** 
   - `frontend/nginx.conf`
   - `frontend/.env.example`
-- **Prompt (approx.):** "In the existing frontend/nginx.conf file, generate implementation code to setup a reverse proxy, such that all requests and API calls must be made through the proxy."
-- **Key response:** Generated implementation code for the nginx configuration file and changed the `BASE_URL` variables in `.env.example` to `/api`.
-- **Kept/changed:** No substantial changes were made, other than the addition of code comments for code readability.
+  - `compose.yaml`
+  - `frontend/compose.yaml`
+  - `credit-service/compose.yaml`
+  - `order-service/compose.yaml`
+  - `supplier-service/compose.yaml`
+  - `order-service/compose.yaml`
+- **Prompt (approx.):** "In the existing frontend/nginx.conf file, generate implementation code to setup a reverse proxy, such that all requests and API calls must be made through the proxy. Isolate internal communication for the backend services."
+- **Key response:** Generated implementation code for the nginx configuration file and changed the `BASE_URL` variables in `.env.example` to `/api`. Added internal backend Docker networks, one container per database and removed published ports for backend containers.
+- **Kept/changed:** Removed unnecessary fields such as `absolute_redirect off` (removed trailing slashes from the location blocks instead). No substantial changes were made, other than the addition of code comments for code readability.
 - **Verification:** Tested the application by running Docker locally, and verified that all requests go through the `http://localhost:5173`, rather than the internal backend services' URL.
 
-## 13. Order service containerization documentation
+## 15. Order service documentation
 
-- **Timestamp**: 2026-10-23 13:02
+- **Timestamp**: 2026-10-22 21:50
 - **Tool & model**: Claude Code (Opus 5.5)
 - **Mode:** audit
 - **Files:** `order-service/README.md`
-- **Prompt (approx.):** "Check if the containerization section in the README file is accurate."
-- **Key response:** Suggested the addition of specific commands, such as `docker compose up --build order-service`, to start up only the order service, and to add that the Bearer token has to be added to request made to the API endpoints. 
+- **Prompt (approx.):** "Check if the paragraph of the `NULL` `publishedAt` meaning an outbox message has yet to be sent to RabbitMQ, as well as the containerization section in the README file are accurate."
+- **Key response:** Suggested improvements to the documentation for outbox message,  as well as the addition of specific commands in the containerization section, such as `docker compose up --build order-service`, to start up only the order service, and to add that the Bearer token has to be added to request made to the API endpoints. 
 - **Kept/changed:** Personally applied the suggested changes. 
 - **Verification:** Checked the accuracy of suggested changes before applying them.
 
-## 14. Unit test cases for supplier service 
+## 16. Unit test cases for supplier service 
 
 - **Timestamp**: 2026-10-28 09:25
 - **Tool & model**: Claude Code (Opus 5.5)
@@ -500,7 +554,7 @@ Tools for all entries: **ChatGPT (5.6 Luna)**, **ChatGPT (Astra 6)**, **Claude C
 - **Kept/changed:** Reformatted all test cases and added additional assertions to ensure all tests have the same structure: (1) arguments passed into prisma calls, (2) results returned by the function and (3) the number of calls made to each prisma function. Renamed variables for readability. Test cases for `getSuppliersByIdsService` and `getSupplierByIdService` were created based on test cases provided by Claude. 
 - **Verification:** `npm run test` shows that all tests in the supplier service were successful.
 
-## 15. Fix supplierTypeSchema accepting invalid strings
+## 17. Fix supplierTypeSchema accepting invalid strings
 
 - **Timestamp**: 2026-10-28 14:00
 - **Tool & model**: Claude Code (Opus 5.5)
@@ -511,18 +565,20 @@ Tools for all entries: **ChatGPT (5.6 Luna)**, **ChatGPT (Astra 6)**, **Claude C
 - **Kept/changed:** Applied fixes to use `z.string().trim().min(1).toUpperCase()` instead of `z.string().toUpperCase()`. 
 - **Verification:** All test jobs passed.
 
-## 16. Unit test cases for order service 
+## 18. Unit test cases for order service 
 
 - **Timestamp**: 2026-10-28 16:12
 - **Tool & model**: Claude Code (Opus 5.5)
 - **Mode:** generate
-- **Files:** `order-service/src/services/order.courier.service.test.ts`
+- **Files:** 
+  - `order-service/src/services/order.courier.service.test.ts`
+  - `order-service/src/schemas/order.courier.schema.test.ts`
 - **Prompt (approx.):** "Generate boilerplate code to mock Prisma for the order service and unit test the courier service file. Ensure that the mock Prisma object captures the arguments passed into prisma functions and the number of calls made to each function. Also ensure that all possible outputs and errors from each function are covered by a test case."
-- **Key response:** Test cases were generated for the functions related to courier actions, namely, `acceptOpenOrder`, `completePickedUpOrder`, `dropAcceptedOrder`, `getAllOpenOrders`, `getCourierAcceptanceHistory` and `pickUpAcceptedOrder`. 
+- **Key response:** Test cases were generated for the schemas and functions related to courier actions. Functions that were unit-tested include `acceptOpenOrder`, `completePickedUpOrder`, `dropAcceptedOrder`, `getAllOpenOrders`, `getCourierAcceptanceHistory` and `pickUpAcceptedOrder`. 
 - **Kept/changed:** Reformatted all test cases and added additional assertions to ensure all tests have the same structure: (1) arguments passed into prisma calls, (2) results returned by the function and (3) the number of calls made to each prisma function. Renamed variables for readability and added reusable constants `VALID_GET_OPEN_ORDERS_INPUT`, `VALID_DEFAULT_COURIER_ACCEPTANCE_INPUT`, `MOCK_ACCEPTED_ORDER`, `MOCK_PICKED_UP_ORDER` and `MOCK_COMPLETED_ORDER`. 
 - **Verification:** `npm run test` shows that all tests in the order service were successful.
 
-## 17. Running deployment only on the upstream repository
+## 19. Running deployment only on the upstream repository
 
 - **Timestamp**: 2026-10-29 12:17
 - **Tool & model**: Claude Code (Opus 5.5)
@@ -533,18 +589,34 @@ Tools for all entries: **ChatGPT (5.6 Luna)**, **ChatGPT (Astra 6)**, **Claude C
 - **Kept/changed:** Fixes kept as-is. 
 - **Verification:** Github actions for both upstream and forked repositories were successful. 
 
-## 18. Debugging frontend showing stale orders when tabs are switched
+## 20. Debugging frontend showing stale orders when tabs are switched
 
 - **Timestamp**: 2026-11-03 21:39
 - **Tool & model**: Claude Code (Opus 5.5)
 - **Mode:** debug
-- **Files:** `frontend/src/features/order/hooks/useOrderHistory.ts`
-- **Prompt (approx.):** "Fix this bug where status tabs in the order history show the wrong orders. The order status had updated but specific status tabs were still showing the old version of the orders."
-- **Key response:** Added `staleTime: 0` in the `useOrderHistory` hook.
-- **Kept/changed:** Fixes kept as-is. 
-- **Verification:** Stale orders were no longer shown on the application deployed on localhost, after switching tabs in the order history.
+- **Files:** 
+  - `frontend/src/features/order/hooks/useOrderHistory.ts`
+  - `frontend/src/features/order/hooks/useAcceptRequest.ts`
+  - `frontend/src/features/order/components/RequestActivityDetailsDialog.tsx`
+- **Prompt (approx.):** "Fix this bug where status tabs in the order history show the wrong orders. The order status had updated but specific status tabs were still showing the old version of the orders. Both requester and courier details should be shown to admins; add this implementation in the RequestActivityDetailsDialog."
+- **Key response:** Added `staleTime: 0` in the `useOrderHistory` hook. Added `invalidateQueries` for `orderQueryKeys.all` to ensure that fresh data is refetched. Controlled the two user-details hooks with `enabled`. Checked for an undefined courier before `isPending` in the dialog.
+- **Kept/changed:** Fixes and the minor edits by Claude kept as-is. Applied the changes for invalidating queries to all status hooks.
+- **Verification:** Stale orders were no longer shown on the application deployed on localhost, after switching tabs in the order history. Admins can view requester and courier details successfully.
 
-## 20. Debugging auto-receipt for orders
+## 21. Fixing optimistic concurrency control for order service
+
+- **Timestamp**: 2026-11-04 14:06
+- **Tool & model**: Claude Code (Opus 5.5)
+- **Mode:** debug
+- **Files:** 
+  - `frontend/src/features/order/hooks/useDropRequest.ts`
+  - `order-service/src/services/order.courier.service.test.ts`
+- **Prompt (approx.):** "Check the type errors that VSCode is giving in the payload of useDropRequest hook. I'm trying to pass the expected order version from the frontend for optimistic concurrency control."
+- **Key response:** Fixed the compilation time errors in the. Also corrected version-mismatch tests in the unit test cases.
+- **Kept/changed:** Fixes kept as-is. All hooks related to courier order status updates fixed, with reference to the changes made in useDropRequest.
+- **Verification:** Order status updates work as expected when testing the application on localhost.
+
+## 22. Debugging auto-receipt for orders
 
 - **Timestamp**: 2026-11-05 21:16
 - **Tool & model**: Claude Code (Opus 5.5)
@@ -555,7 +627,7 @@ Tools for all entries: **ChatGPT (5.6 Luna)**, **ChatGPT (Astra 6)**, **Claude C
 - **Kept/changed:** Personally added the missing `courierId` field. 
 - **Verification:** User testing on localhost and cloud is successful.
 
-## 21. Unit tests for automated order receipt
+## 23. Unit tests for automated order receipt
 
 - **Timestamp**: 2026-11-05 21:41
 - **Tool & model**: Claude Code (Opus 5.5)
@@ -566,7 +638,7 @@ Tools for all entries: **ChatGPT (5.6 Luna)**, **ChatGPT (Astra 6)**, **Claude C
 - **Kept/changed:** Merged two test cases which tested receiving one order and receiving multiple orders separately. Renamed constants for ease of reading. 
 - **Verification:** `npm run test` shows all test cases ran successfully.
 
-## 22. Order dashboard date range filter
+## 24. Order dashboard date range filter
 
 - **Timestamp**: 2026-11-06 09:51
 - **Tool & model**: Claude Code (Opus 5.5)
@@ -575,13 +647,14 @@ Tools for all entries: **ChatGPT (5.6 Luna)**, **ChatGPT (Astra 6)**, **Claude C
   - `frontend/src/components/ui/date-range.tsx`
   - `frontend/src/features/order/components/AdminOrderDashboardCard.tsx`
   - `order-service/src/schemas/order.schema.ts`
+  - `order-service/src/schemas/order.schema.test.ts`
   - `order-service/src/services/order.service.ts`
-- **Prompt (approx.):** "The current code has a date-range UI component. Refactor the components such that props can be passed from the parent component. For the related backend function, allow filtering by date range of the `createdAt` column. I also want to be able to filter by an array of statuses."
-- **Key response:** Refactored shadcn's date-range component in `frontend/src/components/ui/date-range.tsx` to allow props to be passed in. Values were added as props and passed in from `AdminOrderDashboardCard.tsx`. In the `WHERE` clause of the Prisma query in `order-service/src/services/order.service.ts`, new lines of code was added to allow orders to be filtered by their date range, as well as by a set of statuses. 
+- **Prompt (approx.):** "The current code has a date-range UI component. Refactor the components such that props can be passed from the parent component. For the related backend function, allow filtering by date range of the `createdAt` column. I also want to be able to filter by an array of statuses. The filters and selectors on the UI are also not aligned vertically, fix this."
+- **Key response:** Refactored shadcn's date-range component in `frontend/src/components/ui/date-range.tsx` to allow props to be passed in. Values were added as props and passed in from `AdminOrderDashboardCard.tsx`. In the `WHERE` clause of the Prisma query in `order-service/src/services/order.service.ts`, new lines of code was added to allow orders to be filtered by their date range, as well as by a set of statuses. Schema test cases modified to test the dates and statuses fields. Filters and selectors vertically aligned with the addition of `flex flex-col gap-1` tailwind classes. 
 - **Kept/changed:** Rewrote the picker to use `startDate` and `endDate` instead of `DateRange`. 
 - **Verification:** All test jobs passed, and user testing on localhost was successful. Functionalities also work on the cloud-deployed application.
 
-## 23. Migration of supplier images from AWS EC2 to S3, while using local storage when running the app locally
+## 25. Migration of supplier images from AWS EC2 to S3, while using local storage when running the app locally
 
 - **Timestamp**: 2026-11-08 18:50
 - **Tool & model**: Claude Code (Opus 5.5)
@@ -592,22 +665,39 @@ Tools for all entries: **ChatGPT (5.6 Luna)**, **ChatGPT (Astra 6)**, **Claude C
   - `supplier-service/src/services/supplier.asset.service.ts`
   - `supplier-service/src/libs/storage.ts`
   - `supplier-service/src/middleware/upload.middleware.ts`
+  - `supplier-service/src/config/config.ts`
+  - `supplier-service/README.md`
+  - `supplier-service/.env.example`
+  - `.github/workflows/ci.yml`
 - **Prompt (approx.):** "Create a storage.ts file under libs where there's an interface implemented. If running localhost, there's an attribute in the .env file that will say "local" and the image get and post will just be on some local storage, but if the attribute is "s3" then it will pull and post to AWS S3. The service functions (e.g. uploadImage) will still work the same way since the storage is hidden behind some interace. Place the upload functions into `supplier.asset.service.ts` and remove the `upload.ts` file in the `libs` directory."
-- **Follow-up Prompt (approx.):** "Move the multer checking of file size and file extensions into `upload.middleware.ts`."
+- **Follow-up Prompt (approx.):** "Move the multer checking of file size and file extensions into `upload.middleware.ts`. Check if the documentation in README.md is up to date and accurate."
 - **Key response:** Generated the code based that fulfilled the above description. A test file `supplier.asset.service.test.ts` was also generated. 
 - **Kept/changed:** `requestOrigin` was originally kept, but I removed it as all .env files will have the `ASSETS_PUBLIC_URL` variable set, which would already contain the base URL for image fetching. I also removed `ASSETS_DIR` and `defaultAssetsDir`, which were generated by Claude, as we can directly resolve the file path for local image storage. 
 - **Verification:** All test jobs passed, and user testing on localhost was successful. 
 
-## 24. Debugging image upload errors on cloud
+## 26. Fix unselected default supplier tab
 
+- **Timestamp**: 2026-11-07 14:54
+- **Tool & model**: Claude Code (Opus 5.5)
+- **Mode:** debug
+- **Files:** 
+  - `frontend/src/pages/SupplierPage.tsx`
+  - `frontend/src/pages/ManageSuppliersPage.tsx`
+- **Prompt (approx.):** "When the user reloads the SupplierPage and ManageSuppliersPage, the "All" tab should be selected but there is no indication of it being selected on the UI. The data displayed is correct though. Fix this error."
+- **Key response:** Changed the default `typeFilter` from `"all"` to `"ALL"`.
+- **Kept/changed:** Fix as-is.
+- **Verification:** Tab selected on browser on page reload.
+
+## 27. Debugging image upload errors on cloud
+                  
 - **Timestamp**: 2026-11-08 21:36
 - **Tool & model**: Claude Code (Opus 5.5)
 - **Mode:** generate
 - **Files:** `compose.yaml`
 - **Prompt (approx.):** "The logs on AWS show that credentials cannot be loaded from the provider, hence image upload is failing on the cloud-deployed application. The functionality works on localhost. What is causing this error?"
-- **Key response:** Suggested to add the supplier-service container to the default network, so that supplier-service has network access to load the AWS credentials and
-- **Kept/changed:** Personally applied the one-line fix. Rebuilt the `supplier-service` container to ensure that changes in `.env` has been applied.
-- **Verification:** AUser testing on the cloud-deployed application was successful.
+- **Key response:** Suggested to add the supplier-service container to the default network, so that supplier-service has network access to load the AWS credentials and S3.
+- **Kept/changed:** Personally applied the one-line fix. Rebuilt the `supplier-service` container to ensure that changes in `.env` has been applied. 
+- **Verification:** User testing on the cloud-deployed application was successful. 
 
 # Detailed AI Usage Log for Ng See Pui
 
@@ -745,5 +835,3 @@ Tools for all entries: **ChatGPT (5.6 Luna)**, **ChatGPT (Astra 6)**, **Claude C
 - **Key response:** Reviewed the Docker configuration for correctness and consistency with the notification service.
 - **Kept/changed:** Nothing changed; verified that the Dockerfiles and compose files are correct and consistent.
 - **Verification:** Compared the Docker files against the notification service setup and runtime requirements.
-
-

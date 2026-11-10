@@ -2,8 +2,8 @@
 # Tool: ChatGPT (Astra 6), Claude Code (Opus 5.5)
 # Date: approx. 2026-10-25, 2026-10-29, 2026-11-10
 # Scope: Generated the deploy workflow: reuse CI, push images to ECR via OIDC, deploy the backend to EC2 with docker compose, and upload the frontend to S3 with a CloudFront invalidation; skip docs-only changes.
-# Run deployment only when the current repository is the upstream repository.
-# (2026-11-10, Claude Code / Claude Sonnet 5.5): Ship observability/, restart the logging stack, and seed the Grafana password from a GitHub secret.
+#        (2026-10-29) Run deployment only when the current repository is the upstream repository.
+#        (2026-11-10, Claude Code / Claude Sonnet 5.5): Ship observability/, restart the logging stack, and seed the Grafana password from a GitHub secret.
 # Author review: Reviewed, tested, and edited by Lim Shao Qi; Amber Tan Junning; Duong Ngoc Mai.
 
 name: Deploy
