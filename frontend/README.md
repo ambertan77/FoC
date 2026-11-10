@@ -31,8 +31,7 @@ The frontend container (`Dockerfile`, `nginx.conf`):
 - builds the app with Node.js 22
 - serves the static output with non-root nginx on port 8080. Compose
   publishes it on `127.0.0.1:${FRONTEND_PORT}`.
-- proxies `/api/auth` and `/api/users`, `/api/suppliers`, `/api/orders` and
-  `/api/credits` to the backend containers by service name. The browser
+- proxies `/api/auth` and `/api/users`, `/api/suppliers`, `/api/orders`, `/api/credits` and `/api/notifications` to the backend containers by service name. The browser
   only ever talks to one origin.
 - falls back to `index.html`, so client-side routes survive direct
   navigation and page refreshes
@@ -46,6 +45,7 @@ The frontend container (`Dockerfile`, `nginx.conf`):
 | `VITE_SUPPLIER_API_BASE_URL` | `/api` | Base URL for `/suppliers/...` |
 | `VITE_ORDER_API_BASE_URL` | `/api` | Base URL for `/orders/...` |
 | `VITE_CREDIT_API_BASE_URL` | `/api` | Base URL for `/credits/...` |
+| `VITE_NOTIFICATION_API_BASE_URL` | `/api` | Base URL for `/notifications/...` |
 
 Keep the `VITE_*` values as `/api` for Docker. CI and the production
 build use `/api` too. Vite embeds `VITE_*` values in the public
@@ -67,8 +67,7 @@ the Docker stack doesn't publish the backend ports. So to use it:
 1. Run the backend services on the host. See
    [Running services on the host instead](../README.md#running-services-on-the-host-instead).
 2. Point the `VITE_*` values at each service: `http://localhost:3000/api`
-   (auth), `:3001/api` (supplier), `:3002/api` (order), `:3003/api`
-   (credit).
+   (auth), `:3001/api` (supplier), `:3002/api` (order), `:3003/api` (credit), `:3004/api` (notification).
 
 Stop the frontend container first if it is using port 5173.
 
@@ -176,3 +175,7 @@ is treated as zero credits or empty history. Missing legacy accounts can remain
 pending indefinitely; reads do not provision them. Balance/history errors are
 independent, retained data is labelled as potentially outdated after a failed
 refresh, and invalid cursors offer a return to page one.
+
+## Code References
+
+- [AuthForge Client](https://github.com/hamidukarimi/authforge-client): Referenced for authentication-related and authorization-related client code.
