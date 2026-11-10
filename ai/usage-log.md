@@ -11,7 +11,7 @@ Tool for entries 1–27: **ChatGPT (Astra 6)**. Tool for entry 28: **Claude Code
 Tools for all entries: **Claude AI and Claude Code** (as specified in the detailed log). Every AI output was reviewed, edited and tested by Amber Tan Junning before it was committed. 
 
 3. Ng See Pui
-   > Logged on 2026-11-10 for work done 2026-10-30 to 2026-11-10; dates and prompts are approximate.
+   > Logged on 2026-11-10 for work done 2026-10-12 to 2026-11-10; dates and prompts are approximate.
 
 Tools for all entries: **ChatGPT (5.6 Luna)**, **ChatGPT (Astra 6)**, **Claude Code (Claude Sonnet 5.5)**. Every AI output was reviewed, edited and tested by Ng See Pui before it was committed.
 
@@ -689,7 +689,7 @@ Tools for all entries: **ChatGPT (5.6 Luna)**, **ChatGPT (Astra 6)**, **Claude C
 - **Verification:** Tab selected on browser on page reload.
 
 ## 27. Debugging image upload errors on cloud
-                  
+
 - **Timestamp**: 2026-11-08 21:36
 - **Tool & model**: Claude Code (Opus 5.5)
 - **Mode:** generate
@@ -701,7 +701,29 @@ Tools for all entries: **ChatGPT (5.6 Luna)**, **ChatGPT (Astra 6)**, **Claude C
 
 # Detailed AI Usage Log for Ng See Pui
 
-## 1. Redrive scirpts for failing RabbitMQ messages
+## 1. Date-time picker popover width
+
+- **Timestamp:** approx. 2026-10-12 10:20
+- **Tool & model:** ChatGPT (5.6 Luna)
+- **Mode:** edit
+- **Files:**
+  - `frontend/src/features/order/components/DateTimePicker.tsx`
+- **Prompt (approx.):** "How do I make the date-time picker popover content width relative to the trigger?"
+- **Key response:** Adjusted the popover content width to match or scale relative to the trigger element.
+- **Verification:** Reviewed the component styling and tested the date-time picker layout.
+
+## 2. Responsive supplier selector height
+
+- **Timestamp:** approx. 2026-10-12 21:40
+- **Tool & model:** ChatGPT (5.6 Luna)
+- **Mode:** edit
+- **Files:**
+  - `frontend/src/features/order/components/SupplierSelect.tsx`
+- **Prompt (approx.):** "How do I make the height responsive?"
+- **Key response:** Adjusted the supplier selector height to respond appropriately across different screen sizes.
+- **Verification:** Reviewed the responsive styling and tested the component layout.
+
+## 3. Redrive scirpts for failing RabbitMQ messages
 
 - **Timestamp:** 2026-10-30 15:47
 - **Tool & model:** ChatGPT (5.6 Luna)
@@ -716,7 +738,7 @@ Tools for all entries: **ChatGPT (5.6 Luna)**, **ChatGPT (Astra 6)**, **Claude C
 - **Kept/changed:** Reviewed and edited event validation, republishing, retry handling, and status updates.
 - **Verification:** Reviewed the scripts and tested the affected redrive workflows.
 
-## 2. Unit tests for order service and credit service
+## 4. Unit tests for order service and credit service
 
 - **Timestamp:** 2026-11-04 09:00
 - **Tool & model:** ChatGPT (Astra 6)
@@ -734,7 +756,7 @@ Tools for all entries: **ChatGPT (5.6 Luna)**, **ChatGPT (Astra 6)**, **Claude C
 - **Kept/changed:** Fixed mocks that didn't match the real Prisma call shapes. Added additional test cases for edge cases and error handling.
 - **Verification:** `npm test` in `order-service` and `credit-service` (all passing); the tests also run in CI.
 
-## 3. Refactor RabbitMQ functionality
+## 5. Refactor RabbitMQ functionality
 
 - **Timestamp:** 2026-11-05 13:00
 - **Tool & model:** ChatGPT (5.6 Luna)
@@ -748,7 +770,7 @@ Tools for all entries: **ChatGPT (5.6 Luna)**, **ChatGPT (Astra 6)**, **Claude C
 - **Kept/changed:** Preserved existing messaging behavior while reducing duplication and improving reuse across credit-service workflows.
 - **Verification:** Reviewed the refactored implementation and tested the affected RabbitMQ workflows.
 
-## 4. Backend notification service
+## 6. Backend notification service
 
 - **Timestamp:** 2026-11-09 01:00
 - **Tool & model:** ChatGPT (Astra 6),  Claude Code (Claude Sonnet 5.5)
@@ -765,7 +787,7 @@ Tools for all entries: **ChatGPT (5.6 Luna)**, **ChatGPT (Astra 6)**, **Claude C
 - **Kept/changed:** Preserved the existing order status event flow while adding notification logic and SSE support. Added comments for clarity.
 - **Verification:** Reviewed the implementation and tested the notification service with simulated order status events and user preferences using a local frontend client.
 
-## 5. Frontend SSE integration for notification service
+## 7. Frontend SSE integration for notification service
 
 - **Timestamp:** 2026-11-09 03:00
 - **Tool & model:** ChatGPT (Astra 6),  Claude Code (Claude Sonnet 5.5)
@@ -778,7 +800,7 @@ Tools for all entries: **ChatGPT (5.6 Luna)**, **ChatGPT (Astra 6)**, **Claude C
 - **Kept/changed:**  Reviewed and edited connection handling, reconnection behavior, unread state updates, read-state synchronization, and notification state management.
 - **Verification:**  Tested the frontend notification service with the backend notification service and verified real-time updates, state management, and SSE reconnection behavior.
 
-## 6. Unit tests for notification service
+## 8. Unit tests for notification service
 
 - **Timestamp:** 2026-11-09 15:00
 - **Tool & model:** ChatGPT (Astra 6)
@@ -793,7 +815,7 @@ Tools for all entries: **ChatGPT (5.6 Luna)**, **ChatGPT (Astra 6)**, **Claude C
 - **Kept/changed:**  Reviewed and edited test cases to match the service logic and expected notification outcomes.
 - **Verification:** `npm test` in `notification-service` (all passing); the tests also run in CI.
 
-## 7. Redrive order status events script
+## 9. Redrive order status events script
 
 - **Timestamp:** 2026-11-10 10:30 
 - **Tool & model:** ChatGPT (Astra 6)
@@ -805,7 +827,7 @@ Tools for all entries: **ChatGPT (5.6 Luna)**, **ChatGPT (Astra 6)**, **Claude C
 - **Kept/changed:** Reviewed and edited event validation, republishing, retry handling, and status updates.
 - **Verification:** Reviewed the scripts and tested the affected redrive workflows.
 
-## 8. Verify and edit errors for notification service README
+## 10. Verify and edit errors for notification service README
 
 - **Timestamp:** 2026-11-10 12:00
 - **Tool & model:** ChatGPT (Astra 6)
@@ -817,7 +839,7 @@ Tools for all entries: **ChatGPT (5.6 Luna)**, **ChatGPT (Astra 6)**, **Claude C
 - **Kept/changed:** Applied suggested edits to improve readability and accuracy of the README.
 - **Verification:** Reviewed the updated README for clarity and correctness.
 
-## 9. Check and verify all notification service Dockerfiles and compose files
+## 11. Check and verify all notification service Dockerfiles and compose files
 
 - **Timestamp:** 2026-11-10 14:00
 - **Tool & model:** ChatGPT (Astra 6)
@@ -835,3 +857,20 @@ Tools for all entries: **ChatGPT (5.6 Luna)**, **ChatGPT (Astra 6)**, **Claude C
 - **Key response:** Reviewed the Docker configuration for correctness and consistency with the notification service.
 - **Kept/changed:** Nothing changed; verified that the Dockerfiles and compose files are correct and consistent.
 - **Verification:** Compared the Docker files against the notification service setup and runtime requirements.
+
+## 12. README documentation verification
+
+- **Timestamp:** 2026-11-10 18:41
+- **Tool & model:** ChatGPT (Astra 6)
+- **Mode:** review/edit
+- **Files:**
+  - `README.md`
+  - `supplier-service/README.md`
+  - `notification-service/README.md`
+  - `order-service/README.md`
+  - `credit-service/README.md`
+  - `user-service/README.md`
+- **Prompt (approx.):** "Review all README files and ensure their content matches the implementation."
+- **Key response:** Compared the README documentation against service source code, routes, package scripts, Docker Compose files, gateway configuration, and deployment workflows.
+- **Kept/changed:** Identified documentation inconsistencies involving service counts, ports, RabbitMQ consumers, environment setup, ECR repositories, and incorrect worker descriptions.
+- **Verification:** Cross-checked documented behavior against the implemented services and configuration files.

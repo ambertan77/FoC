@@ -6,6 +6,14 @@ Scope: Audited against the code; updated the repository structure, added the ser
 Author review: Reviewed and edited by Lim Shao Qi.
 -->
 
+<!--
+AI Assistance Disclosure:
+Tool: ChatGPT (Astra 6)
+Date: 2026-11-10
+Scope: README documentation verification
+Author review: Reviewed and edited by Ng See Pui.
+-->
+
 # CS3219 — Software Design and Architecture (AY2627 Sem 1)
 
 ## Aaron
@@ -112,7 +120,7 @@ skipped. You can also start it by hand from the Actions tab
 queue instead of cancelling it. The jobs:
 
 1. **`ci`** reruns the full CI workflow.
-2. **`build-push`** builds the four backend images and pushes them to
+2. **`build-push`** builds the five backend images and pushes them to
    Amazon ECR as `foc/<service>:<commit-sha>` and `:latest`. It only runs
    in `AY2627S1-CS3219-P20/FoC`, so on forks it and the rest of the deploy
    are skipped.
@@ -160,7 +168,7 @@ The workflow assumes this already exists:
   repository. It can push to ECR, sync to `S3_BUCKET` and create
   CloudFront invalidations. No long-lived AWS keys are stored in GitHub.
 - **ECR repositories**: `foc/user-service`, `foc/supplier-service`,
-  `foc/order-service`, `foc/credit-service`.
+  `foc/order-service`, `foc/credit-service`, `foc/notification-service`.
 - **EC2 host**:
   - Docker with the Compose plugin and the AWS CLI are installed
   - the instance can pull from ECR
@@ -181,7 +189,7 @@ The workflow assumes this already exists:
 
 ## Run Locally with Docker
 
-The whole stack can run in Docker: four services, four Postgres
+The whole stack can run in Docker: five services, five Postgres
 databases, RabbitMQ and the frontend. Start Docker Desktop or the Docker
 engine first.
 
@@ -193,7 +201,7 @@ engine first.
 
    ```sh
    cp .env.example .env
-   for d in user-service supplier-service order-service credit-service frontend; do
+   for d in user-service supplier-service order-service credit-service notification-service frontend; do
      cp "$d/.env.example" "$d/.env"
    done
    ```

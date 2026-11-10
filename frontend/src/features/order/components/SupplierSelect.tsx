@@ -4,6 +4,12 @@
 // Scope: Corrected import in line 25 after supplier-related code was refactored
 // Author review: Reviewed, tested, and edited by Amber Tan Junning.
 
+// AI Assistance Disclosure:
+// Tool: ChatGPT (5.6 Luna)
+// Date: approx. 2026-10-12
+// Scope: Made the supplier selection component height responsive across screen sizes.
+// Author review: Reviewed, tested, and edited by Ng See Pui.
+
 import { useEffect, useState } from "react";
 import { Check, ChevronDown } from "lucide-react";
 

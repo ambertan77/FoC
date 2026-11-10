@@ -2,7 +2,7 @@
 Tool: ChatGPT (Astra 6)
 Date: approx. 2026-11-10
 Scope: Verified and edited errors in the notification service README.
-Author review: Reviewed, tested, and edited by Ng See Pui.
+Author review: Reviewed and edited by Ng See Pui.
 -->
 
 # Notification Service
@@ -509,15 +509,16 @@ npm run db:studio
 
 Start development with `npm run dev`, or run the compiled application with `npm start`.
 
-The registration consumer starts after the HTTP server begins listening. It reconnects if RabbitMQ becomes unavailable. `GET /healthz` only confirms that the HTTP server is running; it does not check RabbitMQ or whether students have received credits.
+The order status consumer starts after the HTTP server begins listening. It reconnects if RabbitMQ becomes unavailable. `GET /healthz` only confirms that the HTTP server is running; it does not check RabbitMQ or whether students have received credits.
 
-### Containerization
+### Docker
 
-The Notification Service has been containerized with Docker. Use `docker compose up --build notification-service` in the root folder to build only the `notification-service` container and its dependencies `notification-postgres` and `rabbitmq`.
+The root `compose.yaml` includes this folder's `compose.yaml`, which defines two containers:
 
-However, building the Notification Service container does not mean the API endpoints for the service can be called directly. The Notification Service runs on the Docker `backend` and `notification-db` networks, which are both internal networks. All calls to the Notification Service must be done through the frontend proxy.
+- **`notification-service`:** built from the `Dockerfile` (Node.js 22 Alpine). It mounts `../user-service/keys/public.pem` read-only at `JWT_PUBLIC_KEY_PATH`, so create the user-service keys first. `docker-entrypoint.sh` runs `prisma migrate deploy` and then starts `dist/index.js`. The API port isn't published to the host. In the root stack, reach it through the frontend at `http://localhost:5173/api/notifications/...`.
+- **`notification-postgres`:** PostgreSQL 17 with a health check. The service waits until it is healthy.
 
-To go through the frontend proxy, go to the root folder `foc` and run `docker compose up --build`. Then from Postman or the browser's dev tools, add the Bearer authentication token, call `http://localhost:5173/api/notifications` or the relevant notification service endpoints.
+The `127.0.0.1:5437` Postgres port mapping only works when you run this folder's compose on its own, for example `docker compose up -d notification-postgres` to use with `npm run dev`. In the root stack, the database is on an internal network and isn't reachable from the host. Use `docker compose exec notification-postgres psql -U <NOTIFICATION_POSTGRES_USER> <NOTIFICATION_POSTGRES_DB>` instead.
 
 ## Acknowledgements
 

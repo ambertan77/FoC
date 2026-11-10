@@ -445,6 +445,7 @@ When this application is ran on localhost, `LocalStorage` is the storage class u
 ### Uploading Images
 
 When the route for uploading images is used, the following steps occur:
+
 1. The authenticate middleware checks the JWT token and authenticates the caller. 
 2. The authorize middleware checks that the caller has the `admin` role. 
 3. The multer in the upload middleware checks that the uploaded image does not exceed the maximum allowed image size, and is of the allowed file types. The image is then placed into `req.file` before control is passed to the controller. 
@@ -527,6 +528,15 @@ npm test
 
 - `src/schemas/supplier.schema.test.ts` — Zod schema validation + `parseInput` error mapping.
 - `src/services/supplier.service.test.ts` — create/update/deactivate logic driven by an in-memory fake Prisma client (no database needed).
+
+### Docker
+
+The root `compose.yaml` includes this folder's `compose.yaml`, which defines two containers:
+
+- **`supplier-service`:** built from the `Dockerfile` (Node.js 22 Alpine). It mounts `../user-service/keys/public.pem` read-only at `JWT_PUBLIC_KEY_PATH`, so create the user-service keys first. `docker-entrypoint.sh` runs `prisma migrate deploy` and then starts `dist/index.js`. The API port isn't published to the host. In the root stack, reach it through the frontend at `http://localhost:5173/api/suppliers/...`.
+- **`supplier-postgres`:** PostgreSQL 17 with a health check. The service waits until it is healthy.
+
+The `127.0.0.1:5433` Postgres port mapping only works when you run this folder's compose on its own, for example `docker compose up -d supplier-postgres` to use with `npm run dev`. In the root stack, the database is on an internal network and isn't reachable from the host. Use `docker compose exec supplier-postgres psql -U <POSTGRES_USER> <POSTGRES_PASSWORD>` instead.
 
 ## Acknowledgements
 
