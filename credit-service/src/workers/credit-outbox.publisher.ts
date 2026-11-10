@@ -9,6 +9,7 @@ import {
     publishConfirmed,
     RESERVATION_RESULT_MESSAGING,
 } from "../libs/rabbitmq.js";
+import { logger } from "../libs/logger.js";
 
 // Maximum number of outbox events to fetch and publish in one batch.
 const BATCH_SIZE = 30;
@@ -193,10 +194,10 @@ async function publishOne(
             },
         });
 
-        console.log("Outbox event published successfully", {
+        logger.info({
             eventId: event.id,
             eventType: event.eventType,
-        });
+        }, "Outbox event published successfully");
     } catch (error) {
         const nextRetryCount = event.retryCount + 1;
         const dead = nextRetryCount >= MAX_RETRIES;
@@ -223,11 +224,11 @@ async function publishOne(
             },
         });
 
-        console.error("Credit outbox publish failed", {
+        logger.error({
             eventId: event.id,
             retryCount: nextRetryCount,
             dead,
-        });
+        }, "Credit outbox publish failed");
 
         // publishConfirmed may have closed an unhealthy channel.
         // Reconnect before trying to publish another event.
@@ -261,7 +262,7 @@ export function startCreditOutboxPublisher(): () => Promise<void> {
                 const events = await claimBatch();
 
                 if (events.length === 0) {
-                    console.debug("No outbox events to publish; waiting for next poll");
+                    logger.debug("No outbox events to publish; waiting for next poll");
                     await delay(POLL_INTERVAL_MS, undefined, {
                         signal: abortController.signal,
                     });
@@ -283,13 +284,13 @@ export function startCreditOutboxPublisher(): () => Promise<void> {
                 if (!abortController.signal.aborted) {
                     retry++;
 
-                    console.error("Credit outbox publisher iteration failed", {
+                    logger.error({
                         retry,
                         error:
                             error instanceof Error
                                 ? error.message
                                 : "UNKNOWN_ERROR",
-                    });
+                    }, "Credit outbox publisher iteration failed");
 
                     await delay(backoffMs(retry), undefined, {
                         signal: abortController.signal,

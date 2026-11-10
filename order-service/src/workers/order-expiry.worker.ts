@@ -1,4 +1,5 @@
 import { updateExpiredOrders } from "../services/order-expiry.service.js";
+import { logger } from "../libs/logger.js";
 
 const POLL_INTERVAL_MS = 60_000; // Poll every 1 minutes for new orders to expire.
 
@@ -18,10 +19,10 @@ export function startOrderExpiryWorker(): () => Promise<void> {
                 const expiredOrdersCount = await updateExpiredOrders();
 
                 if (expiredOrdersCount > 0) {
-                    console.log(`Expired ${expiredOrdersCount} orders`);
+                    logger.info({ count: expiredOrdersCount }, "Orders expired");
                 }
             } catch (error) {
-                console.error('Error occurred while updating expired orders:', error);
+                logger.error({ err: error }, 'Error occurred while updating expired orders');
             } finally {
                 currentRun = undefined;
             }

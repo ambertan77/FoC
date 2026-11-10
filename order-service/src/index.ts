@@ -4,6 +4,7 @@ import cors from "cors";
 import "dotenv/config";
 import config from "./config/config.js";
 import { errorHandler } from "./middleware/error.middleware.js";
+import { requestLogger } from "./middleware/request-logger.middleware.js";
 import { AppError } from "./errors/errors.js";
 import orderRouter from "./routes/order.route.js";
 import { startOrderOutboxPublisher } from "./workers/order-outbox.publisher.js";
@@ -11,9 +12,11 @@ import { prisma } from "./libs/prisma.js";
 import { startOrderExpiryWorker } from "./workers/order-expiry.worker.js";
 import { startOrderReceiptWorker } from "./workers/order-receipt.worker.js";
 import { startCreditReservationResultConsumer } from "./workers/credit-reservation-result.consumer.js";
+import { logger } from "./libs/logger.js";
 
 const app = express();
 
+app.use(requestLogger);
 app.use(
     cors({
         origin: config.frontendUrl,
@@ -46,7 +49,7 @@ let stopCreditReservationResultConsumer: (() => Promise<void>) | undefined;
 let shuttingDown = false;
 
 const server = app.listen(PORT, () => {
-    console.log(`Order service is running at http://localhost:${PORT}`);
+    logger.info({ port: PORT }, "Order service is running");
 
     // If the service is not shutting down, start the outbox publisher.
     if (!shuttingDown) {
@@ -64,7 +67,7 @@ const shutdown = async () => {
     const deadline = setTimeout(() => process.exit(1), 15_000);
     deadline.unref();
 
-    console.log("Shutting down gracefully...");
+    logger.info("Shutting down gracefully...");
 
     try {
         await Promise.all([
@@ -81,9 +84,9 @@ const shutdown = async () => {
         ]);
         await prisma.$disconnect();
         clearTimeout(deadline);
-        console.log("Shutdown complete.");
-    } catch {
-        console.error("Order service shutdown failed.");
+        logger.info("Shutdown complete.");
+    } catch (error) {
+        logger.error({ err: error }, "Order service shutdown failed");
         process.exitCode = 1;
     }
 };

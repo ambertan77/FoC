@@ -3,6 +3,7 @@ import jwt, { type Secret } from "jsonwebtoken";
 import { AppError } from "../errors/errors.js";
 import { REFRESH_TOKEN_EXPIRES_IN } from "../constants/auth.constants.js";
 import config from "../config/config.js";
+import { logger } from "./logger.js";
 
 const key: Secret = config.jwtRefreshTokenKey;
 
@@ -56,7 +57,7 @@ export function verifyRefreshToken(
             jti: payload.jti,
         };
     } catch {
-        console.log("Invalid or expired refresh token");
+        logger.warn("Invalid or expired refresh token");
         throw new AppError(
             "Invalid token, please sign out and back in",
             401,

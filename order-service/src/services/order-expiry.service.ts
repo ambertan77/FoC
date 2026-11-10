@@ -3,6 +3,7 @@ import { prisma } from "../libs/prisma.js";
 import { OrderEventType, OrderStatus } from "../generated/prisma/client.js";
 import { randomUUID } from "node:crypto";
 import { enqueueOrderStatusChanged } from "../libs/order-status-event.js";
+import { logger } from "../libs/logger.js";
 
 /* 
 expiryAt is the deadline for the order to be completed by the courier.
@@ -20,7 +21,7 @@ const OPEN_EXPIRY_REASON = "No courier accepted the request before its completio
 
 export async function updateExpiredOrders(): Promise<number> {
     const now: Date = new Date();
-    console.log(`Checking for expired orders at ${now.toISOString()}`);
+    logger.debug({ now: now.toISOString() }, "Checking for expired orders");
 
     const candidateOrders = await prisma.order.findMany({
         where: {
@@ -56,7 +57,7 @@ export async function updateExpiredOrders(): Promise<number> {
         const reason = expiredBeforeAcceptance ? OPEN_EXPIRY_REASON : COMPLETION_FAILURE_REASON;
 
         if (!order.creditReservationId) {
-            console.error(`Expired order ${order.id} has no credit reservation; skipping`);
+            logger.error({ orderId: order.id }, "Expired order has no credit reservation; skipping");
             continue;
         }
 

@@ -12,6 +12,7 @@ import {
     SETTLEMENT_MESSAGING,
 } from "../libs/rabbitmq.js";
 import { MAX_RETRIES, MAX_SETTLEMENT_BYTES } from "../constants/consumer.constant.js";
+import { logger } from "../libs/logger.js";
 
 function record(value: unknown): Record<string, unknown> {
     return typeof value === "object" && value !== null ? value as Record<string, unknown> : {};
@@ -63,13 +64,13 @@ export async function processSettlementMessage(
                 },
             });
             channel.ack(message);
-            console.info("Settlement consumer", {
+            logger.info({
                 ...context,
                 outcome: queue === SETTLEMENT_MESSAGING.retryQueue ? "retry_scheduled" : "dead_lettered",
                 reason,
-            });
+            }, "Settlement consumer");
         } catch (error) {
-            console.warn("Settlement consumer", { ...context, outcome: "forward_unconfirmed" });
+            logger.warn({ ...context, outcome: "forward_unconfirmed" }, "Settlement consumer");
             throw error; // Leave the original unacknowledged; reconnect requeues it.
         }
     }
@@ -103,7 +104,7 @@ export async function processSettlementMessage(
     } catch (error) {
         // Close/reconnect on outages without spending per-event retry budgets.
         if (error instanceof AppError && error.statusCode === 503 && isTemporaryDatabaseError(error.cause)) {
-            console.warn("Settlement consumer", { ...context, outcome: "database_paused" });
+            logger.warn({ ...context, outcome: "database_paused" }, "Settlement consumer");
             throw error;
         }
         const retryable = error instanceof AppError && [404, 503].includes(error.statusCode);
@@ -118,7 +119,7 @@ export async function processSettlementMessage(
     }
     // Ack is outside the transaction catch: redelivery after commit is a no-op.
     channel.ack(message);
-    console.info("Settlement consumer", { ...context, outcome: applied ? (parsed.data.eventType === "ORDER_RECEIVED" ? "transferred" : parsed.data.eventType === "ORDER_FAILED" ? "refunded" : "released") : "already_settled", durationMs: Date.now() - startedAt });
+    logger.info({ ...context, outcome: applied ? (parsed.data.eventType === "ORDER_RECEIVED" ? "transferred" : parsed.data.eventType === "ORDER_FAILED" ? "refunded" : "released") : "already_settled", durationMs: Date.now() - startedAt }, "Settlement consumer");
 }
 
 /** One in-flight delivery; HTTP startup does not await broker availability. */
@@ -143,12 +144,12 @@ export function startSettlementConsumer(prisma: PrismaClient): () => Promise<voi
                 if (!message) { end(); return; } // Broker cancelled the consumer.
                 if (ending) return; // Requeue on close; do not begin new work.
                 inFlight = processSettlementMessage(prisma, channel, message).catch(() => {
-                    console.warn("Settlement consumer", { outcome: "delivery_unacknowledged" });
+                    logger.warn({ outcome: "delivery_unacknowledged" }, "Settlement consumer");
                     end();
                 });
             }, { noAck: false });
             consumerTag = consumer.consumerTag;
-            console.info("Settlement consumer", { outcome: "connected" });
+            logger.info({ outcome: "connected" }, "Settlement consumer");
             await finished;
         } finally {
             ending = true;
@@ -168,7 +169,7 @@ export function startSettlementConsumer(prisma: PrismaClient): () => Promise<voi
             try {
                 await runSession();
             } catch {
-                console.warn("Settlement consumer", { outcome: "connection_retry" });
+                logger.warn({ outcome: "connection_retry" }, "Settlement consumer");
             }
             if (abort.signal.aborted) break;
             if (Date.now() - startedAt >= 60_000) reconnectAttempts = 0;

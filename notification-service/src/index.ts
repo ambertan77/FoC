@@ -4,14 +4,17 @@ import cors from "cors";
 import "dotenv/config";
 import config from "./config/config.js";
 import { errorHandler } from "./middleware/error.middleware.js";
+import { requestLogger } from "./middleware/request-logger.middleware.js";
 import { AppError } from "./errors/errors.js";
 import { prisma } from "./libs/prisma.js";
 import notificationRouter from "./routes/notification.route.js";
 import { hub } from "./sse/hub.js";
 import { startOrderStatusConsumer } from "./workers/order-status.consumer.js";
+import { logger } from "./libs/logger.js";
 
 const app = express();
 
+app.use(requestLogger);
 app.use(
     cors({
         origin: config.frontendUrl,
@@ -45,7 +48,7 @@ let stopOrderStatusConsumer: (() => Promise<void>) | undefined;
 let shuttingDown = false;
 
 const server = app.listen(PORT, () => {
-    console.log(`Notification service is running at http://localhost:${PORT}`);
+    logger.info({ port: PORT }, "Notification service is running");
 
     // If the service is not shutting down, start the outbox publisher.
     if (!shuttingDown) {
@@ -60,7 +63,7 @@ const shutdown = async () => {
     const deadline = setTimeout(() => process.exit(1), 15_000);
     deadline.unref();
 
-    console.log("Shutting down gracefully...");
+    logger.info("Shutting down gracefully...");
 
     try {
         clearInterval(heartbeat);
@@ -76,9 +79,9 @@ const shutdown = async () => {
         ]);
         await prisma.$disconnect();
         clearTimeout(deadline);
-        console.log("Shutdown complete.");
-    } catch {
-        console.error("Notification service shutdown failed.");
+        logger.info("Shutdown complete.");
+    } catch (error) {
+        logger.error({ err: error }, "Notification service shutdown failed");
         process.exitCode = 1;
     }
 };
