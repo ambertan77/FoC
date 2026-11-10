@@ -52,11 +52,6 @@ export const adminNavLinks: NavLinkItem[] = [
         icon: HouseIcon,
     },
     {
-        label: "Suppliers",
-        href: ROUTES.SUPPLIERS,
-        icon: BoxesIcon,
-    },
-    {
         label: "Manage Users",
         href: ROUTES.ADMIN.MANAGE_USERS,
         icon: UserIcon,
