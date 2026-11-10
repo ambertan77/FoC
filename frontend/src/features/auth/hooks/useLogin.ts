@@ -14,6 +14,7 @@ import type { ParsedError } from "@/utils/errorHandler";
 import type { AuthResult, LoginPayload } from "../types/auth.types";
 import { toast } from "react-toastify";
 import { ROUTES } from "@/routes/routes";
+import { broadcastAuthEvent } from "@/utils/authSession";
 
 const useLogin = () => {
   const navigate = useNavigate();
@@ -31,6 +32,7 @@ const useLogin = () => {
 
         setToken(result.accessToken);
         setUser(result.user);
+        broadcastAuthEvent("login");
 
         return result;
       } catch (rawError) {
