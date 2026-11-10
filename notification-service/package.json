@@ -15,7 +15,8 @@
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",
     "db:deploy": "prisma migrate deploy",
-    "db:reset": "prisma migrate reset --force"
+    "db:reset": "prisma migrate reset --force",
+    "redrive:order-status-events": "node --import tsx src/scripts/redrive-order-status-events.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",
