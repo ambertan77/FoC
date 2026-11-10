@@ -10,6 +10,7 @@ import UserMenu from "./UserMenu";
 import CreditBalance from "./CreditBalance";
 import { ROLES } from "@/features/auth/types/auth.types";
 import { adminNavLinks, studentNavLinks } from "./navLinks";
+import { NotificationBell } from "@/features/notification/components/NotificationBell";
 
 const Navbar = () => {
     const { user, isAuthenticated } = useAuth();
@@ -48,10 +49,11 @@ const Navbar = () => {
                                         />
                                     </>
                                 )}
-
+                                {!isAdmin && <NotificationBell />}
                                 <UserMenu />
                             </div>
-                            <div className="ml-auto flex md:hidden">
+                            <div className="ml-auto flex items-center gap-1 md:hidden">
+                                {!isAdmin && <NotificationBell />}
                                 <MobileMenu links={navLinks} creditBalance={creditBalanceProps} />
                             </div>
                         </>
