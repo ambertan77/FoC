@@ -972,7 +972,7 @@ Entries 2–8 are retrospective feature declarations by **Duong Ngoc Mai**, reco
 - **Mode:** implementation assistance, declared retrospectively.
 - **Scope:** Supplier creation through the admin form and POST route, including required fields, supplier-type checks, duplicate-name checks and opening-hours persistence.
 - **Files:** relevant feature portions of the supplier feature files listed above, including the associated tests.
-- **Prompt / original response:** not retained because historical Codex data is periodically deleted to save device storage.
+- **Prompt (approx.):** "Implement admin supplier creation across the frontend and supplier-service. Build a form for supplier details, supplier type, location, image and opening hours. Add validation, an admin-only POST endpoint, duplicate-name and supplier-type checks, and database persistence. Follow the existing controller/service structure and include schema and service tests."
 - **Kept/changed:** Added the supplier creation form and client request, wired the admin POST route to the controller and service, and stored supplier details with opening hours. Included required-field validation, supplier-type checks, duplicate-name checks and related tests.
 - **Verification:** current source inspected for attribution scope; historical author review and test results not supplied. No runtime tests were run for this comments-and-documentation update.
 
@@ -984,7 +984,7 @@ Entries 2–8 are retrospective feature declarations by **Duong Ngoc Mai**, reco
 - **Mode:** implementation assistance, declared retrospectively.
 - **Scope:** Supplier editing through the admin form and PATCH route, including partial inputs, supplier-type and duplicate-name checks, and replacement of opening hours.
 - **Files:** relevant feature portions of the supplier feature files listed above, including the associated tests.
-- **Prompt / original response:** not retained because historical Codex data is periodically deleted to save device storage.
+- **Prompt (approx.):** "Reuse the supplier form for editing and prefill the existing values. Add a PATCH endpoint that updates only supplied fields and replaces opening hours when provided. Reject empty updates, invalid supplier types and names belonging to another supplier. Refresh the supplier list after saving and add tests for successful and invalid updates."
 - **Kept/changed:** Reused the supplier form for editing, populated it with the existing values and sent partial updates through the PATCH route. Updated only supplied fields, replaced opening hours when provided, and included checks for duplicate names, invalid types and empty updates.
 - **Verification:** current source inspected for attribution scope; historical author review and test results not supplied. No runtime tests were run for this comments-and-documentation update.
 
@@ -996,7 +996,7 @@ Entries 2–8 are retrospective feature declarations by **Duong Ngoc Mai**, reco
 - **Mode:** implementation assistance, declared retrospectively.
 - **Scope:** Admin status mutations, edit/status actions on supplier cards, confirmation dialogs and backend activation/deactivation handlers.
 - **Files:** relevant feature portions of the supplier feature files listed above, including the associated tests.
-- **Prompt / original response:** not retained because historical Codex data is periodically deleted to save device storage.
+- **Prompt (approx.):** "Allow admins to deactivate suppliers without deleting their records. Add a confirmation dialog, frontend API call and protected backend endpoint. Handle missing suppliers and repeated deactivation. Then add an Activate action for inactive suppliers, return an already-active supplier unchanged, and refresh the list after either action."
 - **Kept/changed:** Added admin activation and deactivation requests, status actions on supplier cards and confirmation dialogs. Updated the backend status handlers to handle missing suppliers, return an already-active supplier unchanged and reject repeated deactivation. Refreshed the supplier list after successful status changes.
 - **Verification:** current source inspected for attribution scope; historical author review and test results not supplied. No runtime tests were run for this comments-and-documentation update.
 
@@ -1008,7 +1008,7 @@ Entries 2–8 are retrospective feature declarations by **Duong Ngoc Mai**, reco
 - **Mode:** implementation assistance, declared retrospectively.
 - **Scope:** The legacy reserveCredits implementation, internal reservation create/lookup/abort handlers, input validation, service authentication and atomic available-to-reserved balance and ledger updates. The internal HTTP router is currently not mounted by src/index.ts. Active asynchronous reservation creation and renewal are outside this declaration.
 - **Files:** relevant feature portions of the credit feature files listed above, including the associated tests.
-- **Prompt / original response:** not retained because historical Codex data is periodically deleted to save device storage.
+- **Prompt (approx.):** "Implement the Credit Service reservation flow with internal create, lookup and abort endpoints protected by the Order–Credit service token. Validate UUIDs and positive integer amounts. Atomically move available credits into reserved credits and write a reservation ledger entry. Handle insufficient funds, conflicting requests, integer overflow and abort compensation. Include integration tests."
 - **Kept/changed:** Added the synchronous reservation service and internal create, lookup and abort routes, with UUID/amount validation and shared-secret authentication. Used a serializable transaction to move available credits into reserved credits and write the reservation ledger entry. Added balance checks and abort compensation. The internal router remains disabled in the current service entry point.
 - **Verification:** current source inspected for attribution scope; historical author review and test results not supplied. No runtime tests were run for this comments-and-documentation update.
 
@@ -1020,7 +1020,7 @@ Entries 2–8 are retrospective feature declarations by **Duong Ngoc Mai**, reco
 - **Mode:** implementation assistance, declared retrospectively.
 - **Scope:** transferCredits and ORDER_RECEIVED validation/dispatch, transferring reserved requester credits to the courier, paired ledger entries, settlement state and replay checks.
 - **Files:** relevant feature portions of the credit feature files listed above, including the associated tests.
-- **Prompt / original response:** not retained because historical Codex data is periodically deleted to save device storage.
+- **Prompt (approx.):** "Implement settlement when an ORDER_RECEIVED event arrives. Validate the event and reservation, deduct the requester's reserved credits and credit the courier in one transaction. Write paired ledger entries and mark the reservation transferred. Prevent self-transfers and duplicate settlement, reject altered replays, and add RabbitMQ retry/dead-letter handling, a redrive script and integration tests."
 - **Kept/changed:** Added ORDER_RECEIVED validation and dispatch to transferCredits. Updated the requester's reserved balance and courier's available balance in one transaction, recorded paired ledger entries and marked the reservation as transferred. Included identity/amount checks, self-transfer rejection and replay handling.
 - **Verification:** current source inspected for attribution scope; historical author review and test results not supplied. No runtime tests were run for this comments-and-documentation update.
 
@@ -1032,7 +1032,7 @@ Entries 2–8 are retrospective feature declarations by **Duong Ngoc Mai**, reco
 - **Mode:** implementation assistance, declared retrospectively.
 - **Scope:** releaseCredits for ORDER_CANCELED and ORDER_EXPIRED, returning reserved credits to the requester, release ledger entries and replay checks; legacy creation-abort compensation is covered with synchronous reservations.
 - **Files:** relevant feature portions of the credit feature files listed above, including the associated tests.
-- **Prompt / original response:** not retained because historical Codex data is periodically deleted to save device storage.
+- **Prompt (approx.):** "Extend settlement to handle ORDER_CANCELED and ORDER_EXPIRED. Return the reserved amount to the requester's available balance, write a release ledger entry and record the settlement reason. Reuse the existing transaction and replay checks. Update routing, event schemas, redrive support and tests so repeated events cannot release credits twice."
 - **Kept/changed:** Added ORDER_CANCELED and ORDER_EXPIRED handling through releaseCredits. Returned reserved credits to the requester's available balance, recorded a release ledger entry and saved the release reason. Reused the shared settlement transaction and included checks for mismatched or repeated events.
 - **Verification:** current source inspected for attribution scope; historical author review and test results not supplied. No runtime tests were run for this comments-and-documentation update.
 
@@ -1044,7 +1044,7 @@ Entries 2–8 are retrospective feature declarations by **Duong Ngoc Mai**, reco
 - **Mode:** implementation assistance, declared retrospectively.
 - **Scope:** refundCredits for ORDER_FAILED, returning reserved credits to the requester, refund ledger entries, settlement state and replay checks.
 - **Files:** relevant feature portions of the credit feature files listed above, including the associated tests.
-- **Prompt / original response:** not retained because historical Codex data is periodically deleted to save device storage.
+- **Prompt (approx.):** "Add ORDER_FAILED handling to the credit settlement flow. Return held credits to the requester, record a REFUND transaction and mark the reservation REFUNDED. Validate the reservation identifiers and amount, make repeated delivery safe, and reject conflicting settlement events. Update the consumer routing, schemas, documentation and integration tests."
 - **Kept/changed:** Added ORDER_FAILED handling through refundCredits. Returned reserved credits to the requester's available balance, recorded a refund ledger entry and marked the reservation as refunded. Reused the shared settlement validation, transaction and replay checks, with related regression tests.
 - **Verification:** current source inspected for attribution scope; historical author review and test results not supplied. No runtime tests were run for this comments-and-documentation update.
 
