@@ -259,7 +259,7 @@ test("fetchAllSuppliers can execute even with no pagination and filters", async 
         countReturn: 2,
     });
 
-    const result = await fetchAllSuppliers();
+    const result = await fetchAllSuppliers("ALL");
     const expectedPaginationResult = {
         limit: null,
         page: null,
@@ -286,7 +286,7 @@ test("fetchAllSuppliers can execute with pagination and filters used", async (t)
         countReturn: 2,
     });
 
-    const result = await fetchAllSuppliers(1, "starbucks", "FOOD");
+    const result = await fetchAllSuppliers("ALL", 1, "starbucks", "FOOD");
     const expectedPaginationResult = {
         limit: 15,
         page: 1,
@@ -315,7 +315,7 @@ test("fetchAllSuppliers accepts typeFilter 'all' and returns all possible types"
         countReturn: 1,
     });
 
-    await fetchAllSuppliers(1, null, "ALL"); // "all" should be case-insensitive
+    await fetchAllSuppliers("ALL", 1, null, "ALL"); // "all" should be case-insensitive
 
     assert.equal((captured.findManyArgs as FindManyArgs).where.type.contains, ""); // no type filter
 
@@ -328,7 +328,7 @@ test("fetchAllSuppliers returns 400 when value in the page parameter > the total
     const { calls, captured } = useSharedMockPrisma(t, { findManyReturn: [] });
 
     await assert.rejects(
-        () => fetchAllSuppliers(5),
+        () => fetchAllSuppliers("ALL", 5),
         (error: unknown) => {
             assert.ok(error instanceof AppError);
             assert.equal(error.statusCode, 400);
@@ -347,7 +347,7 @@ test("fetchAllSuppliers returns 400 when there is no match", async (t) => {
     const { calls } = useSharedMockPrisma(t, { findManyReturn: [] });
 
     await assert.rejects(
-        () => fetchAllSuppliers(1, "random_prefix", "FOOD"),
+        () => fetchAllSuppliers("ALL", 1, "random_prefix", "FOOD"),
         (error: unknown) => {
             assert.ok(error instanceof AppError);
             assert.equal(error.statusCode, 400);

@@ -24,7 +24,7 @@ export async function getSuppliers(req: Request, res: Response) {
         throw new AppError("Parameters not input correctly", 400);
     }
 
-    const suppliers = await fetchAllSuppliers(query.data.page, query.data.searchString, query.data.typeFilter);
+    const suppliers = await fetchAllSuppliers(query.data.status, query.data.page, query.data.searchString, query.data.typeFilter);
 
     return res.status(200).json({
         success: true,

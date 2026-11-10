@@ -36,11 +36,11 @@ const AppRouter = () => {
                             <Route element={<AppLayout />}>
                                 <Route element={<RoleRoute allowedRoles={[ROLES.STUDENT, ROLES.ADMIN]} />}>
                                     <Route path={ROUTES.HOME} element={<HomePage />} />
-                                    <Route path={ROUTES.SUPPLIERS} element={<SupplierPage />} />
                                     <Route path={ROUTES.PROFILE} element={<ProfilePage />} />
                                 </Route>
 
                                 <Route element={<RoleRoute allowedRoles={[ROLES.STUDENT]} />}>
+                                    <Route path={ROUTES.SUPPLIERS} element={<SupplierPage />} />
                                     <Route path={ROUTES.CREDITS} element={<CreditsPage />} />
                                 </Route>
 

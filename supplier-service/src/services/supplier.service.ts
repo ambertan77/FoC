@@ -6,7 +6,7 @@
 
 import { AppError } from "../errors/errors.js";
 import type { Prisma, PrismaClient } from "../generated/prisma/client.js";
-import type { Day } from "../generated/prisma/enums.js";
+import type { Day, SupplierStatus } from "../generated/prisma/enums.js";
 import { prisma } from "../libs/prisma.js";
 import type { CreateSupplierInput, OpeningHoursInput, UpdateSupplierInput } from "../schemas/supplier.schema.js";
 
@@ -84,9 +84,10 @@ async function findSupplierByName(
 // supplier service functions
 
 // Conditional spread for take and skip (lines 106-109) were implemented by Claude Code; reviewed, edited and tested by Amber Tan Junning
-export async function fetchAllSuppliers(page?: number, searchString?: string | null, typeFilter?: string | null) {
+export async function fetchAllSuppliers(status?: string, page?: number, searchString?: string | null, typeFilter?: string | null) {
     const search = searchString ?? "";
     let type = "";
+    const supplierStatus = status === "ALL" ? undefined : status as SupplierStatus | undefined;
     if (typeFilter && typeFilter.toLowerCase() !== "all") {
         type = typeFilter;
     }
@@ -96,6 +97,12 @@ export async function fetchAllSuppliers(page?: number, searchString?: string | n
                 contains: search, // enforce partial string match
                 mode: 'insensitive', // enforce case insensitivity
             },
+            ...(supplierStatus 
+                ? {
+                    status: supplierStatus
+                }
+                : {}
+            ),
             type: {
                 contains: type, // should return all types if typeFilter is empty
                 mode: 'insensitive',
@@ -119,6 +126,12 @@ export async function fetchAllSuppliers(page?: number, searchString?: string | n
                 contains: search, // enforce partial string match
                 mode: 'insensitive', // enforce case insensitivity
             },
+            ...(supplierStatus 
+                ? {
+                    status: supplierStatus
+                }
+                : {}
+            ),
             type: {
                 contains: type, // should return all types if typeFilter is empty
                 mode: 'insensitive',
