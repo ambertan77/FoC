@@ -6,6 +6,14 @@ Scope: Audited against the code; rewrote the API reference to match the current 
 Author review: Reviewed and edited by Lim Shao Qi.
 -->
 
+<!--
+AI Assistance Disclosure:
+Tool: Claude Code (Claude Opus 5.5)
+Date: 2026-11-11
+Scope: Audited against the code; added LOG_LEVEL and the logger to the environment and project structure sections.
+Author review: Reviewed and edited by Lim Shao Qi.
+-->
+
 # User Service
 
 ## Table of Contents
@@ -191,8 +199,8 @@ user-service/
 │   ├── controllers/
 │   ├── errors/          # AppError and default error codes
 │   ├── generated/       # Prisma client (generated, git-ignored)
-│   ├── libs/            # Tokens, cookies, email, Prisma, RabbitMQ
-│   ├── middlewares/     # authenticate, authorize, error handler
+│   ├── libs/            # Tokens, cookies, email, logger, Prisma, RabbitMQ
+│   ├── middlewares/     # authenticate, authorize, request logger, error handler
 │   ├── routes/
 │   ├── schemas/         # Zod request schemas
 │   ├── services/        # Business logic, outbox publisher, admin bootstrap
@@ -982,6 +990,7 @@ Variable                       | Required | Description
 `BOOTSTRAP_ADMIN_USERNAME`     | No       | First-admin bootstrap
 `BOOTSTRAP_ADMIN_PHONE_NUMBER` | No       | First-admin bootstrap
 `BOOTSTRAP_ADMIN_PASSWORD`     | No       | First-admin bootstrap
+`LOG_LEVEL`                    | No       | Log level (`debug`, `info`, `warn`, `error`). Defaults to `info`
 `USER_POSTGRES_DB`             | Compose  | Database name for the `user-postgres` container
 `USER_POSTGRES_USER`           | Compose  | Database user for the `user-postgres` container
 `USER_POSTGRES_PASSWORD`       | Compose  | Database password for the `user-postgres` container. Use a URL-safe value

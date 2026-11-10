@@ -4,6 +4,12 @@ Date: 2026-11-06
 Scope: Audited README and suggested changes to keep documentation up-to-date. 
 Author review: Reviewed and edited by Amber Tan Junning. -->
 
+<!-- AI Assistance Disclosure:
+Tool: Claude Code (Claude Opus 5.5)
+Date: 2026-11-11
+Scope: Audited against the code; fixed the setup commands, key mount, internal endpoint response, environment variables, response examples, test list, project structure and typos.
+Author review: Reviewed and edited by Lim Shao Qi. -->
+
 # Supplier Service
 
 ## Table of Contents
@@ -26,7 +32,7 @@ The Supplier Service is responsible for managing suppliers and supplier types fo
 ### Supplier Management
 
 - View suppliers (active and all) with pagination, search, and type filtering.
-- Create, update, active and deactivate suppliers.
+- Create, update, activate and deactivate suppliers.
 - Upload supplier images.
 - Seed initial supplier data.
 
@@ -104,7 +110,7 @@ The Supplier Service is one of the backend microservices in Aaron.
 
 The Supplier Service has its own PostgreSQL database.
 
-```test
+```text
 Supplier Service
      │
      ▼
@@ -127,34 +133,36 @@ Other microservices do not directly access the Supplier Service's database. All 
 supplier-service/
 ├── prisma/
 │   ├── migrations/
-│   └── schema.prisma
+│   ├── schema.prisma
+│   └── seed.ts
 │
 ├── src/
 │   ├── config/
 │   ├── constants/
 │   ├── controllers/
 │   ├── errors/
+│   ├── generated/      # Prisma client (generated, git-ignored)
 │   ├── libs/
-│   ├── middlewares/
+│   ├── middleware/
 │   ├── routes/
 │   ├── schemas/
 │   ├── services/
 │   ├── types/
 │   └── index.ts
 │
-├── keys/
+├── keys/               # public.pem (git-ignored)
 ├── .dockerignore
 ├── .env
 ├── .env.example
 ├── .gitignore
-|── AGENTS.md
-|── compose.yaml
-|── docker-entrypoint.sh
-|── Dockerfile
-|── package-lock.json
+├── AGENTS.md
+├── compose.yaml
+├── docker-entrypoint.sh
+├── Dockerfile
+├── package-lock.json
 ├── package.json
 ├── prisma.config.ts
-|── README.md
+├── README.md
 └── tsconfig.json
 ```
 
@@ -186,7 +194,7 @@ Pagination is an option for querying suppliers. If the entire list of suppliers 
 
 1. have a name that contains the searchString (case-insensitive)
 2. have a supplier type that is equal to `typeFilter`
-3. after filtering for supplier records that fulfil conditions (1) and (2) and sorting these records in alphabetical (case-sensitive) order, supplier records returned are the first `{1+15*<page_number-1>}`th to `{15*<page_number>}`th records if pagination is required, or a list of al the records if pagination is not required.
+3. after filtering for supplier records that fulfil conditions (1) and (2) and sorting these records in alphabetical (case-sensitive) order, supplier records returned are the first `{1+15*<page_number-1>}`th to `{15*<page_number>}`th records if pagination is required, or a list of all the records if pagination is not required.
 
 Example request URL:
 ```{base_url}/api/suppliers/?page=2&typeFilter=FOOD```
@@ -198,6 +206,7 @@ Example response for data:
     "data": {
         "suppliers": [ <supplier data> ],
         "pagination": {
+            "paginated": true,
             "limit": 15,
             "page": 2,
             "totalCount": 40,
@@ -274,21 +283,21 @@ Request body:
 Status | Description
 ------ | ----------------------------------------------------------------
 `201`  | Supplier successfully created
-`400`  | Invalid request data
+`422`  | Invalid request body (`UNPROCESSABLE_ENTITY`)
 `409`  | Supplier with the same (case-insensitive) name already exists
 
 ### Update supplier (`PATCH /api/suppliers/:supplierId`)
 
 Partial body using the same fields as create. Only provided fields are
 changed. If `openingHours` is provided, the supplier's existing hours are
-replaced. An empty body is rejected (`400`).
+replaced. An empty body is rejected (`422`).
 
 #### Possible Responses
 
 Status | Description
 ------ | ----------------------------------------------------------------------
 `200`  | Supplier successfully updated
-`400`  | Invalid request data 
+`422`  | Invalid request body (`UNPROCESSABLE_ENTITY`)
 `404`  | Supplier with the specified supplierId not found
 `409`  | New supplier name given conflicts with an existing supplier's name 
 
@@ -383,7 +392,7 @@ The supplier type to be deleted must be an existing supplier type, if not, the a
 
 Status | Description
 ------ | ----------------------------------------------------------------------
-`200`  | New supplier type successfully created
+`200`  | Supplier type successfully deleted
 `403`  | Supplier type to be deleted has associated supplier records
 `404`  | No supplier type with the given typeId exists
 
@@ -402,13 +411,13 @@ Query a single supplier by its ID.
 Example request URL:
 ```{base_url}/api/internal/suppliers/1```
 
-Example response for data:
+Example response:
 
 ```json
 {
-    "data": {
-        "supplier": [ <supplier data> ]
-    }
+    "success": true,
+    "message": "Supplier fetched successfully",
+    "data": { <supplier data> }
 }
 ```
 
@@ -440,7 +449,7 @@ Under `storage.ts`, a storage interface is implemented by two classes, `S3Storag
 
 `S3Storage` is the storage class that will be used when the application is deployed on cloud. All seeded images and image uploads have a dedicated image bucket on AWS S3. 
 
-When this application is ran on localhost, `LocalStorage` is the storage class used. When an uploaded supplier image is requested, the request is passed from nginx to supplier service, before being served. 
+When this application is run on localhost, `LocalStorage` is the storage class used. When an uploaded supplier image is requested, the request is passed from nginx to supplier service, before being served. 
 
 ### Uploading Images
 
@@ -485,7 +494,7 @@ Create a `.env` file in the root of the Supplier Service and fill in the require
 `JWT_PUBLIC_KEY_PATH` | Path to the RSA public key used to verify access tokens
 `STORAGE` | Required, `local` or `s3`. Where uploaded images are stored: `local` saves them to disk (`supplier-service/uploads/`), `s3` uses foc's AWS S3 image bucket
 `ASSETS_PUBLIC_URL` | Base URL of all returned image URLs
-`S3_BUCKET` | Required variable when `STORAGE=s3`. Name of the images bucket in AWS S3.
+`S3_BUCKET` | Required variable when `STORAGE=s3`. Name of the images bucket in AWS S3. Not in `.env.example`; add it when using S3.
 `AWS_REGION` | Required variable when `STORAGE=s3`. Region of the images bucket in AWS S3.
 `ORDER_SUPPLIER_SERVICE_TOKEN` | Shared secret for internal communication between the Order Service and Supplier Service
 
@@ -500,11 +509,13 @@ cd supplier-service
 npm ci
 ```
 
-Apply the database migrations and generate the Prisma client:
+Apply the database migrations, generate the Prisma client, then seed the
+database. The seed script imports the generated client, so generate first:
 
 ```sh
-npm run db:deploy
+npx prisma migrate deploy
 npm run db:generate
+npx prisma db seed
 ```
 
 To inspect the database schema, run:
@@ -527,16 +538,20 @@ npm test
 ```
 
 - `src/schemas/supplier.schema.test.ts` — Zod schema validation + `parseInput` error mapping.
+- `src/schemas/supplier.type.schema.test.ts` — supplier type schema validation.
 - `src/services/supplier.service.test.ts` — create/update/deactivate logic driven by an in-memory fake Prisma client (no database needed).
+- `src/services/supplier.type.service.test.ts` — supplier type create/delete/count logic.
+- `src/services/supplier.asset.service.test.ts` — image upload logic.
+- `src/routes/supplier.route.test.ts` — route wiring, authentication and authorization.
 
 ### Docker
 
 The root `compose.yaml` includes this folder's `compose.yaml`, which defines two containers:
 
-- **`supplier-service`:** built from the `Dockerfile` (Node.js 22 Alpine). It mounts `../user-service/keys/public.pem` read-only at `JWT_PUBLIC_KEY_PATH`, so create the user-service keys first. `docker-entrypoint.sh` runs `prisma migrate deploy` and then starts `dist/index.js`. The API port isn't published to the host. In the root stack, reach it through the frontend at `http://localhost:5173/api/suppliers/...`.
+- **`supplier-service`:** built from the `Dockerfile` (Node.js 22 Alpine). It mounts its own `./keys/public.pem` read-only at `/app/keys/public.pem`, so copy `user-service/keys/public.pem` into `supplier-service/keys/` first. It also mounts `../data/csv` read-only for the seed data. `docker-entrypoint.sh` runs `prisma migrate deploy`, then `prisma db seed`, and then starts `dist/index.js`. The API port isn't published to the host. In the root stack, reach it through the frontend at `http://localhost:5173/api/suppliers/...`.
 - **`supplier-postgres`:** PostgreSQL 17 with a health check. The service waits until it is healthy.
 
-The `127.0.0.1:5433` Postgres port mapping only works when you run this folder's compose on its own, for example `docker compose up -d supplier-postgres` to use with `npm run dev`. In the root stack, the database is on an internal network and isn't reachable from the host. Use `docker compose exec supplier-postgres psql -U <POSTGRES_USER> <POSTGRES_PASSWORD>` instead.
+The `127.0.0.1:5433` Postgres port mapping only works when you run this folder's compose on its own, for example `docker compose up -d supplier-postgres` to use with `npm run dev`. In the root stack, the database is on an internal network and isn't reachable from the host. Use `docker compose exec supplier-postgres psql -U <POSTGRES_USER> suppliers` instead.
 
 ## Acknowledgements
 

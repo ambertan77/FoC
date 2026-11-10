@@ -4,6 +4,12 @@ Date: 2026-10-23
 Scope: Checked accuracy of documentation related to outbox messages and containerization, and suggested edits to better improve documentation. 
 Author review: Reviewed and edited by Amber Tan Junning. -->
 
+<!-- AI Assistance Disclosure:
+Tool: Claude Code (Claude Opus 5.5)
+Date: 2026-11-11
+Scope: Audited against the code; corrected API response messages, status codes and examples, the redrive dependencies, the environment table, the project structure and typos.
+Author review: Reviewed and edited by Lim Shao Qi. -->
+
 # Order Service
 
 ## Table of Contents
@@ -55,7 +61,7 @@ In the Order Service, there are two main roles: Requester (user who created an o
 
 ### Real-Time Notifications
 
-- Notify requesters and couriers of order status changes in real time using Server-Sent Events (SSE)
+- Publish an `ORDER_STATUS_CHANGED` event on every status change. Notification Service turns it into real-time Server-Sent Events (SSE) for requesters and couriers
 
 ## Order Lifecycle
 
@@ -68,9 +74,9 @@ In the Order Service, there are two main roles: Requester (user who created an o
 | From | Action and Conditions | To | Changed By | Trigger and Credit Operation |
 | --- | --- | --- | --- | --- |
 | NULL | Request is valid, expiry date in the future, pickup and delivery suppliers exist. | PENDING_RESERVATION | Requester ID | Request is submitted. Order Service creates the order, history row, and `RESERVE_CREDITS` outbox row in one transaction. Credit reservation happens asynchronously. |
-| PENDING_RESERVATION | Credit Service successfully reserves the requested credits. | OPEN | NULL (system) | Credit Service publishes an `CREDIT_RESERVATION_SUCCEEDED` outbox event. Order Service consumes it, records the reservation ID, and records the status change. |
-| PENDING_RESERVATION | Credit Service cannot reserve the requested credits. | RESERVATION_FAILED | NULL (system) | Credit Service publishes an `CREDIT_RESERVATION_FAILED` outbox event. Order Service consumes it and updates the order to `RESERVATION_FAILED`. No credits are reserved. |
-| OPEN | Requester owns the request, no courier is assigned, supplies exits, expected version matches, editable fields are valid, order must be in OPEN status. | OPEN | Requester ID | Requester updates the request. Offered credits cannot be changed after it is created. No change to credit reservations. |
+| PENDING_RESERVATION | Credit Service successfully reserves the requested credits. | OPEN | NULL (system) | Credit Service publishes a `CREDIT_RESERVATION_SUCCEEDED` outbox event. Order Service consumes it, records the reservation ID, and records the status change. |
+| PENDING_RESERVATION | Credit Service cannot reserve the requested credits. | RESERVATION_FAILED | NULL (system) | Credit Service publishes a `CREDIT_RESERVATION_FAILED` outbox event. Order Service consumes it and updates the order to `RESERVATION_FAILED`. No credits are reserved. |
+| OPEN | Requester owns the request, no courier is assigned, suppliers exist, expected version matches, editable fields are valid, order must be in OPEN status. | OPEN | Requester ID | Requester updates the request. Offered credits cannot be changed after it is created. No change to credit reservations. |
 | OPEN | No courier assigned, the user is not the requester, order has not expired, order must be in OPEN status. | ACCEPTED | Courier ID | Courier accepts the request. No change in credit reservations. |
 | ACCEPTED | The user is the assigned courier,  order has not expired, order must be in ACCEPTED status. | OPEN | Courier ID | Courier drops the request. No change in credit reservations. |
 | ACCEPTED | The user is the assigned courier,  order has not expired, order must be in ACCEPTED status. | PICKED_UP | Courier ID | Courier picks up the item. No change in credit reservations. |
@@ -81,8 +87,8 @@ In the Order Service, there are two main roles: Requester (user who created an o
 | OPEN | The order belongs to the requester, order must be in OPEN status, no courier is assigned, credit reservationId must exist, expected version matches. | CANCELED | Requester ID | Requester cancels the request. Order Service publishes an `ORDER_CANCELED` outbox event, triggering the credit service to release the reservation. |
 | OPEN | The order must be in OPEN status, no courier has accepted it and expiryAt has passed. | EXPIRED | NULL (system) | The system’s expiry worker automatically expires the request. The expiry worker polls every 1 minute to check if any order has expired, and updates the order status accordingly. Order Service publishes an `ORDER_EXPIRED` outbox event, triggering the credit service to release the reservation. |
 | EXPIRED | The order belongs to the requester, order must be in EXPIRED status, credit reservationId must exist, expiry date in the future, expected version matches. | EXPIRED | Requester ID | Requester requests renewal. Order Service set `renewalPending` to true and publishes a new `RESERVE_CREDITS` outbox event. Credit Service attempts to create a new reservation. The existing expired status is retained while the reservation is pending. |
-| EXPIRED | Credit Service successfully reserves the credits for the renewal attempt. | OPEN | NULL (system) | Credit Service publishes an `CREDIT_RESERVATION_SUCCEEDED` outbox event. Order Service consumes it, records the new reservation ID, updates the expiry date, and reopens the order. |
-| EXPIRED | Credit Service cannot reserve the credits for the renewal attempt. | EXPIRED | NULL (system) | Credit Service publishes an `CREDIT_RESERVATION_FAILED` outbox event. Order Service consumes it, sets `renewalPending` to false and stores the renewal failure code. The order remains expired. |
+| EXPIRED | Credit Service successfully reserves the credits for the renewal attempt. | OPEN | NULL (system) | Credit Service publishes a `CREDIT_RESERVATION_SUCCEEDED` outbox event. Order Service consumes it, records the new reservation ID, updates the expiry date, and reopens the order. |
+| EXPIRED | Credit Service cannot reserve the credits for the renewal attempt. | EXPIRED | NULL (system) | Credit Service publishes a `CREDIT_RESERVATION_FAILED` outbox event. Order Service consumes it, sets `renewalPending` to false and stores the renewal failure code. The order remains expired. |
 | ACCEPTED | The order must be in ACCEPTED status, a courier must be assigned, and the expiry date has passed. | AUTO_FAILED | NULL (system) | The system’s expiry worker automatically fails the request. The expiry worker polls every 1 minute to check if any order has expired, and updates the order status accordingly. Order Service publishes an `ORDER_FAILED` outbox event, triggering the credit service to refund the reservation. |
 | PICKED_UP | The order must be in PICKED_UP status, a courier must be assigned, and the expiry date has passed. | AUTO_FAILED | NULL (system) | The system’s expiry worker automatically fails the request. The expiry worker polls every 1 minute to check if any order has expired, and updates the order status accordingly. Order Service publishes an `ORDER_FAILED` outbox event, triggering the credit service to refund the reservation. |
 
@@ -145,7 +151,7 @@ The create API response means that the order was submitted. Its initial status i
 
 ### Renewing an Expired Order
 
-When a requester renews an expired order, the Order Service validates the new expiry time and expected version. It then sets `renewalPending` and writes a `RESERVE_CREDITS`command with request type `RENEW` to its outbox. It uses the same exchange and routing key as a create request. The order stays `EXPIRED` while the Credit Service processes the request.
+When a requester renews an expired order, the Order Service validates the new expiry time and expected version. It then sets `renewalPending` and writes a `RESERVE_CREDITS` command with request type `RENEW` to its outbox. It uses the same exchange and routing key as a create request. The order stays `EXPIRED` while the Credit Service processes the request.
 
 - On success, the Order Service saves the new reservation ID and expiry time, clears `renewalPending`, and changes the order from `EXPIRED` to `OPEN`.
 - On failure, the order stays `EXPIRED`; the Order Service clears `renewalPending` and records the renewal failure code.
@@ -211,7 +217,7 @@ This prevents concurrent publishers from doing the same work, but it cannot guar
 
 Order Service publishes to the durable exchanges `credit.commands` (direct) and `order.events` (topic), and consumes from `credit.events` (topic). Each publishing service owns its exchange. Exchange names are not versioned; routing keys and queue names carry `.v1`.
 
-Order Service declares the Credit Service owned queues that it publishes to, so a `mandatory` publish is not returned as unroutable when Credit Service has not started yet. Keep these definitions identical to Credit Service, or startup fails with `PRECONDITION_FAILED`.
+Order Service declares the Credit Service and Notification Service owned queues that it publishes to, so a `mandatory` publish is not returned as unroutable when those services have not started yet. Keep these definitions identical to the consuming services, or startup fails with `PRECONDITION_FAILED`.
 
 | Published by Order | Exchange | Routing key | Consumer | Queue (declared by both) |
 | --- | --- | --- | --- | --- |
@@ -253,7 +259,11 @@ Stop Order Service while keeping RabbitMQ running, then run one redrive command 
 | Credit reservation results | `order.credit-events.dead.v1` | `npm run redrive:credit-reservation-results -- --limit 10` |
 | Order outbox (`DEAD` rows) | database | `npm run redrive:order-outbox -- --limit 10` |
 
-Redrive means sending a dead-letter message back for another processing attempt. The command only needs `RABBITMQ_URL`; it does not start Prisma or the HTTP server. It processes the oldest available dead letters and stops at the requested limit or the number of ready messages counted at startup, whichever is smaller. Restart order-service afterward. Keeping its consumer paused prevents a still-failing event from returning to the dead-letter queue in the same run.
+Redrive means sending a dead-letter message back for another processing attempt.
+
+`redrive:order-outbox` only touches the database: it resets `DEAD` outbox rows so the running outbox publisher sends them again. It uses Prisma and needs `DATABASE_URL` and the other startup variables.
+
+`redrive:credit-reservation-results` only needs `RABBITMQ_URL`; it does not start Prisma or the HTTP server. It processes the oldest available dead letters and stops at the requested limit or the number of ready messages counted at startup, whichever is smaller. Restart order-service afterward. Keeping its consumer paused prevents a still-failing event from returning to the dead-letter queue in the same run.
 
 For each message, it:
 
@@ -286,9 +296,9 @@ The worker polls every minute and runs immediately when the service starts. It i
 
 ### Order Receipt Worker
 
-A requester is expected to confirm the status of his/her order 30 minutes after the courier has marked the order as `COMPLETED`. If no confirmation has been received by the system, order service treats the order as one that was successfully received by the requester. This ensures all orders reach a terminal state and consequently, prevents credits from being held indefinitely in the requester's reserve wallet.
+A requester is expected to confirm the status of their order 30 minutes after the courier has marked the order as `COMPLETED`. If no confirmation has been received by the system, order service treats the order as one that was successfully received by the requester. This ensures all orders reach a terminal state and consequently, prevents credits from being held indefinitely in the requester's reserve wallet.
 
-The worker polls every minute and runs immediately when the service starts. At every minute, the worker first finds candidate orders to be updated, i.e. orders that are in the `COMPLETED` stage but more than 30 minutes have passed since the time recorded in the order's `completedAt` field. Then, it updates each order as `AUTO_RECEIVED` and create an `ORDER_RECEIVED` event. The worker also records a status-history entry and creates the corresponding outbox event in the same database transaction. It is stopped during graceful service shutdowns.
+The worker polls every minute and runs immediately when the service starts. At every minute, the worker first finds candidate orders to be updated, i.e. orders that are in the `COMPLETED` stage but more than 30 minutes have passed since the time recorded in the order's `completedAt` field. Then, it updates each order as `AUTO_RECEIVED` and creates an `ORDER_RECEIVED` event. The worker also records a status-history entry and creates the corresponding outbox event in the same database transaction. It is stopped during graceful service shutdowns.
 
 ## Tech Stack
 
@@ -400,7 +410,7 @@ order-service/
 │   ├── errors/
 │   ├── integrations/
 │   ├── libs/
-│   ├── middlewares/
+│   ├── middleware/
 │   ├── routes/
 │   ├── schemas/
 │   ├── scripts/
@@ -409,19 +419,20 @@ order-service/
 │   ├── workers/
 │   └── index.ts
 │
+├── documentation/      # Order lifecycle diagram
 ├── keys/
 ├── .dockerignore
 ├── .env
 ├── .env.example
 ├── .gitignore
-|── AGENTS.md
-|── compose.yaml
-|── docker-entrypoint.sh
-|── Dockerfile
-|── package-lock.json
+├── AGENTS.md
+├── compose.yaml
+├── docker-entrypoint.sh
+├── Dockerfile
+├── package-lock.json
 ├── package.json
 ├── prisma.config.ts
-|── README.md
+├── README.md
 └── tsconfig.json
 ```
 
@@ -431,20 +442,20 @@ order-service/
 
 | Method | Route                             | Access Control         | Description                                            |
 |--------|-----------------------------------|------------------------|--------------------------------------------------------|
-| GET    | /api/orders                       | Authenticated users    | Gets all OPEN orders not posted by the caller          |
+| GET    | /api/orders                       | Authenticated users    | Gets all OPEN orders not posted by the caller           |
 | POST   | /api/orders                       | Authenticated students | Create a new order                                     |
 | GET    | /api/orders/me/requester          | Authenticated students | Gets all requests made by the authenticated requester  |
 | GET    | /api/orders/me/courier            | Authenticated students | Gets all requests made by the authenticated courier    |
 | PATCH  | /api/orders/:orderId              | Authenticated students | Update an existing order                               |
 | GET    | /api/orders/all                   | Authenticated admins   | Gets all orders posted by any user                     |
 | POST   | /api/orders/:orderId/cancellation | Authenticated students | Requester cancels a specified open order               |
-| POST   | /api/orders/:orderId/receipt      | Authenticated students | Requester marks a specfied completed order as received |
+| POST   | /api/orders/:orderId/receipt      | Authenticated students | Requester marks a specified completed order as received |
 | POST   | /api/orders/:orderId/failure      | Authenticated students | Requester marks a specified completed order as failed  |
 | POST   | /api/orders/:orderId/renewal      | Authenticated students | Requester renews a specified expired order             |
 | POST   | /api/orders/:orderId/acceptance   | Authenticated students | Courier accepts a specified open order                 |
 | DELETE | /api/orders/:orderId/acceptance   | Authenticated students | Courier drops a specified accepted order               |
 | POST   | /api/orders/:orderId/pickup       | Authenticated students | Courier marks a specified accepted order as picked up   |
-| POST   | /api/orders/:orderId/completion   | Authenticated students | Courier marks a specified picked-up orderas completed  |
+| POST   | /api/orders/:orderId/completion   | Authenticated students | Courier marks a specified picked-up order as completed |
 
 --------------------------------------------------------------------------------
 
@@ -452,7 +463,7 @@ order-service/
 
 Gets all OPEN orders not posted by the caller. The user can further specify the following:
 
-- `page` (page number): server-side pagination is applied, default to `1`
+- `page` (page number, required): server-side pagination is applied
 - `sortBy`: category (either `offeredCredits` or `expiryAt`) to sort the records by, default to `expiryAt`
 - `sortOrder`: order to sort the records by, default to `asc`
 - `filterLocation`: location that the pickup supplier or delivery supplier must be
@@ -473,7 +484,7 @@ Authorization: Bearer <access-token>
 ```json
 {
     "success": true,
-    "message": "Requester order history retrieved successfully",
+    "message": "0 orders on page 1 retrieved",
     "data": {
         "orders": [ <full order information of all OPEN orders not posted by the caller> ],
         "pagination": {
@@ -532,7 +543,7 @@ Authorization: Bearer <access-token>
 
 Status | Description
 ------ | -----------------------------------------------
-`200`  | Orders successfully queried
+`201`  | Order successfully created
 `400`  | Invalid request data
 `404`  | Invalid supplier id
 `500`  | Internal server error
@@ -644,7 +655,7 @@ Authorization: Bearer <access-token>
 ```json
 {
     "success": true,
-    "message": "Order created successfully",
+    "message": "Order updated successfully",
     "data": { <full order information of the updated order> }
 }
 ```
@@ -653,7 +664,7 @@ Authorization: Bearer <access-token>
 
 Status | Description
 ------ | -----------------------------------------------
-`200`  | Orders successfully queried
+`200`  | Order successfully updated
 `400`  | Invalid request data
 `404`  | Invalid orderId specified
 `500`  | Internal server error
@@ -690,15 +701,16 @@ Authorization: Bearer <access-token>
 ```json
 {
     "success": true,
-    "message": "5 orders on page 1 retrieved",
+    "message": "1 orders on page 1 retrieved",
     "data": {
-        [ <list of orders retrieved> ],
+        "orders": [ <list of orders retrieved> ],
         "pagination": {
             "limit": 15,
             "page": 1,
             "totalCount": 1,
-            "totalPages": 1,
-    },
+            "totalPages": 1
+        }
+    }
 }
 ```
 
@@ -708,7 +720,7 @@ Status | Description
 ------ | -----------------------------------------------
 `200`  | Orders successfully queried
 `400`  | Invalid request data
-`404`  | Invalid orderId specified
+`403`  | Caller is not an admin
 `500`  | Internal server error
 
 --------------------------------------------------------------------------------
@@ -744,7 +756,7 @@ Authorization: Bearer <access-token>
 
 Status | Description
 ------ | ------------------------------------------------------------
-`200`  | Orders successfully queried
+`200`  | Order successfully canceled
 `400`  | Invalid request data
 `404`  | Invalid orderId specified
 `409`  | Order does not satisfy conditions for it to be cancelled
@@ -782,7 +794,7 @@ Authorization: Bearer <access-token>
 
 Status | Description
 ------ | ------------------------------------------------------------
-`200`  | Orders successfully queried
+`200`  | Order successfully marked as received
 `400`  | Invalid request data
 `404`  | Invalid orderId specified
 `409`  | Order does not satisfy conditions for it to be mark received
@@ -821,7 +833,7 @@ Authorization: Bearer <access-token>
 
 Status | Description
 ------ | ------------------------------------------------------------
-`200`  | Orders successfully queried
+`200`  | Order successfully marked as failed
 `400`  | Invalid request data
 `404`  | Invalid orderId specified
 `409`  | Order does not satisfy conditions for it to be mark as failed
@@ -831,7 +843,7 @@ Status | Description
 
 ### `POST /api/orders/:orderId/renewal`
 
-Renews an expired request by changing the order status from EXPIRED back to OPEN. This action can only be done by the requester.
+Requests renewal of an EXPIRED order. The order stays `EXPIRED` with `renewalPending` set until Credit Service reserves the credits; it then becomes `OPEN` asynchronously (see [Renewing an Expired Order](#renewing-an-expired-order)). This action can only be done by the requester.
 
 ```http
 Authorization: Bearer <access-token>
@@ -860,7 +872,7 @@ Authorization: Bearer <access-token>
 
 Status | Description
 ------ | ------------------------------------------------------------
-`200`  | Orders successfully queried
+`200`  | Renewal submitted
 `400`  | Invalid request data
 `404`  | Invalid orderId specified
 `409`  | Order does not satisfy conditions for it to be renewed
@@ -889,7 +901,7 @@ Authorization: Bearer <access-token>
 ```json
 {
     "success": true,
-    "message": "Order successfully picked up by courier",
+    "message": "Order successfully accepted by courier",
     "data": { <full order information of the accepted order> }
 }
 ```
@@ -898,7 +910,7 @@ Authorization: Bearer <access-token>
 
 Status | Description
 ------ | -----------------------------------------------------------------
-`200`  | Orders successfully queried
+`200`  | Order successfully accepted
 `400`  | Invalid request data
 `403`  | Caller does not have the permissions to perform this operation
 `404`  | Invalid orderId specified
@@ -937,7 +949,7 @@ Authorization: Bearer <access-token>
 
 Status | Description
 ------ | -----------------------------------------------------------------
-`200`  | Orders successfully queried
+`200`  | Order successfully dropped
 `400`  | Invalid request data
 `403`  | Caller does not have the permissions to perform this operation
 `404`  | Invalid orderId specified
@@ -976,7 +988,7 @@ Authorization: Bearer <access-token>
 
 Status | Description
 ------ | -----------------------------------------------------------------
-`200`  | Orders successfully queried
+`200`  | Order successfully marked as picked up
 `400`  | Invalid request data
 `403`  | Caller does not have the permissions to perform this operation
 `404`  | Invalid orderId specified
@@ -1015,7 +1027,7 @@ Authorization: Bearer <access-token>
 
 Status | Description
 ------ | -----------------------------------------------------------------
-`200`  | Orders successfully queried
+`200`  | Order successfully marked as completed
 `400`  | Invalid request data
 `403`  | Caller does not have the permissions to perform this operation
 `404`  | Invalid orderId specified
@@ -1068,7 +1080,7 @@ Create a `.env` file in the root of the Order Service and fill in the required e
 
 | Variable | Purpose |
 | --- | --- |
-`PORT` | Port used by the User Service
+`PORT` | Port used by the Order Service (`3002`)
 `NODE_ENV` | Node environment (development, production, etc.)
 `FRONTEND_URL` | Frontend URL allowed by CORS
 `SUPPLIER_SERVICE_URL` | URL of the Supplier Service
@@ -1108,7 +1120,7 @@ npm run db:studio
 
 Start development with `npm run dev`, or run the compiled application with `npm start`.
 
-The consumers starts after the HTTP server begins listening. It reconnects if RabbitMQ becomes unavailable. `GET /healthz` only confirms that the HTTP server is running; it does not check RabbitMQ or whether students have received credits.
+The credit-result consumer, outbox publisher, expiry worker and receipt worker start after the HTTP server begins listening. The consumer and publisher reconnect if RabbitMQ becomes unavailable. `GET /healthz` only confirms that the HTTP server is running; it does not check the database or RabbitMQ.
 
 ### Docker
 

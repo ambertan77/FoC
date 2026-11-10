@@ -5,6 +5,13 @@ Scope: Verified and edited errors in the notification service README.
 Author review: Reviewed and edited by Ng See Pui.
 -->
 
+<!-- AI Assistance Disclosure:
+Tool: Claude Code (Claude Opus 5.5)
+Date: 2026-11-11
+Scope: Audited against the code; fixed the notification transitions table, environment variables, project structure and typos.
+Author review: Reviewed and edited by Lim Shao Qi.
+-->
+
 # Notification Service
 
 ## Table of Contents
@@ -77,6 +84,8 @@ The Notification Service does not modify orders. It reacts to order status chang
 | `COMPLETED → AUTO_RECEIVED` | Requester and courier | The order was automatically received |
 | `PENDING_RESERVATION → OPEN` | Requester | The request is available to couriers |
 | `PENDING_RESERVATION → RESERVATION_FAILED` | Requester | Credits could not be reserved |
+| `EXPIRED → OPEN` | Requester | The renewed request is available to couriers again |
+| `OPEN → CANCELED` | Requester | The request was canceled (currently sent with the same text as an expired request) |
 
 ## Asynchronous Workflows with RabbitMQ
 
@@ -254,7 +263,7 @@ notification-service/
 │   ├── controllers/
 │   ├── errors/
 │   ├── libs/
-│   ├── middlewares/
+│   ├── middleware/
 │   ├── routes/
 │   ├── schemas/
 │   ├── scripts/
@@ -269,14 +278,14 @@ notification-service/
 ├── .env
 ├── .env.example
 ├── .gitignore
-|── AGENTS.md
-|── compose.yaml
-|── docker-entrypoint.sh
-|── Dockerfile
-|── package-lock.json
+├── AGENTS.md
+├── compose.yaml
+├── docker-entrypoint.sh
+├── Dockerfile
+├── package-lock.json
 ├── package.json
 ├── prisma.config.ts
-|── README.md
+├── README.md
 └── tsconfig.json
 ```
 
@@ -469,11 +478,13 @@ Make sure the following are installed:
 
 ### Environment Variables
 
-Create a `.env` file in the root of the Order Service and fill in the required environment variables. You can use the provided `.env.example` as a template.
+Create a `.env` file in the root of the Notification Service and fill in the required environment variables. You can use the provided `.env.example` as a template.
 
 | Variable | Purpose |
 | --- | --- |
-| `PORT` | HTTP port for Notification Service |
+| `PORT` | HTTP port for Notification Service (`3004`) |
+| `NODE_ENV` | Node environment. Only read by the logger: `test` silences logs |
+| `LOG_LEVEL` | Optional log level (`debug`, `info`, `warn`, `error`). Defaults to `info` |
 | `FRONTEND_URL` | Frontend origin allowed by CORS |
 | `DATABASE_URL` | PostgreSQL connection string |
 | `NOTIFICATION_POSTGRES_DB` | Notification database name |
@@ -481,7 +492,7 @@ Create a `.env` file in the root of the Order Service and fill in the required e
 | `NOTIFICATION_POSTGRES_PASSWORD` | Notification database password |
 | `RABBITMQ_URL` | RabbitMQ connection URL |
 | `JWT_PUBLIC_KEY_PATH` | Path to the JWT public key |
-| `MAX_STREAMS_PER_USER` | Maximum active SSE connections per user |
+| `MAX_STREAMS_PER_USER` | Maximum active SSE connections per user. Required: startup fails if it is missing or not a number |
 
 > Do not commit `.env`, private keys, or other secrets to the repository.
 
@@ -509,7 +520,7 @@ npm run db:studio
 
 Start development with `npm run dev`, or run the compiled application with `npm start`.
 
-The order status consumer starts after the HTTP server begins listening. It reconnects if RabbitMQ becomes unavailable. `GET /healthz` only confirms that the HTTP server is running; it does not check RabbitMQ or whether students have received credits.
+The order status consumer starts after the HTTP server begins listening. It reconnects if RabbitMQ becomes unavailable. `GET /healthz` only confirms that the HTTP server is running and reports the number of open SSE connections; it does not check the database or RabbitMQ.
 
 ### Docker
 
