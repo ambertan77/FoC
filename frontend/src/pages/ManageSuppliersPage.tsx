@@ -38,7 +38,8 @@ import type {
     CreateSupplierInput,
     SupplierType,
     SuppliersQueryParams,
-    SuppliersQueryResponse
+    SuppliersQueryResponse,
+    SupplierStatus
 } from "@/features/supplier/types/supplier.types";
 import type { SupplierFormValues } from "@/features/supplier/schemas/supplier.schema";
 import { Button } from "@/components/ui/button";
@@ -98,13 +99,14 @@ const ManageSuppliersPage = () => {
     }, [searchString, typeFilter]);
 
     const suppliersQueryParams: SuppliersQueryParams = {
+        status: status === "ALL" ? undefined : status as SupplierStatus | undefined,
         page: currentPage,
         searchString: searchString,
         typeFilter: typeFilter
     }
 
     const suppliersQuery = useQuery<SuppliersQueryResponse, ParsedError>({
-        queryKey: ["admin-suppliers", currentPage, searchString, typeFilter],
+        queryKey: ["admin-suppliers", status, currentPage, searchString, typeFilter],
         queryFn: () => getAllSuppliers(suppliersQueryParams),
         refetchOnMount: "always",
     });
@@ -253,7 +255,7 @@ const ManageSuppliersPage = () => {
                             Activated
                         </TabsTrigger>
 
-                        <TabsTrigger value="ACTIVATED" onClick={() => handleStatusChange("DEACTIVATED")}>
+                        <TabsTrigger value="DEACTIVATED" onClick={() => handleStatusChange("DEACTIVATED")}>
                             Deactivated
                         </TabsTrigger>
                     </TabsList>

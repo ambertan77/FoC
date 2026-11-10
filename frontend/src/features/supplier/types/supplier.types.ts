@@ -62,6 +62,7 @@ export interface CreateSupplierInput {
 export type UpdateSupplierInput = Partial<CreateSupplierInput>;
 
 export type SuppliersQueryParams = {
+    status?: SupplierStatus | undefined;
     page?: number;
     searchString?: string;
     typeFilter?: string;
