@@ -699,24 +699,6 @@ Tools for all entries: **ChatGPT (5.6 Luna)**, **ChatGPT (Astra 6)**, **Claude C
 - **Verification:** AUser testing on the cloud-deployed application was successful. 
 - **Verification:** All test jobs passed, and user testing on localhost was successful. User testing on cloud was also successful once a small fix (placing `supplier-service` on the default Docker network to allow S3 credentials to be reached) was applied. 
 
-## 30. Centralized logging (pino, Loki, Alloy, Grafana)
-
-- **Timestamp:** 2026-11-10
-- **Tool & model:** Claude Code (Claude Sonnet 5.5)
-- **Mode:** generate, refactor
-- **Files:**
-  - `*/src/libs/logger.ts`, `*/src/middleware(s)/request-logger.middleware.ts` (all five services)
-  - `*/src/index.ts`, `*/src/middleware(s)/error.middleware.ts`, `*/src/middleware/*auth.middleware.ts`, and the ~145 `console.*` calls replaced across the services
-  - `order-service/src/integrations/supplier/supplier.client.ts`, `gateway/nginx.conf`, `frontend/nginx.conf`
-  - `observability/` (Loki, Alloy, Grafana provisioning and dashboard), `compose.yaml`, `compose.prod.yaml`, `.github/workflows/deploy.yml`, `.env.example`, `README.md`
-  - `docs/centralized-logging.png`, `package.json` files (pino dependencies)
-- **Prompt (approx.):** "i want to implement centralized logging, basically a prettier, comprehensive logging system that i can also see in Docker. TA recommends Grafana or use some services on AWS. what do you think i should take as the direction?" then "plan out how you going to implement while keeping the codebase modular, clean, correct first."
-- **Key response:** Recommended pino JSON logs to Loki and Grafana over CloudWatch, then implemented it in phases: logger and request middleware, request IDs from nginx, the observability stack, and the deploy changes. Also removed logging of tokens and user emails, drafted the PR description, and wrote the Grafana access steps.
-- **Kept/changed:** RabbitMQ event tracing was left out by decision. Work was paused after phase 1 for review. _Author to add any later edits._
-- **Verification:** `tsc` and unit tests pass in all five services; the stack was run locally with Docker; `nginx -t` and `docker compose config` were checked; the deploy workflow succeeded on `main`. _Author review pending._
-
-
-- **Verification:** User testing on the cloud-deployed application was successful. 
 
 # Detailed AI Usage Log for Ng See Pui
 
@@ -893,3 +875,22 @@ Tools for all entries: **ChatGPT (5.6 Luna)**, **ChatGPT (Astra 6)**, **Claude C
 - **Key response:** Compared the README documentation against service source code, routes, package scripts, Docker Compose files, gateway configuration, and deployment workflows.
 - **Kept/changed:** Identified documentation inconsistencies involving service counts, ports, RabbitMQ consumers, environment setup, ECR repositories, and incorrect worker descriptions.
 - **Verification:** Cross-checked documented behavior against the implemented services and configuration files.
+
+
+# Detailed AI Usage Log for Duong Ngoc Mai
+
+## 1. Centralized logging (pino, Loki, Alloy, Grafana)
+
+- **Timestamp:** 2026-11-10
+- **Tool & model:** Claude Code (Claude Sonnet 5.5)
+- **Mode:** generate, refactor
+- **Files:**
+  - `*/src/libs/logger.ts`, `*/src/middleware(s)/request-logger.middleware.ts` (all five services)
+  - `*/src/index.ts`, `*/src/middleware(s)/error.middleware.ts`, `*/src/middleware/*auth.middleware.ts`, and the ~145 `console.*` calls replaced across the services
+  - `order-service/src/integrations/supplier/supplier.client.ts`, `gateway/nginx.conf`, `frontend/nginx.conf`
+  - `observability/` (Loki, Alloy, Grafana provisioning and dashboard), `compose.yaml`, `compose.prod.yaml`, `.github/workflows/deploy.yml`, `.env.example`, `README.md`
+  - `docs/centralized-logging.png`, `package.json` files (pino dependencies)
+- **Prompt (approx.):** "i want to implement centralized logging, basically a prettier, comprehensive logging system that i can also see in Docker. TA recommends Grafana or use some services on AWS. what do you think i should take as the direction?" then "plan out how you going to implement while keeping the codebase modular, clean, correct first."
+- **Key response:** Recommended pino JSON logs to Loki and Grafana over CloudWatch, then implemented it in phases: logger and request middleware, request IDs from nginx, the observability stack, and the deploy changes. Also removed logging of tokens and user emails, drafted the PR description, and wrote the Grafana access steps.
+- **Kept/changed:** RabbitMQ event tracing was left out by decision. Work was paused after phase 1 for review. _Author to add any later edits._
+- **Verification:** `tsc` and unit tests pass in all five services; the stack was run locally with Docker; `nginx -t` and `docker compose config` were checked; the deploy workflow succeeded on `main`. _Author review pending._
