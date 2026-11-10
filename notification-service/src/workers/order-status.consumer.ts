@@ -8,6 +8,7 @@ import {
 import { orderStatusEventSchema } from "../schemas/order-status-event.schema.js";
 import { handleOrderStatusEvent } from "../services/notification.service.js";
 import { AppError } from "../errors/errors.js";
+import { logger } from "../libs/logger.js";
 
 const MAX_RESULT_BYTES = 65_536;
 const MAX_RETRIES = 5;
@@ -123,10 +124,10 @@ export async function processOrderStatusMessage(
 
         channel.ack(message); // after commit; a lost ack only causes a harmless redelivery
 
-        console.info("Order status event", {
+        logger.info({
             eventId: parsed.data.eventId,
             notifications: created
-        });
+        }, "Order status event");
     } catch (error) {
         // A temporary database outage should reconnect and let RabbitMQ
         // redeliver this unacked message, without spending its retry budget.
@@ -152,11 +153,11 @@ export async function processOrderStatusMessage(
             );
         }
 
-        console.warn("Order status event processing failed", {
+        logger.warn({
             eventId: parsed.data.eventId,
             orderId: parsed.data.orderId,
             retryCount,
-        });
+        }, "Order status event processing failed");
     }
 }
 
@@ -204,7 +205,7 @@ export function startOrderStatusConsumer():
 
                     inFlight = processOrderStatusMessage(channel, message)
                         .catch(() => {
-                            console.warn("Order status delivery left unacknowledged");
+                            logger.warn("Order status delivery left unacknowledged");
                             end(); // reconnect; RabbitMQ redelivers the unacked message
                         });
                 },
@@ -212,7 +213,7 @@ export function startOrderStatusConsumer():
             );
 
             consumerTag = consumer.consumerTag;
-            console.info("Order status consumer connected");
+            logger.info("Order status consumer connected");
             await finished;
         } finally {
             ending = true;
@@ -238,7 +239,7 @@ export function startOrderStatusConsumer():
             try {
                 await runSession();
             } catch {
-                console.warn("Order status consumer reconnecting");
+                logger.warn("Order status consumer reconnecting");
             }
 
             if (abort.signal.aborted) break;

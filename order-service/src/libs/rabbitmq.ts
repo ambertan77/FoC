@@ -1,6 +1,7 @@
 import { OrderEventType } from "../generated/prisma/client.js";
 import { connect, type Channel, type ChannelModel, type ConfirmChannel, type Options } from "amqplib";
 import config from "../config/config.js";
+import { logger } from "./logger.js";
 
 const BROKER_TIMEOUT_MS = 10_000; // 10 seconds
 
@@ -203,14 +204,14 @@ export async function connectOrderMessaging(
 
     // Handle EventEmitter errors even between operations; never log URL credentials.
     connection.on("error", () =>
-        console.warn("RabbitMQ connection error; reconnect required")
+        logger.warn("RabbitMQ connection error; reconnect required")
     );
 
     try {
         // Create a confirm channel for publishing messages with publisher confirms.
         const channel = await connection.createConfirmChannel();
         channel.on("error", () =>
-            console.warn("RabbitMQ channel error; reconnect required")
+            logger.warn("RabbitMQ channel error; reconnect required")
         );
 
         // Assert the exchange for order events.

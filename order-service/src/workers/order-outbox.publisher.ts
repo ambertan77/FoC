@@ -7,6 +7,7 @@ import {
     type PublishableOrderEventType,
 } from "../libs/rabbitmq.js";
 import { prisma } from "../libs/prisma.js";
+import { logger } from "../libs/logger.js";
 
 // Maximum number of outbox events to fetch and publish in a single batch.
 const BATCH_SIZE = 30;
@@ -158,11 +159,11 @@ async function publishOne(
                 lastError: null,
             },
         });
-        console.log("Outbox event published successfully", {
+        logger.info({
             eventId: event.id,
             orderId: event.orderId,
             eventType: event.eventType,
-        });
+        }, "Outbox event published successfully");
 
     } catch (error) {
         const nextRetryCount = event.retryCount + 1;
@@ -189,11 +190,11 @@ async function publishOne(
             },
         });
 
-        console.error("Outbox publish failed", {
+        logger.error({
             eventId: event.id,
             retryCount: nextRetryCount,
             dead,
-        });
+        }, "Outbox publish failed");
 
         // Reconnect before the next publish when the channel may be unhealthy.
         throw error;
@@ -219,7 +220,7 @@ export function startOrderOutboxPublisher(): () => Promise<void> {
                 const events = await claimBatch();
 
                 if (events.length === 0) {
-                    console.debug("No outbox events to publish; waiting for next poll");
+                    logger.debug("No outbox events to publish; waiting for next poll");
                     await delay(POLL_INTERVAL_MS, undefined, {
                         signal: abortController.signal
                     });
@@ -242,10 +243,10 @@ export function startOrderOutboxPublisher(): () => Promise<void> {
             } catch (error) {
                 if (!abortController.signal.aborted) {
                     retry++;
-                    console.error("Outbox publisher iteration failed", {
+                    logger.error({
                         retry,
                         error: error instanceof Error ? error.message : "UNKNOWN_ERROR",
-                    });
+                    }, "Outbox publisher iteration failed");
 
                     await delay(backoffMs(retry), undefined, {
                         signal: abortController.signal

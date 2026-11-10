@@ -6,6 +6,7 @@ import {
   type ConfirmChannel,
   type Options,
 } from "amqplib";
+import { logger } from "./logger.js";
 
 const BROKER_TIMEOUT_MS = 10_000;
 
@@ -158,10 +159,10 @@ async function connectMessaging(declareTopology: (channel: Channel) => Promise<v
 
   const connection = await connect(url.toString(), { timeout: BROKER_TIMEOUT_MS });
   // Handle EventEmitter errors even between operations; never log URL credentials.
-  connection.on("error", () => console.warn("RabbitMQ connection error; reconnect required"));
+  connection.on("error", () => logger.warn("RabbitMQ connection error; reconnect required"));
   try {
     const channel = await connection.createConfirmChannel();
-    channel.on("error", () => console.warn("RabbitMQ channel error; reconnect required"));
+    channel.on("error", () => logger.warn("RabbitMQ channel error; reconnect required"));
     await declareTopology(channel);
     return { connection, channel };
   } catch (error) {

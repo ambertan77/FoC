@@ -1,0 +1,75 @@
+# AI Assistance Disclosure:
+# Tool: Claude Code (Claude Sonnet 5.5)
+# Date: 2026-11-10
+# Scope: Generated the centralized logging stack (Loki, Alloy, Grafana) as a compose file included by the root compose.yaml.
+# Author review: Pending review by the author.
+
+# Logs flow: service stdout (JSON) -> Docker -> Alloy (reads via the Docker API) -> Loki -> Grafana.
+# Grafana is bound to localhost only; reach it locally at http://localhost:3030, or on EC2 via an SSH tunnel.
+services:
+  loki:
+    image: grafana/loki:3.6.7
+    restart: unless-stopped
+    command: ["-config.file=/etc/loki/config.yaml"]
+    mem_limit: 512m
+    volumes:
+      # Mount folders, not files: scp replaces files and a single-file mount keeps the old one.
+      - ./loki:/etc/loki:ro
+      - loki_data:/loki
+    networks:
+      - observability
+
+  alloy:
+    image: grafana/alloy:v1.21.0
+    restart: unless-stopped
+    command:
+      - run
+      - /etc/alloy/config.alloy
+      - --storage.path=/var/lib/alloy/data
+      - --server.http.listen-addr=0.0.0.0:12345
+    mem_limit: 256m
+    environment:
+      # Only ship logs from this compose project, not other containers on the host.
+      COMPOSE_PROJECT_NAME: ${COMPOSE_PROJECT_NAME:-foc}
+      LOG_ENV: ${LOG_ENV:-local}
+    volumes:
+      - ./alloy:/etc/alloy:ro
+      - alloy_data:/var/lib/alloy/data
+      # Alloy discovers containers and reads their logs through the Docker API.
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - loki
+    networks:
+      - observability
+
+  grafana:
+    image: grafana/grafana:12.4.14
+    restart: unless-stopped
+    mem_limit: 384m
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-foc-local-only}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+    ports:
+      - "127.0.0.1:3030:3000"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - loki
+    networks:
+      - default # publishing a port needs a non-internal network
+      - observability
+
+volumes:
+  loki_data:
+  alloy_data:
+  grafana_data:
+
+networks:
+  observability:
+    internal: true

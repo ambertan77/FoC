@@ -16,6 +16,7 @@ import {
     REGISTRATION_MESSAGING,
 } from "../libs/rabbitmq.js";
 import { MAX_RETRIES } from "../constants/consumer.constant.js";
+import { logger } from "../libs/logger.js";
 
 const transientCodes = new Set([
     "P1001", "P1002", "P1008", "P1017", "P2024", "P2028", "P2034", "P2037",
@@ -101,13 +102,13 @@ async function processMessage(
                 },
             });
             channel.ack(message);
-            console.info("Registration consumer", {
+            logger.info({
                 ...context,
                 outcome: queue === REGISTRATION_MESSAGING.retryQueue ? "retry_scheduled" : "dead_lettered",
                 reason,
-            });
+            }, "Registration consumer");
         } catch (error) {
-            console.warn("Registration consumer", { ...context, outcome: "forward_unconfirmed" });
+            logger.warn({ ...context, outcome: "forward_unconfirmed" }, "Registration consumer");
             throw error; // Leave the original unacknowledged; reconnect requeues it.
         }
     }
@@ -143,7 +144,7 @@ async function processMessage(
     // Keep ack failures outside the grant catch: a committed grant must never
     // become a new application retry just because its acknowledgment was lost.
     channel.ack(message);
-    console.info("Registration consumer", { ...context, outcome: created ? "granted" : "already_granted" });
+    logger.info({ ...context, outcome: created ? "granted" : "already_granted" }, "Registration consumer");
 }
 
 /** One in-flight delivery; HTTP startup does not await broker availability. */
@@ -168,12 +169,12 @@ export function startRegistrationConsumer(prisma: PrismaClient): () => Promise<v
                 if (!message) { end(); return; } // Broker cancelled the consumer.
                 if (ending) return; // Requeue on close; do not begin new work.
                 inFlight = processMessage(prisma, channel, message).catch(() => {
-                    console.warn("Registration consumer", { outcome: "delivery_unacknowledged" });
+                    logger.warn({ outcome: "delivery_unacknowledged" }, "Registration consumer");
                     end();
                 });
             }, { noAck: false });
             consumerTag = consumer.consumerTag;
-            console.info("Registration consumer", { outcome: "connected" });
+            logger.info({ outcome: "connected" }, "Registration consumer");
             await finished;
         } finally {
             ending = true;
@@ -193,7 +194,7 @@ export function startRegistrationConsumer(prisma: PrismaClient): () => Promise<v
             try {
                 await runSession();
             } catch {
-                console.warn("Registration consumer", { outcome: "connection_retry" });
+                logger.warn({ outcome: "connection_retry" }, "Registration consumer");
             }
             if (abort.signal.aborted) break;
             if (Date.now() - startedAt >= 60_000) reconnectAttempts = 0;

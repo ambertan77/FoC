@@ -3,6 +3,7 @@
 # Date: approx. 2026-10-25
 # Scope: Generated the deploy workflow: reuse CI, push images to ECR via OIDC, deploy the backend to EC2 with docker compose, and upload the frontend to S3 with a CloudFront invalidation; skip docs-only changes.
 # Author review: Reviewed, tested, and edited by Lim Shao Qi.
+# Later edit (2026-11-10, Claude Code / Claude Sonnet 5.5, pending author review): ship observability/, restart the logging stack, and seed the Grafana password from a GitHub secret.
 
 name: Deploy
 
@@ -62,22 +63,28 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: "compose.yaml,compose.prod.yaml,gateway/nginx.conf,data/csv,user-service/compose.yaml,supplier-service/compose.yaml,order-service/compose.yaml,credit-service/compose.yaml,notification-service/compose.yaml,frontend/compose.yaml"
+          source: "compose.yaml,compose.prod.yaml,gateway/nginx.conf,observability,data/csv,user-service/compose.yaml,supplier-service/compose.yaml,order-service/compose.yaml,credit-service/compose.yaml,notification-service/compose.yaml,frontend/compose.yaml"
           target: ${{ vars.EC2_APP_DIR }}
       - name: Pull images and restart the stack
         uses: appleboy/ssh-action@v1.2.0
         env:
           IMAGE_TAG: ${{ github.sha }}
           AWS_REGION: ${{ vars.AWS_REGION }}
+          GRAFANA_ADMIN_PASSWORD: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          envs: IMAGE_TAG,AWS_REGION
+          envs: IMAGE_TAG,AWS_REGION,GRAFANA_ADMIN_PASSWORD
           command_timeout: 15m
           script: |
             set -eu
             cd "${{ vars.EC2_APP_DIR }}"
+            # Seed the Grafana admin password from the GitHub secret, only if .env has none yet
+            # (a value already on the server wins; Grafana reads it on its first start only).
+            if ! grep -q '^GRAFANA_ADMIN_PASSWORD=' .env && [ -n "${GRAFANA_ADMIN_PASSWORD:-}" ]; then
+              printf '\nGRAFANA_ADMIN_PASSWORD=%s\n' "$GRAFANA_ADMIN_PASSWORD" >> .env
+            fi
             ECR_REGISTRY=$(grep -E '^ECR_REGISTRY=' .env | cut -d= -f2-)
             aws ecr get-login-password --region "$AWS_REGION" \
               | docker login --username AWS --password-stdin "$ECR_REGISTRY"
@@ -95,6 +102,8 @@ jobs:
             done
             # Load the gateway/nginx.conf that scp just copied over.
             $dc exec -T gateway nginx -s reload
+            # up -d won't recreate these when only a mounted config changed; Alloy resumes from its saved position.
+            $dc restart loki alloy grafana
             sed -i '/^IMAGE_TAG=/d' .env && echo "IMAGE_TAG=$IMAGE_TAG" >> .env
             docker image prune -af --filter "until=72h"
       - name: Smoke test through CloudFront
