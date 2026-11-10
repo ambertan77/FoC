@@ -1,4 +1,12 @@
 // Supplier
+
+// AI Assistance Disclosure:
+// Tool & model: GPT-6.1-Sol (high)
+// Disclosure date: 2026-11-11 (retrospective; original development dates not supplied)
+// Contributor: Duong Ngoc Mai
+// Scope: Supplier status, creation and update input types for supplier management.
+// Usage log: /ai/usage-log.md, Detailed AI Usage Log for Duong Ngoc Mai.
+
 export type SupplierDay =
     | "MONDAY"
     | "TUESDAY"

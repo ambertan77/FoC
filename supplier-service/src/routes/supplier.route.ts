@@ -1,3 +1,10 @@
+// AI Assistance Disclosure:
+// Tool & model: GPT-6.1-Sol (high)
+// Disclosure date: 2026-11-11 (retrospective; original development dates not supplied)
+// Contributor: Duong Ngoc Mai
+// Scope: Admin routes for creating, updating, deactivating and activating suppliers.
+// Usage log: /ai/usage-log.md, Detailed AI Usage Log for Duong Ngoc Mai.
+
 import { Router } from "express";
 import { authenticate } from "../middleware/auth.middleware.js";
 import { authorize } from "../middleware/authorize.middleware.js";

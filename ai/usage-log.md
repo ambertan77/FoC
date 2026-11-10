@@ -1,3 +1,12 @@
+<!--
+AI Assistance Disclosure:
+Tool & model: GPT-6.1-Sol (high)
+Disclosure date: 2026-11-11 (retrospective; original development dates not supplied)
+Contributor: Duong Ngoc Mai
+Scope: Recorded retrospective supplier and credit feature declarations for Duong Ngoc Mai; existing log entries preserved.
+Usage log: /ai/usage-log.md, Detailed AI Usage Log for Duong Ngoc Mai.
+-->
+
 # AI Usage Log
 
 1. Lim Shao Qi
@@ -15,7 +24,10 @@ Tools for all entries: **Claude AI and Claude Code** (as specified in the detail
 
 Tools for all entries: **ChatGPT (5.6 Luna)**, **ChatGPT (Astra 6)**, **Claude Code (Claude Sonnet 5.5)**. Every AI output was reviewed, edited and tested by Ng See Pui before it was committed.
 
-4.
+4. Duong Ngoc Mai
+   > Supplier and credit feature disclosures added retrospectively on 2026-11-11. Duong Ngoc Mai periodically deletes historical Codex data to save device storage, so original development dates and exact prompts are no longer available.
+
+Model for supplier and credit entries 2–8: **GPT-6.1-Sol (high)**, as confirmed by Duong Ngoc Mai. Entry 1 retains its existing centralized-logging disclosure. Historical review and test outcomes for entries 2–8 were not supplied.
 
 
 # Detailed AI Usage Log for Lim Shao Qi
@@ -906,3 +918,136 @@ Tools for all entries: **ChatGPT (5.6 Luna)**, **ChatGPT (Astra 6)**, **Claude C
 - **Key response:** Recommended pino JSON logs to Loki and Grafana over CloudWatch, then implemented it in phases: logger and request middleware, request IDs from nginx, the observability stack, and the deploy changes. Also removed logging of tokens and user emails, drafted the PR description, and wrote the Grafana access steps.
 - **Kept/changed:** RabbitMQ event tracing was left out by decision. Work was paused after phase 1 for review. _Author to add any later edits._
 - **Verification:** `tsc` and unit tests pass in all five services; the stack was run locally with Docker; `nginx -t` and `docker compose config` were checked; the deploy workflow succeeded on `main`. _Author review pending._
+
+## Supplier and credit disclosure context — Duong Ngoc Mai
+
+Entries 2–8 are retrospective feature declarations by **Duong Ngoc Mai**, recorded on **2026-11-11**, using **GPT-6.1-Sol (high)**. Duong Ngoc Mai periodically deletes historical Codex data to save storage space on her device, so the original conversations, exact prompts and development timestamps are no longer available. The disclosure date records when these entries were documented. The Kept/changed descriptions are approximate summaries of the current files; the exact sequence of AI suggestions and subsequent edits is unavailable. Existing contributors' comments are preserved, and these declarations apply only to the named feature portions of shared files.
+
+**Verification for this citation update:** source paths and current feature wiring were inspected. Only disclosure comments and Markdown documentation were changed. Runtime tests, historical author review and historical test outcomes are not established by this update. The reservation integration fixture currently uses asynchronous reservation creation, so its tests should not be described as proof that the legacy synchronous implementation works. Historical SQL migrations are unchanged to preserve migration checksums.
+
+### Supplier feature files — Duong Ngoc Mai
+
+- `supplier-service/src/services/supplier.service.ts`
+- `supplier-service/src/controllers/supplier.controller.ts`
+- `supplier-service/src/routes/supplier.route.ts`
+- `supplier-service/src/schemas/supplier.schema.ts`
+- `supplier-service/src/services/supplier.service.test.ts`
+- `supplier-service/src/routes/supplier.route.test.ts`
+- `supplier-service/src/schemas/supplier.schema.test.ts`
+- `supplier-service/prisma/schema.prisma`
+- `frontend/src/pages/ManageSuppliersPage.tsx`
+- `frontend/src/features/supplier/services/supplier.service.ts`
+- `frontend/src/features/supplier/types/supplier.types.ts`
+- `frontend/src/features/supplier/schemas/supplier.schema.ts`
+- `frontend/src/features/supplier/components/SupplierForm.tsx`
+- `frontend/src/features/supplier/components/SupplierModal.tsx`
+- `frontend/src/features/supplier/components/DeactivateModal.tsx`
+- `frontend/src/features/supplier/components/SupplierCard.tsx`
+- `frontend/src/api/endpoints.ts`
+
+### Credit feature files — Duong Ngoc Mai
+
+- `credit-service/src/services/credit.service.ts`
+- `credit-service/src/controllers/internal-credit.controller.ts`
+- `credit-service/src/routes/internal-credit.route.ts`
+- `credit-service/src/middleware/order-credit-service-auth.middleware.ts`
+- `credit-service/src/schemas/reservation.schema.ts`
+- `credit-service/src/services/settlement.service.ts`
+- `credit-service/src/schemas/settlement-event.schema.ts`
+- `credit-service/src/services/settlement-consumer.service.ts`
+- `credit-service/src/libs/credit-transaction.ts`
+- `credit-service/src/libs/rabbitmq.ts`
+- `credit-service/src/constants/consumer.constant.ts`
+- `credit-service/prisma/schema.prisma`
+- `credit-service/test/credit-flows.test.ts`
+- `credit-service/test/reservation.integration.ts`
+- `credit-service/test/settlement.integration.ts`
+- `credit-service/test/reservation-fixture.ts`
+
+## 2. Create suppliers — Duong Ngoc Mai
+
+- **Contributor:** Duong Ngoc Mai.
+- **Disclosure date:** 2026-11-11 (retrospective; original development date not supplied).
+- **Tool & model:** GPT-6.1-Sol (high).
+- **Mode:** implementation assistance, declared retrospectively.
+- **Scope:** Supplier creation through the admin form and POST route, including required fields, supplier-type checks, duplicate-name checks and opening-hours persistence.
+- **Files:** relevant feature portions of the supplier feature files listed above, including the associated tests.
+- **Prompt / original response:** not retained because historical Codex data is periodically deleted to save device storage.
+- **Kept/changed:** Added the supplier creation form and client request, wired the admin POST route to the controller and service, and stored supplier details with opening hours. Included required-field validation, supplier-type checks, duplicate-name checks and related tests.
+- **Verification:** current source inspected for attribution scope; historical author review and test results not supplied. No runtime tests were run for this comments-and-documentation update.
+
+## 3. Update suppliers — Duong Ngoc Mai
+
+- **Contributor:** Duong Ngoc Mai.
+- **Disclosure date:** 2026-11-11 (retrospective; original development date not supplied).
+- **Tool & model:** GPT-6.1-Sol (high).
+- **Mode:** implementation assistance, declared retrospectively.
+- **Scope:** Supplier editing through the admin form and PATCH route, including partial inputs, supplier-type and duplicate-name checks, and replacement of opening hours.
+- **Files:** relevant feature portions of the supplier feature files listed above, including the associated tests.
+- **Prompt / original response:** not retained because historical Codex data is periodically deleted to save device storage.
+- **Kept/changed:** Reused the supplier form for editing, populated it with the existing values and sent partial updates through the PATCH route. Updated only supplied fields, replaced opening hours when provided, and included checks for duplicate names, invalid types and empty updates.
+- **Verification:** current source inspected for attribution scope; historical author review and test results not supplied. No runtime tests were run for this comments-and-documentation update.
+
+## 4. Deactivate and activate suppliers — Duong Ngoc Mai
+
+- **Contributor:** Duong Ngoc Mai.
+- **Disclosure date:** 2026-11-11 (retrospective; original development date not supplied).
+- **Tool & model:** GPT-6.1-Sol (high).
+- **Mode:** implementation assistance, declared retrospectively.
+- **Scope:** Admin status mutations, edit/status actions on supplier cards, confirmation dialogs and backend activation/deactivation handlers.
+- **Files:** relevant feature portions of the supplier feature files listed above, including the associated tests.
+- **Prompt / original response:** not retained because historical Codex data is periodically deleted to save device storage.
+- **Kept/changed:** Added admin activation and deactivation requests, status actions on supplier cards and confirmation dialogs. Updated the backend status handlers to handle missing suppliers, return an already-active supplier unchanged and reject repeated deactivation. Refreshed the supplier list after successful status changes.
+- **Verification:** current source inspected for attribution scope; historical author review and test results not supplied. No runtime tests were run for this comments-and-documentation update.
+
+## 5. Reserve credits (synchronous) — Duong Ngoc Mai
+
+- **Contributor:** Duong Ngoc Mai.
+- **Disclosure date:** 2026-11-11 (retrospective; original development date not supplied).
+- **Tool & model:** GPT-6.1-Sol (high).
+- **Mode:** implementation assistance, declared retrospectively.
+- **Scope:** The legacy reserveCredits implementation, internal reservation create/lookup/abort handlers, input validation, service authentication and atomic available-to-reserved balance and ledger updates. The internal HTTP router is currently not mounted by src/index.ts. Active asynchronous reservation creation and renewal are outside this declaration.
+- **Files:** relevant feature portions of the credit feature files listed above, including the associated tests.
+- **Prompt / original response:** not retained because historical Codex data is periodically deleted to save device storage.
+- **Kept/changed:** Added the synchronous reservation service and internal create, lookup and abort routes, with UUID/amount validation and shared-secret authentication. Used a serializable transaction to move available credits into reserved credits and write the reservation ledger entry. Added balance checks and abort compensation. The internal router remains disabled in the current service entry point.
+- **Verification:** current source inspected for attribution scope; historical author review and test results not supplied. No runtime tests were run for this comments-and-documentation update.
+
+## 6. Transfer credits — Duong Ngoc Mai
+
+- **Contributor:** Duong Ngoc Mai.
+- **Disclosure date:** 2026-11-11 (retrospective; original development date not supplied).
+- **Tool & model:** GPT-6.1-Sol (high).
+- **Mode:** implementation assistance, declared retrospectively.
+- **Scope:** transferCredits and ORDER_RECEIVED validation/dispatch, transferring reserved requester credits to the courier, paired ledger entries, settlement state and replay checks.
+- **Files:** relevant feature portions of the credit feature files listed above, including the associated tests.
+- **Prompt / original response:** not retained because historical Codex data is periodically deleted to save device storage.
+- **Kept/changed:** Added ORDER_RECEIVED validation and dispatch to transferCredits. Updated the requester's reserved balance and courier's available balance in one transaction, recorded paired ledger entries and marked the reservation as transferred. Included identity/amount checks, self-transfer rejection and replay handling.
+- **Verification:** current source inspected for attribution scope; historical author review and test results not supplied. No runtime tests were run for this comments-and-documentation update.
+
+## 7. Release credits — Duong Ngoc Mai
+
+- **Contributor:** Duong Ngoc Mai.
+- **Disclosure date:** 2026-11-11 (retrospective; original development date not supplied).
+- **Tool & model:** GPT-6.1-Sol (high).
+- **Mode:** implementation assistance, declared retrospectively.
+- **Scope:** releaseCredits for ORDER_CANCELED and ORDER_EXPIRED, returning reserved credits to the requester, release ledger entries and replay checks; legacy creation-abort compensation is covered with synchronous reservations.
+- **Files:** relevant feature portions of the credit feature files listed above, including the associated tests.
+- **Prompt / original response:** not retained because historical Codex data is periodically deleted to save device storage.
+- **Kept/changed:** Added ORDER_CANCELED and ORDER_EXPIRED handling through releaseCredits. Returned reserved credits to the requester's available balance, recorded a release ledger entry and saved the release reason. Reused the shared settlement transaction and included checks for mismatched or repeated events.
+- **Verification:** current source inspected for attribution scope; historical author review and test results not supplied. No runtime tests were run for this comments-and-documentation update.
+
+## 8. Refund credits — Duong Ngoc Mai
+
+- **Contributor:** Duong Ngoc Mai.
+- **Disclosure date:** 2026-11-11 (retrospective; original development date not supplied).
+- **Tool & model:** GPT-6.1-Sol (high).
+- **Mode:** implementation assistance, declared retrospectively.
+- **Scope:** refundCredits for ORDER_FAILED, returning reserved credits to the requester, refund ledger entries, settlement state and replay checks.
+- **Files:** relevant feature portions of the credit feature files listed above, including the associated tests.
+- **Prompt / original response:** not retained because historical Codex data is periodically deleted to save device storage.
+- **Kept/changed:** Added ORDER_FAILED handling through refundCredits. Returned reserved credits to the requester's available balance, recorded a refund ledger entry and marked the reservation as refunded. Reused the shared settlement validation, transaction and replay checks, with related regression tests.
+- **Verification:** current source inspected for attribution scope; historical author review and test results not supplied. No runtime tests were run for this comments-and-documentation update.
+
+### Citation documentation — Duong Ngoc Mai
+
+`README.md`, `supplier-service/README.md`, `credit-service/README.md` and `ai/usage-log.md` contain the corresponding summaries and shared log. File headers retain prior disclosures and append the model, contributor, feature scope and log reference for Duong Ngoc Mai.

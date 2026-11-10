@@ -1,3 +1,10 @@
+// AI Assistance Disclosure:
+// Tool & model: GPT-6.1-Sol (high)
+// Disclosure date: 2026-11-11 (retrospective; original development dates not supplied)
+// Contributor: Duong Ngoc Mai
+// Scope: Serializable transaction and retry handling shared by reservation, transfer, release and refund operations.
+// Usage log: /ai/usage-log.md, Detailed AI Usage Log for Duong Ngoc Mai.
+
 import { setTimeout as delay } from "node:timers/promises";
 import { Prisma, type PrismaClient } from "../generated/prisma/client.js";
 import { AppError } from "../errors/errors.js";

@@ -4,6 +4,13 @@
 // Scope: Generated getCreditBalance, getCreditTransactions (cursor pagination, PROVISIONING when no account exists) and the idempotent 50-credit grantInitialCredits with P2002 handling.
 // Author review: Reviewed, tested, and edited by Lim Shao Qi.
 
+// AI Assistance Disclosure:
+// Tool & model: GPT-6.1-Sol (high)
+// Disclosure date: 2026-11-11 (retrospective; original development dates not supplied)
+// Contributor: Duong Ngoc Mai
+// Scope: Synchronous reserveCredits, reservation lookup and abort/release compensation; other contributors' scopes remain separate.
+// Usage log: /ai/usage-log.md, Detailed AI Usage Log for Duong Ngoc Mai.
+
 import { z } from "zod";
 import {
     CreditTransactionType,

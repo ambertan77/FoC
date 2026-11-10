@@ -4,6 +4,13 @@
 // Scope: Later edit to this file: Replaced console.* with the pino logger.
 // Author review: Reviewed, tested, checked by the author.
 
+// AI Assistance Disclosure:
+// Tool & model: GPT-6.1-Sol (high)
+// Disclosure date: 2026-11-11 (retrospective; original development dates not supplied)
+// Contributor: Duong Ngoc Mai
+// Scope: Dispatch settlement events to transfer, release and refund operations with retry/dead-letter handling.
+// Usage log: /ai/usage-log.md, Detailed AI Usage Log for Duong Ngoc Mai.
+
 import { setTimeout as delay } from "node:timers/promises";
 import type { ConsumeMessage, ConfirmChannel } from "amqplib";
 import type { PrismaClient } from "../generated/prisma/client.js";

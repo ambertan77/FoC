@@ -22,6 +22,15 @@ Scope: Audited against the code; corrected notification-service RabbitMQ/key/shu
 Author review: Reviewed and edited by Lim Shao Qi.
 -->
 
+<!--
+AI Assistance Disclosure:
+Tool & model: GPT-6.1-Sol (high)
+Disclosure date: 2026-11-11 (retrospective; original development dates not supplied)
+Contributor: Duong Ngoc Mai
+Scope: Added the retrospective supplier and credit feature AI citation summary for Duong Ngoc Mai.
+Usage log: /ai/usage-log.md, Detailed AI Usage Log for Duong Ngoc Mai.
+-->
+
 # CS3219 — Software Design and Architecture (AY2627 Sem 1)
 
 ## Aaron
@@ -395,7 +404,7 @@ deadline. supplier-service exits immediately.
 
 ## AI Use Summary
 
-- **Tools:** ChatGPT (Astra 6), Claude Code (Claude Opus 5.5, Claude Sonnet 5.5)
+- **Tools:** ChatGPT (Astra 6), GPT-6.1-Sol (high), Claude Code (Claude Opus 5.5, Claude Sonnet 5.5)
 - **Used for:**
   - Generating initial implementations:
     - user-service registration with OTP, profile, email change, password change, admin invitation and activation, and first-admin bootstrap
@@ -431,5 +440,13 @@ deadline. supplier-service exits immediately.
   - Auditing and updating READMEs and API docs against the code (Claude Code)
   - Centralized logging (Claude Code): pino logger and request-ID middleware in all five services, the Loki/Alloy/Grafana stack in `observability/`, deploy workflow changes, the architecture diagram and the Grafana access steps
 - **Prohibited phases avoided:** requirements elicitation; architecture/design decisions
-- **Verification:** all AI outputs reviewed, edited and tested by the authors
+- **Verification:** review and test details are recorded per contributor in the shared usage log.
 - **Full log:** [/ai/usage-log.md](ai/usage-log.md)
+
+### Duong Ngoc Mai — supplier and credit features
+
+- **Tool & model:** GPT-6.1-Sol (high).
+- **Supplier Service:** create suppliers, update suppliers, deactivate suppliers and activate suppliers, including the admin UI, request validation, persistence and related tests.
+- **Credit Service:** reserve credits synchronously, transfer credits, release credits and refund credits, including validation, transactional balance/ledger updates and related tests. The synchronous reservation HTTP router is currently disabled; active asynchronous reservation creation is a separate contribution.
+- **Attribution:** retrospective declaration by Duong Ngoc Mai, recorded on 2026-11-11. She periodically deletes historical Codex data to save storage space on her device, so original development dates and exact prompts are no longer available. Kept/changed descriptions summarize the current files. Existing contributors' disclosures are preserved; historical review/test results were not supplied.
+- **Details:** [Shared AI usage log](ai/usage-log.md#detailed-ai-usage-log-for-duong-ngoc-mai).
