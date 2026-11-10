@@ -10,6 +10,7 @@ import {
   ADMIN_INVITATION_EXPIRES_IN_HOURS,
   REGISTRATION_OTP_EXPIRES_IN_MINUTES,
 } from "../constants/auth.constants.js";
+import { logger } from "./logger.js";
 
 const BREVO_SMTP_HOST = "smtp-relay.brevo.com";
 const BREVO_SMTP_PORT = 587;
@@ -70,7 +71,7 @@ export async function sendRegistrationOtpEmail(
       ].join("\n"),
     });
   } catch (error) {
-    console.error("Email Service Error:", error);
+    logger.error({ err: error }, "Verification email delivery failed");
     throw new AppError(
       "Unable to send verification email. Please try again later.",
       502,
@@ -99,7 +100,7 @@ export async function sendEmailChangeOtpEmail(
       ].join("\n"),
     });
   } catch (error) {
-    console.error("Email Service Error:", error);
+    logger.error({ err: error }, "Email change verification email delivery failed");
     throw new AppError(
       "Unable to send verification email. Please try again later.",
       502,
@@ -130,7 +131,7 @@ export async function sendAdminInvitationEmail(
       ].join("\n"),
     });
   } catch {
-    console.error("Administrator invitation email delivery failed");
+    logger.error("Administrator invitation email delivery failed");
     throw new AppError(
       "Unable to send administrator invitation. Please try again later.",
       502,

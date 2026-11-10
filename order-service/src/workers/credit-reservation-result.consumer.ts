@@ -11,6 +11,7 @@ import {
     type CreditReservationResult,
 } from "../schemas/credit-reservation-result.schema.js";
 import { creditReservationResultService } from "../services/credit-reservation-result.service.js";
+import { logger } from "../libs/logger.js";
 
 export const MAX_RESULT_BYTES = 65_536;
 const MAX_RETRIES = 5;
@@ -127,12 +128,12 @@ export async function processCreditReservationResultMessage(
 
         channel.ack(message);
 
-        console.info("Credit reservation result", {
+        logger.info({
             eventId: parsed.data.eventId,
             orderId: parsed.data.orderId,
             requestType: parsed.data.requestType,
             outcome: "processed",
-        });
+        }, "Credit reservation result");
     } catch (error) {
         // A temporary database outage should reconnect and let RabbitMQ
         // redeliver this unacked message, without spending its retry budget.
@@ -158,11 +159,11 @@ export async function processCreditReservationResultMessage(
             );
         }
 
-        console.warn("Credit reservation result processing failed", {
+        logger.warn({
             eventId: parsed.data.eventId,
             orderId: parsed.data.orderId,
             retryCount,
-        });
+        }, "Credit reservation result processing failed");
     }
 }
 
@@ -213,9 +214,7 @@ export function startCreditReservationResultConsumer():
                         channel,
                         message,
                     ).catch(() => {
-                        console.warn(
-                            "Credit reservation result left unacknowledged",
-                        );
+                        logger.warn("Credit reservation result left unacknowledged");
                         end();
                     });
                 },
@@ -223,7 +222,7 @@ export function startCreditReservationResultConsumer():
             );
 
             consumerTag = consumer.consumerTag;
-            console.info("Credit reservation result consumer connected");
+            logger.info("Credit reservation result consumer connected");
             await finished;
         } finally {
             ending = true;
@@ -249,9 +248,7 @@ export function startCreditReservationResultConsumer():
             try {
                 await runSession();
             } catch {
-                console.warn(
-                    "Credit reservation result consumer reconnecting",
-                );
+                logger.warn("Credit reservation result consumer reconnecting");
             }
 
             if (abort.signal.aborted) break;

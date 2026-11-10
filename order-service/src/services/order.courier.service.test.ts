@@ -55,12 +55,12 @@ const MOCK_PICKED_UP_ORDER = { ...MOCK_ACCEPTED_ORDER, status: "PICKED_UP", vers
 const MOCK_COMPLETED_ORDER = { ...MOCK_PICKED_UP_ORDER, status: "COMPLETED", version: 4, completedAt: now };
 
 const VALID_GET_OPEN_ORDERS_INPUT: GetOpenOrdersInput = {
-    page: 1, 
+    page: 1,
     sortBy: "expiryAt", // default value
     sortOrder: "asc" // default value
 }
 
-const VALID_DEFAULT_COURIER_ACCEPTANCE_INPUT: GetCourierOrderHistoryInput = { 
+const VALID_DEFAULT_COURIER_ACCEPTANCE_INPUT: GetCourierOrderHistoryInput = {
     page: 1,
     sortBy: "acceptedAt",
     sortOrder: "desc"
@@ -90,6 +90,10 @@ function createMockPrisma(config: MockConfig = {}) {
         countArgs: undefined as unknown,
         updateArgs: undefined as unknown,
         orderStatusHistoryCreateArgs: undefined as unknown,
+    };
+
+    const outboxEvent = {
+        create: mock.fn(async (_args: unknown) => ({})),
     };
 
     const prisma = {
@@ -122,12 +126,14 @@ function createMockPrisma(config: MockConfig = {}) {
                 return "orderStatusHistoryCreateReturn" in config ? config.orderStatusHistoryCreateReturn : {}; // allow null to be returned
             }),
         },
+        outboxEvent,
         // run the transaction callback with the mock client as tx, so tx.order and tx.orderStatusHistory use the mock tables
         $transaction: mock.fn(async (callback: (tx: unknown) => Promise<unknown>) => {
             calls.transaction++;
             return callback(prisma);
         }),
     };
+
 
     return { prisma, calls, captured };
 }
@@ -137,6 +143,7 @@ function useSharedMockPrisma(t: TestContext, config: MockConfig = {}) {
     const mocked = createMockPrisma(config); // build a mock prisma client
     const originalOrder = sharedPrisma.order;
     const originalOrderStatusHistory = sharedPrisma.orderStatusHistory;
+    const originalOutboxEvent = sharedPrisma.outboxEvent;
     const originalTransaction = sharedPrisma.$transaction;
 
     // point sharedPrisma.order to the mock db so that tested functions query/write to the fake order table, instead of the real database
@@ -149,6 +156,13 @@ function useSharedMockPrisma(t: TestContext, config: MockConfig = {}) {
     // point sharedPrisma.orderStatusHistory to the mock db
     Object.defineProperty(sharedPrisma, "orderStatusHistory", {
         value: mocked.prisma.orderStatusHistory,
+        configurable: true, // allows the property to be redefined again in t.after below
+        writable: true,
+    });
+
+    // point sharedPrisma.outboxEvent to the mock db
+    Object.defineProperty(sharedPrisma, "outboxEvent", {
+        value: mocked.prisma.outboxEvent,
         configurable: true, // allows the property to be redefined again in t.after below
         writable: true,
     });
@@ -170,6 +184,12 @@ function useSharedMockPrisma(t: TestContext, config: MockConfig = {}) {
 
         Object.defineProperty(sharedPrisma, "orderStatusHistory", {
             value: originalOrderStatusHistory,
+            configurable: true,
+            writable: true,
+        });
+
+        Object.defineProperty(sharedPrisma, "outboxEvent", {
+            value: originalOutboxEvent,
             configurable: true,
             writable: true,
         });
@@ -218,7 +238,7 @@ test("getAllOpenOrders returns open orders with pagination when no filters are g
 
 test("getAllOpenOrders applies the search string, location filter, sorting and page offset", async (t) => {
     const input: GetOpenOrdersInput = { page: 2, sortBy: "offeredCredits", sortOrder: "desc", filterLocation: "sup_1", searchString: "coffee" };
-    
+
     const { calls, captured } = useSharedMockPrisma(t, { findManyReturn: [MOCK_OPEN_ORDER], countReturn: 16 });
 
     const result = await getAllOpenOrders("stu_2", input);
@@ -244,7 +264,7 @@ test("getAllOpenOrders applies the search string, location filter, sorting and p
 
     // check number of calls
     assert.equal(calls.findMany, 1);
-    assert.equal(calls.count, 1);    
+    assert.equal(calls.count, 1);
 });
 
 test("getAllOpenOrders returns empty array when there are no records found", async (t) => {
@@ -294,7 +314,7 @@ test("getAllOpenOrders returns error code 400 when Prisma returns null", async (
 
     // check number of calls
     assert.equal(calls.findMany, 1);
-    assert.equal(calls.count, 1);  
+    assert.equal(calls.count, 1);
 });
 
 test("acceptOpenOrder returns error code 404 when the order with specified id does not exist", async (t) => {
@@ -331,7 +351,7 @@ test("acceptOpenOrder returns error code 409 when the order status is EXPIRED", 
             return true;
         },
     );
-    
+
     // check number of calls
     assert.equal(calls.findUnique, 1);
     assert.equal(calls.transaction, 0);
@@ -353,7 +373,7 @@ test("acceptOpenOrder returns error code 409 when the time stated in expiryAt ha
             return true;
         },
     );
-    
+
     // check number of calls
     assert.equal(calls.findUnique, 1);
     assert.equal(calls.transaction, 0);
@@ -375,7 +395,7 @@ test("acceptOpenOrder returns error code 409 when expected version is different"
             return true;
         },
     );
-    
+
     // check number of calls
     assert.equal(calls.findUnique, 1);
     assert.equal(calls.transaction, 0);
@@ -395,7 +415,7 @@ test("acceptOpenOrder returns error code 400 when the order is no longer open", 
             return true;
         },
     );
-    
+
     // check number of calls
     assert.equal(calls.findUnique, 1);
     assert.equal(calls.transaction, 0);
@@ -415,7 +435,7 @@ test("acceptOpenOrder returns error code 403 when the requester tries to accept 
             return true;
         },
     );
-    
+
     // check number of calls
     assert.equal(calls.findUnique, 1);
     assert.equal(calls.transaction, 0);
@@ -438,7 +458,7 @@ test("acceptOpenOrder returns error code 500 and skips the status history when t
             return true;
         },
     );
-    
+
     // check number of calls
     assert.equal(calls.findUnique, 1);
     assert.equal(calls.transaction, 1);
@@ -449,7 +469,7 @@ test("acceptOpenOrder returns error code 500 and skips the status history when t
 test("acceptOpenOrder returns error code 500 and skips the status history when prisma update does not return", async (t) => {
     const { calls } = useSharedMockPrisma(t, {
         findUniqueReturn: MOCK_OPEN_ORDER,
-        updateReturn: null, 
+        updateReturn: null,
     });
 
     await assert.rejects(
@@ -461,7 +481,7 @@ test("acceptOpenOrder returns error code 500 and skips the status history when p
             return true;
         },
     );
-    
+
     // check number of calls
     assert.equal(calls.findUnique, 1);
     assert.equal(calls.transaction, 1);
@@ -495,14 +515,14 @@ test("acceptOpenOrder returns error code 500 when the status history cannot be r
 });
 
 test("acceptOpenOrder executes successfully with a valid input", async (t) => {
-    const orderStatusChange  = {
+    const orderStatusChange = {
         orderId: MOCK_OPEN_ORDER.id,
         fromStatus: MOCK_OPEN_ORDER.status,
         toStatus: MOCK_ACCEPTED_ORDER.status,
         changedBy: "stu_2"
     }
 
-    const { calls, captured } = useSharedMockPrisma(t, {
+    const { prisma, calls, captured } = useSharedMockPrisma(t, {
         findUniqueReturn: MOCK_OPEN_ORDER,
         updateReturn: MOCK_ACCEPTED_ORDER,
     });
@@ -533,6 +553,29 @@ test("acceptOpenOrder executes successfully with a valid input", async (t) => {
     assert.equal(calls.transaction, 1);
     assert.equal(calls.update, 1);
     assert.equal(calls.orderStatusHistoryCreate, 1);
+    assert.equal(prisma.outboxEvent.create.mock.calls.length, 1);
+
+    const event = prisma.outboxEvent.create.mock.calls[0]!.arguments[0] as {
+        data: {
+            eventType: string;
+            orderId: string;
+            payload: Record<string, unknown>;
+        };
+    };
+
+    assert.equal(event.data.eventType, "ORDER_STATUS_CHANGED");
+    assert.equal(event.data.orderId, MOCK_ACCEPTED_ORDER.id);
+    assert.equal(event.data.payload.eventType, "ORDER_STATUS_CHANGED");
+    assert.equal(event.data.payload.orderId, MOCK_ACCEPTED_ORDER.id);
+    assert.equal(event.data.payload.orderName, MOCK_ACCEPTED_ORDER.name);
+    assert.equal(event.data.payload.requesterId, MOCK_ACCEPTED_ORDER.requesterId);
+    assert.equal(event.data.payload.courierId, MOCK_ACCEPTED_ORDER.courierId);
+    assert.equal(event.data.payload.fromStatus, "OPEN");
+    assert.equal(event.data.payload.toStatus, "ACCEPTED");
+    assert.equal(event.data.payload.version, MOCK_ACCEPTED_ORDER.version);
+    assert.equal(event.data.payload.offeredCredits, MOCK_ACCEPTED_ORDER.offeredCredits);
+    assert.equal(typeof event.data.payload.eventId, "string");
+    assert.equal(typeof event.data.payload.occurredAt, "string");
 });
 
 test("pickUpAcceptedOrder returns error code 404 when specified order id does not exist", async (t) => {
@@ -567,7 +610,7 @@ test("pickUpAcceptedOrder returns error code 403 when the caller is not the assi
             return true;
         },
     );
-    
+
     // check number of calls
     assert.equal(calls.findUnique, 1);
     assert.equal(calls.transaction, 0);
@@ -577,7 +620,7 @@ test("pickUpAcceptedOrder returns error code 403 when the caller is not the assi
 
 test("pickUpAcceptedOrder returns error code 400 when the order is not in the ACCEPTED stage", async (t) => {
     const order = { ...MOCK_ACCEPTED_ORDER, status: "PICKED_UP" };// status is not accepted
-    const { calls } = useSharedMockPrisma(t, { findUniqueReturn: order }); 
+    const { calls } = useSharedMockPrisma(t, { findUniqueReturn: order });
 
     await assert.rejects(
         () => pickUpAcceptedOrder("stu_2", order.id, { expectedVersion: order.version }),
@@ -588,7 +631,7 @@ test("pickUpAcceptedOrder returns error code 400 when the order is not in the AC
             return true;
         },
     );
-    
+
     // check number of calls
     assert.equal(calls.findUnique, 1);
     assert.equal(calls.transaction, 0);
@@ -604,12 +647,12 @@ test("pickUpAcceptedOrder returns error code 409 when the time stated in expiryA
         () => pickUpAcceptedOrder("stu_2", MOCK_ACCEPTED_ORDER.id, { expectedVersion: MOCK_ACCEPTED_ORDER.version }),
         (error: unknown) => {
             assert.ok(error instanceof AppError);
-            assert.equal(error.statusCode, 409); 
+            assert.equal(error.statusCode, 409);
             assert.equal(error.code, "CONFLICT");
             return true;
         },
     );
-    
+
     // check number of calls
     assert.equal(calls.findUnique, 1);
     assert.equal(calls.transaction, 0);
@@ -631,7 +674,7 @@ test("pickUpAcceptedOrder returns error code 409 when expected version is differ
             return true;
         },
     );
-    
+
     // check number of calls
     assert.equal(calls.findUnique, 1);
     assert.equal(calls.transaction, 0);
@@ -640,14 +683,14 @@ test("pickUpAcceptedOrder returns error code 409 when expected version is differ
 });
 
 test("pickUpAcceptedOrder updates order status successfully with valid inputs", async (t) => {
-    const orderStatusChange  = {
+    const orderStatusChange = {
         orderId: MOCK_ACCEPTED_ORDER.id,
         fromStatus: MOCK_ACCEPTED_ORDER.status,
         toStatus: MOCK_PICKED_UP_ORDER.status,
         changedBy: "stu_2"
     }
 
-    const { calls, captured } = useSharedMockPrisma(t, {
+    const { prisma, calls, captured } = useSharedMockPrisma(t, {
         findUniqueReturn: MOCK_ACCEPTED_ORDER,
         updateReturn: MOCK_PICKED_UP_ORDER,
     });
@@ -676,6 +719,29 @@ test("pickUpAcceptedOrder updates order status successfully with valid inputs", 
     assert.equal(calls.transaction, 1);
     assert.equal(calls.update, 1);
     assert.equal(calls.orderStatusHistoryCreate, 1);
+    assert.equal(prisma.outboxEvent.create.mock.calls.length, 1);
+
+    const event = prisma.outboxEvent.create.mock.calls[0]!.arguments[0] as {
+        data: {
+            eventType: string;
+            orderId: string;
+            payload: Record<string, unknown>;
+        };
+    };
+
+    assert.equal(event.data.eventType, "ORDER_STATUS_CHANGED");
+    assert.equal(event.data.orderId, MOCK_PICKED_UP_ORDER.id);
+    assert.equal(event.data.payload.eventType, "ORDER_STATUS_CHANGED");
+    assert.equal(event.data.payload.orderId, MOCK_PICKED_UP_ORDER.id);
+    assert.equal(event.data.payload.orderName, MOCK_PICKED_UP_ORDER.name);
+    assert.equal(event.data.payload.requesterId, MOCK_PICKED_UP_ORDER.requesterId);
+    assert.equal(event.data.payload.courierId, MOCK_PICKED_UP_ORDER.courierId);
+    assert.equal(event.data.payload.fromStatus, "ACCEPTED");
+    assert.equal(event.data.payload.toStatus, "PICKED_UP");
+    assert.equal(event.data.payload.version, MOCK_PICKED_UP_ORDER.version);
+    assert.equal(event.data.payload.offeredCredits, MOCK_PICKED_UP_ORDER.offeredCredits);
+    assert.equal(typeof event.data.payload.eventId, "string");
+    assert.equal(typeof event.data.payload.occurredAt, "string");
 });
 
 test("pickUpAcceptedOrder returns error code 500 and skips the status history when the update fails", async (t) => {
@@ -693,12 +759,12 @@ test("pickUpAcceptedOrder returns error code 500 and skips the status history wh
             return true;
         },
     );
-    
+
     // check number of calls
     assert.equal(calls.findUnique, 1);
     assert.equal(calls.transaction, 1);
     assert.equal(calls.update, 1); // this update will be rolled back in the transaction
-    assert.equal(calls.orderStatusHistoryCreate, 0); 
+    assert.equal(calls.orderStatusHistoryCreate, 0);
 });
 
 test("pickUpAcceptedOrder returns error code 500 and skips the status history when prisma update returns null", async (t) => {
@@ -716,12 +782,12 @@ test("pickUpAcceptedOrder returns error code 500 and skips the status history wh
             return true;
         },
     );
-    
+
     // check number of calls
     assert.equal(calls.findUnique, 1);
     assert.equal(calls.transaction, 1);
     assert.equal(calls.update, 1); // this update will be rolled back in the transaction
-    assert.equal(calls.orderStatusHistoryCreate, 0); 
+    assert.equal(calls.orderStatusHistoryCreate, 0);
 });
 
 test("pickUpAcceptedOrder returns error code 500 when the status history cannot be recorded", async (t) => {
@@ -782,7 +848,7 @@ test("completePickedUpOrder returns error code 409 when the time stated in expir
             return true;
         },
     );
-    
+
     // check number of calls
     assert.equal(calls.findUnique, 1);
     assert.equal(calls.transaction, 0);
@@ -804,7 +870,7 @@ test("completePickedUpOrder returns error code 409 when expected version is diff
             return true;
         },
     );
-    
+
     // check number of calls
     assert.equal(calls.findUnique, 1);
     assert.equal(calls.transaction, 0);
@@ -824,7 +890,7 @@ test("completePickedUpOrder returns error code 403 when the caller is not the as
             return true;
         },
     );
-    
+
     // check number of calls
     assert.equal(calls.findUnique, 1);
     assert.equal(calls.transaction, 0);
@@ -844,7 +910,7 @@ test("completePickedUpOrder returns error code 400 when the order is not in the 
             return true;
         },
     );
-    
+
     // check number of calls
     assert.equal(calls.findUnique, 1);
     assert.equal(calls.transaction, 0);
@@ -852,14 +918,14 @@ test("completePickedUpOrder returns error code 400 when the order is not in the 
 });
 
 test("completePickedUpOrder updates order status successfully with valid inputs", async (t) => {
-    const orderStatusChange  = {
+    const orderStatusChange = {
         orderId: MOCK_PICKED_UP_ORDER.id,
         fromStatus: MOCK_PICKED_UP_ORDER.status,
         toStatus: MOCK_COMPLETED_ORDER.status,
         changedBy: "stu_2"
     }
 
-    const { calls, captured } = useSharedMockPrisma(t, {
+    const { prisma, calls, captured } = useSharedMockPrisma(t, {
         findUniqueReturn: MOCK_PICKED_UP_ORDER,
         updateReturn: MOCK_COMPLETED_ORDER,
     });
@@ -888,6 +954,27 @@ test("completePickedUpOrder updates order status successfully with valid inputs"
     assert.equal(calls.transaction, 1);
     assert.equal(calls.update, 1);
     assert.equal(calls.orderStatusHistoryCreate, 1);
+    assert.equal(prisma.outboxEvent.create.mock.calls.length, 1);
+
+    const event = prisma.outboxEvent.create.mock.calls[0]!.arguments[0] as {
+        data: {
+            eventType: string;
+            orderId: string;
+            payload: Record<string, unknown>;
+        };
+    };
+
+    assert.equal(event.data.eventType, "ORDER_STATUS_CHANGED");
+    assert.equal(event.data.orderId, MOCK_COMPLETED_ORDER.id);
+    assert.equal(event.data.payload.fromStatus, "PICKED_UP");
+    assert.equal(event.data.payload.toStatus, "COMPLETED");
+    assert.equal(event.data.payload.version, MOCK_COMPLETED_ORDER.version);
+    assert.equal(event.data.payload.requesterId, MOCK_COMPLETED_ORDER.requesterId);
+    assert.equal(event.data.payload.courierId, MOCK_COMPLETED_ORDER.courierId);
+    assert.equal(event.data.payload.orderName, MOCK_COMPLETED_ORDER.name);
+    assert.equal(event.data.payload.offeredCredits, MOCK_COMPLETED_ORDER.offeredCredits);
+    assert.equal(typeof event.data.payload.eventId, "string");
+    assert.equal(typeof event.data.payload.occurredAt, "string");
 });
 
 test("completePickedUpOrder returns error code 500 and skips the status history when the update fails", async (t) => {
@@ -916,7 +1003,7 @@ test("completePickedUpOrder returns error code 500 and skips the status history 
 test("completePickedUpOrder returns error code 500 and skips the status history when prisma update returns null", async (t) => {
     const { calls } = useSharedMockPrisma(t, {
         findUniqueReturn: MOCK_PICKED_UP_ORDER,
-        updateReturn: null 
+        updateReturn: null
     });
 
     await assert.rejects(
@@ -993,7 +1080,7 @@ test("dropAcceptedOrder returns error code 403 when the caller is not the assign
             return true;
         },
     );
-    
+
     // check number of calls
     assert.equal(calls.findUnique, 1);
     assert.equal(calls.transaction, 0);
@@ -1013,7 +1100,7 @@ test("dropAcceptedOrder returns error code 400 when the order is not in the ACCE
             return true;
         },
     );
-    
+
     // check number of calls
     assert.equal(calls.findUnique, 1);
     assert.equal(calls.transaction, 0);
@@ -1035,7 +1122,7 @@ test("dropAcceptedOrder returns error code 409 when the time stated in expiryAt 
             return true;
         },
     );
-    
+
     // check number of calls
     assert.equal(calls.findUnique, 1);
     assert.equal(calls.transaction, 0);
@@ -1057,7 +1144,7 @@ test("dropAcceptedOrder returns error code 409 when expected version is differen
             return true;
         },
     );
-    
+
     // check number of calls
     assert.equal(calls.findUnique, 1);
     assert.equal(calls.transaction, 0);
@@ -1136,14 +1223,14 @@ test("dropAcceptedOrder returns error code 500 and skips the order status histor
 });
 
 test("dropAcceptedOrder executes successfully with valid inputs", async (t) => {
-    const orderStatusChange  = {
+    const orderStatusChange = {
         orderId: MOCK_ACCEPTED_ORDER.id,
         fromStatus: MOCK_ACCEPTED_ORDER.status,
         toStatus: MOCK_OPEN_ORDER.status,
         changedBy: "stu_2"
     }
 
-    const { calls, captured } = useSharedMockPrisma(t, {
+    const { prisma, calls, captured } = useSharedMockPrisma(t, {
         findUniqueReturn: MOCK_ACCEPTED_ORDER,
         updateReturn: { ...MOCK_OPEN_ORDER, version: 3 }
     });
@@ -1171,6 +1258,24 @@ test("dropAcceptedOrder executes successfully with valid inputs", async (t) => {
     assert.equal(calls.transaction, 1);
     assert.equal(calls.update, 1);
     assert.equal(calls.orderStatusHistoryCreate, 1);
+    assert.equal(prisma.outboxEvent.create.mock.calls.length, 1);
+
+    const event = prisma.outboxEvent.create.mock.calls[0]!.arguments[0] as {
+        data: {
+            eventType: string;
+            orderId: string;
+            payload: Record<string, unknown>;
+        };
+    };
+
+    assert.equal(event.data.eventType, "ORDER_STATUS_CHANGED");
+    assert.equal(event.data.orderId, MOCK_OPEN_ORDER.id);
+    assert.equal(event.data.payload.fromStatus, "ACCEPTED");
+    assert.equal(event.data.payload.toStatus, "OPEN");
+    assert.equal(event.data.payload.version, 3);
+    assert.equal(event.data.payload.courierId, null);
+    assert.equal(typeof event.data.payload.eventId, "string");
+    assert.equal(typeof event.data.payload.occurredAt, "string");
 });
 
 test("getCourierAcceptanceHistory returns orders with default values and no status specified", async (t) => {
@@ -1202,7 +1307,7 @@ test("getCourierAcceptanceHistory returns orders with default values and no stat
 });
 
 test("getCourierAcceptanceHistory uses page offset and status filters specified", async (t) => {
-    const input: GetCourierOrderHistoryInput = { ...VALID_DEFAULT_COURIER_ACCEPTANCE_INPUT, page: 2, status: "ACCEPTED"}
+    const input: GetCourierOrderHistoryInput = { ...VALID_DEFAULT_COURIER_ACCEPTANCE_INPUT, page: 2, status: "ACCEPTED" }
 
     const { calls, captured } = useSharedMockPrisma(t, { findManyReturn: [MOCK_ACCEPTED_ORDER], countReturn: 16 });
 
@@ -1210,7 +1315,7 @@ test("getCourierAcceptanceHistory uses page offset and status filters specified"
 
     // check arguments passed into prisma findMany query
     const findManyArgs = captured.findManyArgs as { where: Record<string, unknown>; orderBy: unknown; take: number; skip: number };
-    assert.equal(findManyArgs.where.status, input.status); 
+    assert.equal(findManyArgs.where.status, input.status);
     assert.deepEqual(findManyArgs.orderBy, { acceptedAt: "desc" });
     assert.equal(findManyArgs.take, 15);
     assert.equal(findManyArgs.skip, 15); // use page 2

@@ -42,6 +42,10 @@ const renewPayload = {
 
 const pendingOrder = {
     id: orderId,
+    name: "Collect coffee",
+    requesterId,
+    courierId: null,
+    offeredCredits: 10,
     status: OrderStatus.PENDING_RESERVATION,
     version: 1,
     renewalPending: false,
@@ -50,6 +54,10 @@ const pendingOrder = {
 
 const expiredOrder = {
     id: orderId,
+    name: "Collect coffee",
+    requesterId,
+    courierId: "courier-1",
+    offeredCredits: 10,
     status: OrderStatus.EXPIRED,
     version: 4,
     renewalPending: true,
@@ -107,6 +115,7 @@ function createMockPrisma(config: MockConfig = {}) {
                 }
                 : config.requestEvent,
         ),
+        create: mock.fn(async (_args: unknown) => ({})),
     };
 
     const creditReservationResultInbox = {
@@ -258,6 +267,7 @@ test("creditReservationResultService applies a successful CREATE result", async 
     const {
         order,
         orderStatusHistory,
+        outboxEvent,
         creditReservationResultInbox,
     } = useMockPrisma(t, {
         order: pendingOrder,
@@ -301,10 +311,25 @@ test("creditReservationResultService applies a successful CREATE result", async 
         inboxArgs.data.eventType,
         CreditReservationResultType.CREDIT_RESERVATION_SUCCEEDED,
     );
+
+    assert.equal(orderStatusHistory.create.mock.calls.length, 1);
+    assert.equal(outboxEvent.create.mock.calls.length, 1);
+
+    const args = outboxEvent.create.mock.calls[0]!.arguments[0] as {
+        data: {
+            eventType: string;
+            payload: Record<string, unknown>;
+        };
+    };
+
+    assert.equal(args.data.eventType, "ORDER_STATUS_CHANGED");
+    assert.equal(args.data.payload.fromStatus, "PENDING_RESERVATION");
+    assert.equal(args.data.payload.toStatus, "OPEN");
+    assert.equal(args.data.payload.version, pendingOrder.version + 1);
 });
 
 test("creditReservationResultService applies a failed CREATE result", async (t) => {
-    const { order, orderStatusHistory } = useMockPrisma(t, {
+    const { order, orderStatusHistory, outboxEvent } = useMockPrisma(t, {
         order: pendingOrder,
         requestEvent: {
             orderId,
@@ -331,10 +356,31 @@ test("creditReservationResultService applies a failed CREATE result", async (t) 
 
     assert.equal(historyArgs.data.toStatus, OrderStatus.RESERVATION_FAILED);
     assert.equal(historyArgs.data.reason, "INSUFFICIENT_CREDITS");
+
+    assert.equal(orderStatusHistory.create.mock.calls.length, 1);
+    assert.equal(outboxEvent.create.mock.calls.length, 1);
+
+    const statusEvent = outboxEvent.create.mock.calls[0]!.arguments[0] as {
+        data: {
+            eventType: string;
+            payload: Record<string, unknown>;
+        };
+    };
+
+    assert.equal(statusEvent.data.eventType, "ORDER_STATUS_CHANGED");
+    assert.equal(statusEvent.data.payload.fromStatus, "PENDING_RESERVATION");
+    assert.equal(
+        statusEvent.data.payload.toStatus,
+        "RESERVATION_FAILED",
+    );
+    assert.equal(
+        statusEvent.data.payload.version,
+        pendingOrder.version + 1,
+    );
 });
 
 test("creditReservationResultService applies a successful RENEW result", async (t) => {
-    const { order, orderStatusHistory } = useMockPrisma(t, {
+    const { order, orderStatusHistory, outboxEvent } = useMockPrisma(t, {
         order: expiredOrder,
         requestEvent: {
             orderId,
@@ -367,10 +413,28 @@ test("creditReservationResultService applies a successful RENEW result", async (
         changedBy: null,
         reason: "Request renewed",
     });
+
+    assert.equal(orderStatusHistory.create.mock.calls.length, 1);
+    assert.equal(outboxEvent.create.mock.calls.length, 1);
+
+    const statusEvent = outboxEvent.create.mock.calls[0]!.arguments[0] as {
+        data: {
+            eventType: string;
+            payload: Record<string, unknown>;
+        };
+    };
+
+    assert.equal(statusEvent.data.eventType, "ORDER_STATUS_CHANGED");
+    assert.equal(statusEvent.data.payload.fromStatus, OrderStatus.EXPIRED);
+    assert.equal(statusEvent.data.payload.toStatus, OrderStatus.OPEN);
+    assert.equal(
+        statusEvent.data.payload.version,
+        expiredOrder.version + 1,
+    );
 });
 
 test("creditReservationResultService applies a failed RENEW result", async (t) => {
-    const { order, orderStatusHistory } = useMockPrisma(t, {
+    const { order, orderStatusHistory, outboxEvent } = useMockPrisma(t, {
         order: expiredOrder,
         requestEvent: {
             orderId,
@@ -392,6 +456,8 @@ test("creditReservationResultService applies a failed RENEW result", async (t) =
     });
 
     assert.equal(orderStatusHistory.create.mock.calls.length, 0);
+    assert.equal(orderStatusHistory.create.mock.calls.length, 0);
+    assert.equal(outboxEvent.create.mock.calls.length, 0);
 });
 
 test("creditReservationResultService ignores an identical replay", async (t) => {

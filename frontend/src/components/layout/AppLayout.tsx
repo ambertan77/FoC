@@ -1,11 +1,14 @@
 import { Outlet } from "react-router-dom";
 import Navbar from "@/components/navbar/Navbar";
+import { NotificationProvider } from "@/context/NotificationProvider";
 
 const AppLayout = () => {
     return (
         <>
-            <Navbar />
-            <Outlet />
+            <NotificationProvider>
+                <Navbar />
+                <Outlet />
+            </NotificationProvider>
         </>
     );
 };

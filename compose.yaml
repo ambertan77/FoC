@@ -11,6 +11,8 @@ include:
   - order-service/compose.yaml
   - credit-service/compose.yaml
   - frontend/compose.yaml
+  - notification-service/compose.yaml
+  - observability/compose.yaml
 
 services:
   frontend:
@@ -19,6 +21,7 @@ services:
       - supplier-service
       - order-service
       - credit-service
+      - notification-service
     networks:
       - default
       - backend
@@ -71,6 +74,18 @@ services:
     networks:
       - supplier-db
 
+  notification-service:
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - backend
+      - notification-db
+
+  notification-postgres:
+    networks:
+      - notification-db
+
   rabbitmq:
     # Source: Docker Hub Official RabbitMQ Image — https://hub.docker.com/_/rabbitmq
     image: rabbitmq:4.2-management
@@ -107,4 +122,6 @@ networks:
   order-db:
     internal: true
   credit-db:
+    internal: true
+  notification-db:
     internal: true

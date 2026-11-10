@@ -3,6 +3,7 @@ const BASE_USER = "/users";
 const BASE_SUPPLIER = "/suppliers";
 const BASE_ORDER = "/orders";
 const BASE_CREDIT = "/credits";
+const BASE_NOTIFICATION = "/notifications";
 
 export const ENDPOINTS = {
 
@@ -67,5 +68,13 @@ export const ENDPOINTS = {
         failedRequest: (orderId: string) => `${BASE_ORDER}/${orderId}/failure`,
         cancelRequest: (orderId: string) => `${BASE_ORDER}/${orderId}/cancellation`,
         renewRequest: (orderId: string) => `${BASE_ORDER}/${orderId}/renewal`,
-    }
+    },
+
+    notification: {
+        stream: `${BASE_NOTIFICATION}/stream`,
+        list: `${BASE_NOTIFICATION}`,
+        getUnreadCount: `${BASE_NOTIFICATION}/unread-count`,
+        markAsRead: (notificationId: string) => `${BASE_NOTIFICATION}/${notificationId}/read`,
+        markAllAsRead: `${BASE_NOTIFICATION}/read-all`,
+    },
 } as const;

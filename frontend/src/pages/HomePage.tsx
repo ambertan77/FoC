@@ -214,49 +214,50 @@ const HomePage = () => {
             </div >
 
             {totalPages > 1 && (
-                <Pagination className="p-2 border rounded-xl w-fit shadow-sm border-slate-200 bg-white">
-                    < PaginationContent >
-                        <PaginationItem>
-                            <PaginationPrevious
-                                href="#"
-                                aria-disabled={page <= 1}
-                                className={
-                                    page <= 1
-                                        ? "pointer-events-none opacity-50"
-                                        : undefined
-                                }
-                                onClick={(event) => {
-                                    event.preventDefault();
-                                    if (page > 1) setPage(page - 1);
-                                }}
-                            />
-                        </PaginationItem>
+                <div className="pb-10">
+                    <Pagination className="p-2 border rounded-xl w-fit shadow-sm border-slate-200 bg-white">
+                        < PaginationContent >
+                            <PaginationItem>
+                                <PaginationPrevious
+                                    href="#"
+                                    aria-disabled={page <= 1}
+                                    className={
+                                        page <= 1
+                                            ? "pointer-events-none opacity-50"
+                                            : undefined
+                                    }
+                                    onClick={(event) => {
+                                        event.preventDefault();
+                                        if (page > 1) setPage(page - 1);
+                                    }}
+                                />
+                            </PaginationItem>
 
-                        <PaginationItem>
-                            <span className="px-3 text-sm">
-                                Page {page} of {totalPages}
-                            </span>
-                        </PaginationItem>
+                            <PaginationItem>
+                                <span className="px-3 text-sm">
+                                    Page {page} of {totalPages}
+                                </span>
+                            </PaginationItem>
 
-                        <PaginationItem>
-                            <PaginationNext
-                                href="#"
-                                aria-disabled={page >= totalPages}
-                                className={
-                                    page >= totalPages
-                                        ? "pointer-events-none opacity-50"
-                                        : undefined
-                                }
-                                onClick={(event) => {
-                                    event.preventDefault();
-                                    if (page < totalPages) setPage(page + 1);
-                                }}
-                            />
-                        </PaginationItem>
-                    </PaginationContent>
-                </Pagination>
-            )
-            }
+                            <PaginationItem>
+                                <PaginationNext
+                                    href="#"
+                                    aria-disabled={page >= totalPages}
+                                    className={
+                                        page >= totalPages
+                                            ? "pointer-events-none opacity-50"
+                                            : undefined
+                                    }
+                                    onClick={(event) => {
+                                        event.preventDefault();
+                                        if (page < totalPages) setPage(page + 1);
+                                    }}
+                                />
+                            </PaginationItem>
+                        </PaginationContent>
+                    </Pagination>
+                </div>
+            )}
         </>
     );
 };

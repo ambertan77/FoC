@@ -682,7 +682,7 @@ test("receiveRequestService changes a completed order to received", async (t) =>
     assertIsDate(updateArgs.data?.receivedAt);
 
     assert.equal(orderStatusHistory.create.mock.calls.length, 1);
-    assert.equal(outboxEvent.create.mock.calls.length, 1);
+    assert.equal(outboxEvent.create.mock.calls.length, 2);
 
     const outboxArgs = firstMockArgument<OutboxArgs>(
         outboxEvent.create.mock.calls,
@@ -692,6 +692,27 @@ test("receiveRequestService changes a completed order to received", async (t) =>
         outboxArgs.data.eventType,
         OrderEventType.ORDER_RECEIVED,
     );
+
+    const outboxEvents = outboxEvent.create.mock.calls.map((call) => {
+        const args = call.arguments[0] as {
+            data: {
+                eventType: string;
+                payload: Record<string, unknown>;
+            };
+        };
+
+        return args.data;
+    });
+
+    const statusEvent = outboxEvents.find(
+        (event) => event.eventType === "ORDER_STATUS_CHANGED",
+    );
+
+    assert.ok(statusEvent);
+    assert.equal(statusEvent.payload.orderId, orderId);
+    assert.equal(statusEvent.payload.fromStatus, "COMPLETED");
+    assert.equal(statusEvent.payload.toStatus, "RECEIVED");
+    assert.equal(statusEvent.payload.version, result.version);
 });
 
 test("receiveRequestService rejects a concurrent update", async (t) => {
@@ -744,7 +765,7 @@ test("failRequestService changes a completed order to failed", async (t) => {
         },
     });
 
-    await failRequestService(requesterId, orderId, {
+    const result = await failRequestService(requesterId, orderId, {
         expectedVersion: 4,
         failureReason: "Wrong item delivered",
     });
@@ -762,7 +783,7 @@ test("failRequestService changes a completed order to failed", async (t) => {
     assertIsDate(updateArgs.data?.failedAt);
 
     assert.equal(orderStatusHistory.create.mock.calls.length, 1);
-    assert.equal(outboxEvent.create.mock.calls.length, 1);
+    assert.equal(outboxEvent.create.mock.calls.length, 2);
 
     const outboxArgs = firstMockArgument<OutboxArgs>(
         outboxEvent.create.mock.calls,
@@ -771,6 +792,27 @@ test("failRequestService changes a completed order to failed", async (t) => {
         outboxArgs.data.eventType,
         OrderEventType.ORDER_FAILED,
     );
+
+    const outboxEvents = outboxEvent.create.mock.calls.map((call) => {
+        const args = call.arguments[0] as {
+            data: {
+                eventType: string;
+                payload: Record<string, unknown>;
+            };
+        };
+
+        return args.data;
+    });
+
+    const statusEvent = outboxEvents.find(
+        (event) => event.eventType === "ORDER_STATUS_CHANGED",
+    );
+
+    assert.ok(statusEvent);
+    assert.equal(statusEvent.payload.orderId, orderId);
+    assert.equal(statusEvent.payload.fromStatus, "COMPLETED");
+    assert.equal(statusEvent.payload.toStatus, "FAILED");
+    assert.equal(statusEvent.payload.version, result.version);
 });
 
 test("failRequestService rejects an order without a reservation", async (t) => {

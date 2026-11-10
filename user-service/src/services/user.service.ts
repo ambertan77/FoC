@@ -19,6 +19,7 @@ import type {
   ListUsersQuery,
   UpdateMyProfileInput,
 } from "../schemas/user.schema.js";
+import { logger } from "../libs/logger.js";
 
 const publicUserSelect = {
   userId: true,
@@ -127,13 +128,12 @@ export async function promoteUserToAdmin(
     throw new AppError("User account not found", 404, "USER_NOT_FOUND");
   }
 
-  console.info("Administrative user role changed", {
+  logger.info({
     actorId,
     targetUserId,
     previousRole: "STUDENT",
     newRole: "ADMIN",
-    changedAt: new Date().toISOString(),
-  });
+  }, "Administrative user role changed");
 
   return toPublicUser(updatedUser);
 }

@@ -8,6 +8,7 @@ import { AppError } from "../errors/errors.js";
 import { prisma } from "../libs/prisma.js";
 import type { GetCourierOrderHistoryInput, GetOpenOrdersInput, CourierUpdateStatusInput } from "../schemas/order.courier.schema.js";
 import { OrderStatus } from "../generated/prisma/client.js";
+import { enqueueOrderStatusChanged } from "../libs/order-status-event.js";
 
 // order lifecycle statuses
 const STATUS = OrderStatus;
@@ -92,7 +93,7 @@ export async function getAllOpenOrders(courierId: string, input: GetOpenOrdersIn
 }
 
 export async function acceptOpenOrder(courierId: string, orderId: string, input: CourierUpdateStatusInput) {
-    const expectedVersion: number = input.expectedVersion; 
+    const expectedVersion: number = input.expectedVersion;
 
     const oldStatus: OrderStatus = STATUS.OPEN;
     const newStatus: OrderStatus = STATUS.ACCEPTED;
@@ -167,6 +168,13 @@ export async function acceptOpenOrder(courierId: string, orderId: string, input:
             throw new AppError(`Unable to record status update for order ${updatedOrder.id}`, 500);
         }
 
+        await enqueueOrderStatusChanged(tx, {
+            order: updatedOrder,
+            fromStatus: oldStatus,
+            toStatus: newStatus,
+            version: updatedOrder.version,
+        });
+
         return updatedOrder;
     });
 
@@ -174,7 +182,7 @@ export async function acceptOpenOrder(courierId: string, orderId: string, input:
 }
 
 export async function pickUpAcceptedOrder(courierId: string, orderId: string, input: CourierUpdateStatusInput) {
-    const expectedVersion: number = input.expectedVersion; 
+    const expectedVersion: number = input.expectedVersion;
 
     const oldStatus: OrderStatus = STATUS.ACCEPTED;
     const newStatus: OrderStatus = STATUS.PICKED_UP;
@@ -245,6 +253,13 @@ export async function pickUpAcceptedOrder(courierId: string, orderId: string, in
             throw new AppError(`Unable to record status update for order ${updatedOrder.id}`, 500);
         }
 
+        await enqueueOrderStatusChanged(tx, {
+            order: updatedOrder,
+            fromStatus: oldStatus,
+            toStatus: newStatus,
+            version: updatedOrder.version,
+        });
+
         return updatedOrder;
     });
 
@@ -253,7 +268,7 @@ export async function pickUpAcceptedOrder(courierId: string, orderId: string, in
 
 export async function completePickedUpOrder(courierId: string, orderId: string, input: CourierUpdateStatusInput) {
     const expectedVersion: number = input.expectedVersion;
-    
+
     const oldStatus: OrderStatus = STATUS.PICKED_UP;
     const newStatus: OrderStatus = STATUS.COMPLETED;
 
@@ -274,7 +289,7 @@ export async function completePickedUpOrder(courierId: string, orderId: string, 
         throw new AppError(`Order ${orderId} has expired`, 409);
     }
 
-     // ensure the found order's version matches the expected current version for optimistic concurrency control
+    // ensure the found order's version matches the expected current version for optimistic concurrency control
     if (order.version !== expectedVersion) {
         throw new AppError(`Order ${orderId} changed while completing. Reload and try again.`, 409);
     }
@@ -323,6 +338,13 @@ export async function completePickedUpOrder(courierId: string, orderId: string, 
             throw new AppError(`Unable to record status update for order ${updatedOrder.id}`, 500);
         }
 
+        await enqueueOrderStatusChanged(tx, {
+            order: updatedOrder,
+            fromStatus: oldStatus,
+            toStatus: newStatus,
+            version: updatedOrder.version,
+        });
+
         return updatedOrder;
     });
 
@@ -350,7 +372,7 @@ export async function dropAcceptedOrder(courierId: string, orderId: string, inpu
         throw new AppError(`Order ${orderId} has expired`, 409);
     }
 
-     // ensure the found order's version matches the expected current version for optimistic concurrency control
+    // ensure the found order's version matches the expected current version for optimistic concurrency control
     if (order.version !== expectedVersion) {
         throw new AppError(`Order ${orderId} changed while dropping. Reload and try again.`, 409);
     }
@@ -399,6 +421,13 @@ export async function dropAcceptedOrder(courierId: string, orderId: string, inpu
         if (!transactionRecord) {
             throw new AppError(`Unable to record status update for order ${updatedOrder.id}`, 500);
         }
+
+        await enqueueOrderStatusChanged(tx, {
+            order: updatedOrder,
+            fromStatus: oldStatus,
+            toStatus: newStatus,
+            version: updatedOrder.version,
+        });
 
         return updatedOrder;
     });

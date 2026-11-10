@@ -5,6 +5,8 @@ import "dotenv/config";
 import supplierRouter from "./routes/supplier.route.js";
 import config from "./config/config.js";
 import { errorHandler } from "./middleware/error.middleware.js";
+import { requestLogger } from "./middleware/request-logger.middleware.js";
+import { logger } from "./libs/logger.js";
 import { storage } from "./libs/storage.js";
 import { AppError } from "./errors/errors.js";
 import internalSupplierRouter from "./routes/internal-supplier.route.js";
@@ -13,6 +15,7 @@ const app = express();
 
 await storage.init(); // initialise the storage class, based on how we are running this app
 
+app.use(requestLogger);
 app.use(
     cors({
         origin: config.frontendUrl,
@@ -41,5 +44,5 @@ app.use(errorHandler);
 const PORT = config.port;
 
 app.listen(PORT, () => {
-    console.log(`Supplier service is running at http://localhost:${PORT}`);
+    logger.info({ port: PORT }, "Supplier service is running");
 });

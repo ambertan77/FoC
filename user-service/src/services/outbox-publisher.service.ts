@@ -10,6 +10,7 @@ import {
   connectRegistrationMessaging,
   publishUserRegistered,
 } from "../libs/rabbitmq.js";
+import { logger } from "../libs/logger.js";
 
 const POLL_INTERVAL_MS = 5_000; // 5 seconds between polls when no pending events are found.
 
@@ -108,10 +109,10 @@ export function startOutboxPublisher(prisma: PrismaClient): () => Promise<void> 
               data: { publishedAt: new Date(), lastError: null },
             });
             consecutiveFailures = 0;
-            console.info("Outbox publisher", { ...context, outcome: "published" });
+            logger.info({ ...context, outcome: "published" }, "Outbox publisher");
           } catch (error) {
             const lastError = `${operation}_FAILED:${failureCode(error)}`;
-            console.warn("Outbox publisher", { ...context, outcome: "retry_scheduled", error: lastError });
+            logger.warn({ ...context, outcome: "retry_scheduled", error: lastError }, "Outbox publisher");
             await disconnect();
             // If marking published failed after confirmation, retry the same
             // event. Group 1 makes this possible duplicate safe.
@@ -128,10 +129,10 @@ export function startOutboxPublisher(prisma: PrismaClient): () => Promise<void> 
         } catch (error) {
           // Includes database outages while polling or saving retry metadata.
           // Rows remain durable; never let a worker failure stop registration.
-          console.warn("Outbox publisher", {
+          logger.warn({
             outcome: "worker_retry",
             error: failureCode(error),
-          });
+          }, "Outbox publisher");
           consecutiveFailures++;
           await pause(retryDelay(consecutiveFailures));
         }

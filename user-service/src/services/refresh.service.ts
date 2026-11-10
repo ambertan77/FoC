@@ -4,14 +4,11 @@ import { prisma } from "../libs/prisma.js";
 import { generateRefreshToken, verifyRefreshToken } from "../libs/refreshToken.js";
 import { generateAccessToken } from "../libs/accessToken.js";
 import { REFRESH_TOKEN_MAX_AGE } from "../constants/auth.constants.js";
+import { logger } from "../libs/logger.js";
 
 export async function refreshAccessToken(refreshToken: string) {
-    console.log("Refresh service running >>>>>>>>>>>>>>");
-
     // 1. Verify the refresh token using jwt and the secret key
     const payload = verifyRefreshToken(refreshToken);
-    console.log("Refresh token jti:", payload.jti);
-    console.log("Refresh token userId:", payload.userId);
 
     // 2. Find the exact refresh token in the database using the jti (tokenId)
     const storedToken = await prisma.refreshToken.findUnique({
@@ -24,26 +21,26 @@ export async function refreshAccessToken(refreshToken: string) {
     });
 
     if (!storedToken) {
-        console.log("Refresh token not found in database");
+        logger.warn({ userId: payload.userId, reason: "not_found" }, "Refresh token rejected");
         throw new AppError("Invalid token, please sign out and back in", 401);
     }
 
     // 3. Check if the refresh token has already been revoked
     if (storedToken.revokedAt) {
-        console.log("The refresh token has been revoked. No more refresh token rotation.");
+        logger.warn({ userId: payload.userId, reason: "revoked" }, "Refresh token rejected");
         throw new AppError("Invalid token, please sign out and back in", 401);
     }
 
     // 4. Check if the refresh token has expired
     if (storedToken.expiresAt < new Date()) {
-        console.log("The refresh token has expired. No more refresh token rotation.");
+        logger.warn({ userId: payload.userId, reason: "expired" }, "Refresh token rejected");
         throw new AppError("Invalid token, please sign out and back in", 401);
     }
 
     // 5. Verify the refresh token against the stored hash
     const refreshTokenValid = await argon2.verify(storedToken.tokenHash, refreshToken);
     if (!refreshTokenValid) {
-        console.log("The refresh token does not match the stored hash. No more refresh token rotation.");
+        logger.warn({ userId: payload.userId, reason: "hash_mismatch" }, "Refresh token rejected");
         throw new AppError("Invalid token, please sign out and back in", 401);
     }
 
@@ -61,11 +58,9 @@ export async function refreshAccessToken(refreshToken: string) {
         }
     });
 
-    console.log(`Revoked ${revoked.count} refresh token(s) for user ${user.userId}`);
-
     // Check if the refresh token was successfully revoked
     if (revoked.count !== 1) {
-        console.log("Failed to revoke the refresh token. No more refresh token rotation.");
+        logger.warn({ userId: payload.userId, reason: "revoke_failed" }, "Refresh token rejected");
         throw new AppError("Invalid token, please sign out and back in", 401);
     }
 

@@ -188,9 +188,9 @@ test("updateOrdersAsReceived does no updates when there are no orders that satis
 //     // this test case checks arguments passed into the WHERE clause of the findMany query
 //     const { captured } = useSharedMockPrisma(t, { findManyReturn: [] });
 
-    
 
-    
+
+
 // });
 
 test("updateOrdersAsReceived returns error code 409 and skips the transaction when an order has no credit reservation", async (t) => {
@@ -255,6 +255,7 @@ test("updateOrdersAsReceived executes successfully for each valid completed orde
     assert.ok(cutoff.getTime() <= after - 30 * 60 * 1000);
     assert.deepEqual(findManyArgs.select, {
         id: true,
+        name: true,
         requesterId: true,
         courierId: true,
         status: true,
@@ -286,15 +287,47 @@ test("updateOrdersAsReceived executes successfully for each valid completed orde
         assert.deepEqual(prisma.orderStatusHistory.create.mock.calls[i]!.arguments[0], { data: orderStatusChange });
 
         // check arguments passed into prisma when creating outboxEvent row
-        const outboxEventCreateArgs = prisma.outboxEvent.create.mock.calls[i]!.arguments[0] as { data: { id: string; orderId: string; eventType: string; payload: Record<string, unknown> } };
-        assert.equal(outboxEventCreateArgs.data.orderId, order.id);
-        assert.equal(outboxEventCreateArgs.data.eventType, "ORDER_RECEIVED");
-        assert.equal(outboxEventCreateArgs.data.payload.eventType, "ORDER_RECEIVED");
-        assert.equal(outboxEventCreateArgs.data.payload.reservationId, order.creditReservationId);
-        assert.equal(outboxEventCreateArgs.data.payload.orderId, order.id);
-        assert.equal(outboxEventCreateArgs.data.payload.requesterId, order.requesterId);
-        assert.equal(outboxEventCreateArgs.data.payload.courierId, order.courierId);
-        assert.equal(outboxEventCreateArgs.data.payload.amount, order.offeredCredits);
+        const outboxEvents = prisma.outboxEvent.create.mock.calls
+            .map((call) => (call.arguments[0] as {
+                data: {
+                    id: string;
+                    orderId: string;
+                    eventType: string;
+                    payload: Record<string, unknown>;
+                };
+            }).data)
+            .filter((event) => event.orderId === order.id);
+
+        assert.equal(outboxEvents.length, 2);
+
+        const receivedEvent = outboxEvents.find(
+            (event) => event.eventType === "ORDER_RECEIVED",
+        );
+
+        assert.ok(receivedEvent);
+        assert.equal(receivedEvent.payload.eventType, "ORDER_RECEIVED");
+        assert.equal(receivedEvent.payload.reservationId, order.creditReservationId);
+        assert.equal(receivedEvent.payload.orderId, order.id);
+        assert.equal(receivedEvent.payload.requesterId, order.requesterId);
+        assert.equal(receivedEvent.payload.courierId, order.courierId);
+        assert.equal(receivedEvent.payload.amount, order.offeredCredits);
+
+        const statusEvent = outboxEvents.find(
+            (event) => event.eventType === "ORDER_STATUS_CHANGED",
+        );
+
+        assert.ok(statusEvent);
+        assert.equal(statusEvent.payload.eventType, "ORDER_STATUS_CHANGED");
+        assert.equal(statusEvent.payload.orderId, order.id);
+        assert.equal(statusEvent.payload.orderName, order.name);
+        assert.equal(statusEvent.payload.requesterId, order.requesterId);
+        assert.equal(statusEvent.payload.courierId, order.courierId);
+        assert.equal(statusEvent.payload.fromStatus, "COMPLETED");
+        assert.equal(statusEvent.payload.toStatus, "AUTO_RECEIVED");
+        assert.equal(statusEvent.payload.version, order.version + 1);
+        assert.equal(statusEvent.payload.offeredCredits, order.offeredCredits);
+        assert.equal(typeof statusEvent.payload.eventId, "string");
+        assert.equal(typeof statusEvent.payload.occurredAt, "string");
     });
 
     // check result
@@ -305,5 +338,5 @@ test("updateOrdersAsReceived executes successfully for each valid completed orde
     assert.equal(calls.transaction, orders.length);
     assert.equal(calls.updateMany, orders.length);
     assert.equal(calls.orderStatusHistoryCreate, orders.length);
-    assert.equal(calls.outboxEventCreate, orders.length);
+    assert.equal(calls.outboxEventCreate, orders.length * 2);
 });

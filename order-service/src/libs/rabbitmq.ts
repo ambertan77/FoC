@@ -1,6 +1,7 @@
 import { OrderEventType } from "../generated/prisma/client.js";
 import { connect, type Channel, type ChannelModel, type ConfirmChannel, type Options } from "amqplib";
 import config from "../config/config.js";
+import { logger } from "./logger.js";
 
 const BROKER_TIMEOUT_MS = 10_000; // 10 seconds
 
@@ -102,7 +103,23 @@ export const RESERVATION_RESULT_MESSAGING = {
     retryDelayMs: 10_000,
 } as const;
 
+// ---------- Topologies Notification consumes (Order publishes to them) ----------
+export const ORDER_STATUS_MESSAGING = {
+    exchange: "order.events",
+    exchangeType: "topic",
+    routingKeys: {
+        ORDER_STATUS_CHANGED: "order.status.changed.v1",
+    },
+    // Explicit binding, not "order.*.v1"
+    bindingKeys: ["order.status.changed.v1"],
+    queue: "notification.order-events.v1",
+    retryQueue: "notification.order-events.retry.v1",
+    deadQueue: "notification.order-events.dead.v1",
+    retryDelayMs: 10_000,
+} as const;
 
+
+// ---------- Topologies ----------
 export const declareReservationRequestTopology = (channel: Channel) =>
     declareConsumerTopology(channel, RESERVATION_REQUEST_MESSAGING);
 
@@ -112,10 +129,14 @@ export const declareSettlementTopology = (channel: Channel) =>
 export const declareReservationResultTopology = (channel: Channel) =>
     declareConsumerTopology(channel, RESERVATION_RESULT_MESSAGING);
 
-/** Everything the outbox publisher sends to: the request command and ORDER_* events. */
+export const declareOrderStatusTopology = (channel: Channel) =>
+    declareConsumerTopology(channel, ORDER_STATUS_MESSAGING);
+
+
 export async function declareOrderPublishingTopology(channel: Channel): Promise<void> {
     await declareReservationRequestTopology(channel);
     await declareSettlementTopology(channel);
+    await declareOrderStatusTopology(channel);
 }
 
 
@@ -127,6 +148,7 @@ export type PublishableOrderEventType = Extract<
     | "ORDER_CANCELED"
     | "ORDER_EXPIRED"
     | "ORDER_FAILED"
+    | "ORDER_STATUS_CHANGED"
 >;
 
 export const ORDER_PUBLISH_ROUTES = {
@@ -149,6 +171,10 @@ export const ORDER_PUBLISH_ROUTES = {
     [OrderEventType.ORDER_FAILED]: {
         exchange: SETTLEMENT_MESSAGING.exchange,
         routingKey: SETTLEMENT_MESSAGING.routingKeys.ORDER_FAILED,
+    },
+    [OrderEventType.ORDER_STATUS_CHANGED]: {
+        exchange: ORDER_STATUS_MESSAGING.exchange,
+        routingKey: ORDER_STATUS_MESSAGING.routingKeys.ORDER_STATUS_CHANGED,
     },
 } satisfies Record<PublishableOrderEventType, { exchange: string; routingKey: string }>;
 
@@ -178,14 +204,14 @@ export async function connectOrderMessaging(
 
     // Handle EventEmitter errors even between operations; never log URL credentials.
     connection.on("error", () =>
-        console.warn("RabbitMQ connection error; reconnect required")
+        logger.warn("RabbitMQ connection error; reconnect required")
     );
 
     try {
         // Create a confirm channel for publishing messages with publisher confirms.
         const channel = await connection.createConfirmChannel();
         channel.on("error", () =>
-            console.warn("RabbitMQ channel error; reconnect required")
+            logger.warn("RabbitMQ channel error; reconnect required")
         );
 
         // Assert the exchange for order events.
