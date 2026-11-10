@@ -28,6 +28,7 @@ const badgeVariants = cva(
         red: "bg-red-200 text-red-900 [a]:hover:bg-red-300",
         indigo900: "bg-indigo-900 text-white [a]:hover:bg-indigo-800",
         muted: "bg-muted text-muted-foreground [a]:hover:bg-muted/80",
+        notification: "bg-indigo-500/20 text-indigo-900 focus-visible:ring-indigo/20 dark:focus-visible:ring-indigo/40 [a]:hover:bg-indigo-500/20",
       },
 
       size: {

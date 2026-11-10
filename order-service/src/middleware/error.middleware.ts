@@ -1,5 +1,6 @@
 import type { ErrorRequestHandler } from "express";
 import { AppError, DEFAULT_ERRORS } from "../errors/errors.js";
+import { logger } from "../libs/logger.js";
 
 export const errorHandler: ErrorRequestHandler = (
     err,
@@ -7,7 +8,10 @@ export const errorHandler: ErrorRequestHandler = (
     res,
     _next,
 ) => {
-    console.error(err);
+    // Expected 4xx errors are already in the access log; keep stacks for real failures.
+    if (!(err instanceof AppError) || err.statusCode >= 500) {
+        logger.error({ err }, "Unhandled request error");
+    }
 
     if (err instanceof AppError) {
         return res.status(err.statusCode).json({

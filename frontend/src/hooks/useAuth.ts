@@ -11,11 +11,13 @@ const useAuth = () => {
 
     const user = useAuthStore((state) => state.user);
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+    const sessionVersion = useAuthStore((state) => state.sessionVersion);
     const { isInitializing, restoreSession } = context;
 
     return {
         user,
         isAuthenticated,
+        sessionVersion,
         isInitializing,
         restoreSession,
     };

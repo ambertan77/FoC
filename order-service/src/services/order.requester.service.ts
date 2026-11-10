@@ -4,6 +4,8 @@ import { OrderEventType, OrderStatus, Prisma } from "../generated/prisma/client.
 import { verifySupplierExists } from "../integrations/supplier/supplier.client.js";
 import { prisma } from "../libs/prisma.js";
 import type { CancelRequestInput, CreateRequestInput, FailRequestInput, ReceiveRequestInput, RenewExpiredRequestInput, RequesterOrderHistoryQuery, UpdateRequestInput } from "../schemas/order.requester.schema.js";
+import { enqueueOrderStatusChanged } from "../libs/order-status-event.js";
+import { logger } from "../libs/logger.js";
 
 export async function getRequesterOrderHistoryService(
     requesterId: string,
@@ -157,12 +159,12 @@ export async function createRequestService(
     ]);
 
     if (!pickupSupplierExists) {
-        console.error(`Pickup supplier with ID ${input.pickupSupplierId} does not exist`);
+        logger.warn({ supplierId: input.pickupSupplierId }, "Pickup supplier does not exist");
         throw new AppError("Pickup supplier does not exist", 404);
     }
 
     if (!deliverySupplierExists) {
-        console.error(`Delivery supplier with ID ${input.deliverySupplierId} does not exist`);
+        logger.warn({ supplierId: input.deliverySupplierId }, "Delivery supplier does not exist");
         throw new AppError("Delivery supplier does not exist", 404);
     }
 
@@ -307,6 +309,12 @@ export async function receiveRequestService(
             },
         });
 
+        await enqueueOrderStatusChanged(tx, {
+            order: existingOrder,
+            fromStatus: OrderStatus.COMPLETED,
+            toStatus: OrderStatus.RECEIVED,
+            version: input.expectedVersion + 1,
+        });
 
         return tx.order.findUniqueOrThrow({
             where: { id: orderId },
@@ -396,6 +404,13 @@ export async function failRequestService(
                 eventType: OrderEventType.ORDER_FAILED,
                 payload: eventPayload,
             },
+        });
+
+        await enqueueOrderStatusChanged(tx, {
+            order: existingOrder,
+            fromStatus: OrderStatus.COMPLETED,
+            toStatus: OrderStatus.FAILED,
+            version: input.expectedVersion + 1,
         });
 
         return tx.order.findUniqueOrThrow({

@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "node --import tsx --import ./test/setup.ts --experimental-test-module-mocks --test 'src/**/*.test.ts'",
-    "dev": "nodemon --exec tsx src/index.ts",
+    "dev": "nodemon --exec \"tsx src/index.ts | pino-pretty\"",
     "build": "tsc",
     "start": "node dist/index.js",
     "db:migrate": "prisma migrate dev --name init",
@@ -29,6 +29,8 @@
     "jsonwebtoken": "^9.0.3",
     "nodemailer": "^10.0.10",
     "pg": "^8.23.0",
+    "pino": "^10.4.0",
+    "pino-http": "^11.0.0",
     "prisma": "^7.10.0",
     "zod": "^4.6.4"
   },
@@ -41,6 +43,7 @@
     "@types/nodemailer": "^8.0.2",
     "@types/pg": "^8.23.1",
     "nodemon": "^3.1.14",
+    "pino-pretty": "^13.2.0",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"
   }

@@ -4,6 +4,7 @@ import type { Response, NextFunction } from "express";
 import { AppError } from "../errors/errors.js";
 import config from "../config/config.js";
 import type { AuthRequest, Role } from "../types/auth.types.js";
+import { logger } from "../libs/logger.js";
 
 const publicKey = fs.readFileSync(config.jwtPublicKeyPath, "utf8");
 
@@ -15,14 +16,14 @@ export function authenticate(
     const authHeader = req.headers.authorization;
 
     if (!authHeader?.startsWith("Bearer ")) {
-        console.log("Authorization header does not start with Bearer");
+        logger.debug("Authorization header does not start with Bearer");
         throw new AppError("Authentication required", 401, "AUTHENTICATION_REQUIRED");
     }
 
     const accessToken = authHeader.replace("Bearer ", "").trim();
 
     if (!accessToken) {
-        console.log("Access token is missing after Bearer");
+        logger.debug("Access token is missing after Bearer");
         throw new AppError("Authentication required", 401, "AUTHENTICATION_REQUIRED");
     }
 
@@ -49,11 +50,9 @@ export function authenticate(
             role: payload.role as Role,
         };
 
-        console.log(`Authenticated user: ${req.user.email} with role: ${req.user.role}`);
-
         next();
     } catch {
-        console.log("Access token is invalid or expired");
+        logger.debug("Access token is invalid or expired");
         throw new AppError(
             "Invalid token, please sign out and back in",
             401

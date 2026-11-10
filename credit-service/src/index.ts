@@ -4,6 +4,7 @@ import cors from "cors";
 import "dotenv/config";
 import config from "./config/config.js";
 import { errorHandler } from "./middleware/error.middleware.js";
+import { requestLogger } from "./middleware/request-logger.middleware.js";
 import { AppError } from "./errors/errors.js";
 import creditRouter from "./routes/credit.route.js";
 import { prisma } from "./libs/prisma.js";
@@ -12,9 +13,11 @@ import { startRegistrationConsumer } from "./services/registration-consumer.serv
 import { startSettlementConsumer } from "./services/settlement-consumer.service.js";
 import { startCreditOutboxPublisher } from "./workers/credit-outbox.publisher.js";
 import { startReservationRequestConsumer } from "./workers/reservation-request.consumer.js";
+import { logger } from "./libs/logger.js";
 
 const app = express();
 
+app.use(requestLogger);
 app.use(
     cors({
         origin: config.frontendUrl,
@@ -48,7 +51,7 @@ let stopReservationRequest: (() => Promise<void>) | undefined;
 let stopCreditOutboxPublisher: (() => Promise<void>) | undefined;
 let shuttingDown = false;
 const server = app.listen(PORT, () => {
-    console.log(`Credit service is running at http://localhost:${PORT}`);
+    logger.info({ port: PORT }, "Credit service is running");
     if (!shuttingDown) {
         stopConsumer = startRegistrationConsumer(prisma);
         stopSettlement = startSettlementConsumer(prisma);
@@ -74,8 +77,8 @@ const shutdown = async () => {
         ]);
         await prisma.$disconnect();
         clearTimeout(deadline);
-    } catch {
-        console.error("Credit service shutdown failed");
+    } catch (error) {
+        logger.error({ err: error }, "Credit service shutdown failed");
         process.exitCode = 1;
     }
 };

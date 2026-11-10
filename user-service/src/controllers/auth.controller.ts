@@ -18,6 +18,7 @@ import {
     startRegistration,
     verifyRegistration as verifyRegistrationService,
 } from "../services/registration.service.js";
+import { logger } from "../libs/logger.js";
 
 export async function activateAdmin(req: Request, res: Response) {
     const result = adminActivationSchema.safeParse(req.body);
@@ -90,7 +91,7 @@ export async function login(req: Request, res: Response) {
         throw new AppError(result.error.issues.at(0)?.message || "Invalid request", 400);
     }
     const data = await loginUser(result.data);
-    console.log("Login successful:", data);
+    logger.info({ userId: data.user.id }, "Login successful");
 
     res.cookie("refreshToken", data.refreshToken, refreshTokenCookieOptions);
 
@@ -113,9 +114,9 @@ export async function logout(req: Request, res: Response) {
     if (refreshToken) {
         try {
             await logoutUser(refreshToken);
-            console.log("Logout successful");
+            logger.info("Logout successful");
         } catch (error) {
-            console.error("Error during logout:", error);
+            logger.error({ err: error }, "Error during logout");
             // Even if there's an error during logout, we still want
             // to clear the cookie and log the user out.
         }
@@ -128,19 +129,18 @@ export async function logout(req: Request, res: Response) {
 
 export async function refresh(req: Request, res: Response) {
     const refreshToken = req.signedCookies.refreshToken;
-    console.log("Refresh token received:", refreshToken);
 
     // Check if the refresh token is present in the cookies
     if (!refreshToken) {
         res.clearCookie("refreshToken", refreshTokenCookieOptions);
-        console.log("No refresh token found in cookies");
+        logger.debug("No refresh token found in cookies");
         throw new AppError("Invalid, please sign out and back in", 401);
     }
 
     try {
         const result = await refreshAccessToken(refreshToken);
         res.cookie("refreshToken", result.refreshToken, refreshTokenCookieOptions);
-        console.log("Refresh token rotation successful");
+        logger.debug("Refresh token rotation successful");
 
         return res.status(200).json({
             success: true,
@@ -152,7 +152,7 @@ export async function refresh(req: Request, res: Response) {
         });
     } catch (error) {
         if (error instanceof AppError && error.statusCode === 401) {
-            console.log("Refresh token is invalid or expired, clearing cookie");
+            logger.debug("Refresh token is invalid or expired, clearing cookie");
             res.clearCookie("refreshToken", refreshTokenCookieOptions);
         }
 

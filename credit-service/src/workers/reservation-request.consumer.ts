@@ -11,6 +11,7 @@ import {
 import { reservationRequestEventSchema } from "../schemas/reservation-request-event.schema.js";
 import { reservationRequestService } from "../services/reservation-request.service.js";
 import { MAX_REQUEST_BYTES, MAX_RETRIES } from "../constants/consumer.constant.js";
+import { logger } from "../libs/logger.js";
 
 function getRetryCount(message: ConsumeMessage): number | null {
     const value = message.properties.headers?.["x-retry-count"] ?? 0;
@@ -115,11 +116,11 @@ export async function processReservationRequestMessage(
         // The transaction has recorded the request outcome and result outbox
         // event. A separate outbox publisher will publish that result.
         channel.ack(message);
-        console.info("Reservation request", {
+        logger.info({
             eventId: parsed.data.eventId,
             orderId: parsed.data.orderId,
             outcome: "processed",
-        });
+        }, "Reservation request");
     } catch (error) {
         // 5. If the processing fails, either retry or forward to the dead-letter queue.
         // Pause and reconnect during a temporary database outage instead of
@@ -151,11 +152,11 @@ export async function processReservationRequestMessage(
             );
         }
 
-        console.warn("Reservation request processing failed", {
+        logger.warn({
             eventId: parsed.data.eventId,
             orderId: parsed.data.orderId,
             retryCount,
-        });
+        }, "Reservation request processing failed");
     }
 }
 
@@ -207,7 +208,7 @@ export function startReservationRequestConsumer(
                         channel,
                         message,
                     ).catch(() => {
-                        console.warn("Reservation request delivery left unacknowledged");
+                        logger.warn("Reservation request delivery left unacknowledged");
                         end();
                     });
                 },
@@ -215,7 +216,7 @@ export function startReservationRequestConsumer(
             );
 
             consumerTag = consumer.consumerTag;
-            console.info("Reservation request consumer connected");
+            logger.info("Reservation request consumer connected");
             await finished;
         } finally {
             ending = true;
@@ -241,7 +242,7 @@ export function startReservationRequestConsumer(
             try {
                 await runSession();
             } catch {
-                console.warn("Reservation request consumer reconnecting");
+                logger.warn("Reservation request consumer reconnecting");
             }
 
             if (abort.signal.aborted) break;

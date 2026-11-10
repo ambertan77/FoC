@@ -25,7 +25,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        service: [user-service, supplier-service, order-service, credit-service]
+        service: [user-service, supplier-service, order-service, credit-service, notification-service]
     defaults:
       run:
         working-directory: ${{ matrix.service }}
@@ -56,6 +56,7 @@ jobs:
           SUPPLIER_SERVICE_URL: http://localhost
           CREDIT_SERVICE_URL: http://localhost
           RABBITMQ_URL: amqp://localhost
+          MAX_STREAMS_PER_USER: "8"
 
   credit-integration:
     name: credit-service integration
@@ -119,6 +120,7 @@ jobs:
       VITE_SUPPLIER_API_BASE_URL: /api
       VITE_ORDER_API_BASE_URL: /api
       VITE_CREDIT_API_BASE_URL: /api
+      VITE_NOTIFICATION_API_BASE_URL: /api
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -144,6 +146,7 @@ jobs:
             supplier-service,
             order-service,
             credit-service,
+            notification-service,
             frontend,
           ]
     steps:

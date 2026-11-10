@@ -1,4 +1,5 @@
 import { updateOrdersAsReceived } from "../services/order-receipt.service.js";
+import { logger } from "../libs/logger.js";
 
 const POLL_INTERVAL_MS = 60_000; // Poll every 1 minutes for new orders to expire.
 
@@ -18,10 +19,10 @@ export function startOrderReceiptWorker(): () => Promise<void> {
                 const updatedOrdersCount = await updateOrdersAsReceived();
 
                 if (updatedOrdersCount > 0) {
-                    console.log(`Received ${updatedOrdersCount} orders`);
+                    logger.info({ count: updatedOrdersCount }, "Orders marked as received");
                 }
             } catch (error) {
-                console.error('Error occurred while receiving completed orders:', error);
+                logger.error({ err: error }, 'Error occurred while receiving completed orders');
             } finally {
                 currentRun = undefined;
             }

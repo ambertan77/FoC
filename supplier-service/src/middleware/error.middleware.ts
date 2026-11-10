@@ -1,6 +1,7 @@
 import type { ErrorRequestHandler } from "express";
 
 import { AppError, DEFAULT_ERRORS } from "../errors/errors.js";
+import { logger } from "../libs/logger.js";
 
 const MULTER_CODES: Record<string, number> = {
     LIMIT_FILE_SIZE: 413,
@@ -23,9 +24,9 @@ export const errorHandler: ErrorRequestHandler = (
     res,
     _next,
 ) => {
-    console.error(err);
-
+    // Expected 4xx errors are already in the access log; keep stacks for real failures.
     if (err instanceof AppError) {
+        if (err.statusCode >= 500) logger.error({ err }, "Unhandled request error");
         return res.status(err.statusCode).json({
             success: false,
             code: err.code,
@@ -37,6 +38,7 @@ export const errorHandler: ErrorRequestHandler = (
         ? (err as { code: string }).code
         : undefined;
     if (multerCode && MULTER_CODES[multerCode] !== undefined) {
+        if (MULTER_CODES[multerCode] >= 500) logger.error({ err }, "Unhandled request error");
         return res.status(MULTER_CODES[multerCode]).json({
             success: false,
             code: MULTER_CODES[multerCode] === 413 ? "TOO_LARGE" : "BAD_REQUEST",
@@ -44,6 +46,7 @@ export const errorHandler: ErrorRequestHandler = (
         });
     }
 
+    logger.error({ err }, "Unhandled request error");
     return res.status(500).json({
         success: false,
         code: DEFAULT_ERRORS[500],

@@ -1,0 +1,55 @@
+// Discover this project's containers, label each line by service, and push to Loki.
+
+discovery.docker "containers" {
+  host             = "unix:///var/run/docker.sock"
+  refresh_interval = "5s" // pick up redeployed containers quickly
+
+  filter {
+    name   = "label"
+    values = ["com.docker.compose.project=" + sys.env("COMPOSE_PROJECT_NAME")]
+  }
+}
+
+discovery.relabel "containers" {
+  targets = []
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "service"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
+  }
+}
+
+loki.source.docker "containers" {
+  host          = "unix:///var/run/docker.sock"
+  targets       = discovery.docker.containers.targets
+  labels        = { "env" = sys.env("LOG_ENV") }
+  relabel_rules = discovery.relabel.containers.rules
+  forward_to    = [loki.process.json.receiver]
+}
+
+// Services log JSON (pino). Promote only `level` to a label (low cardinality);
+// everything else, including reqId, stays in the line and is read with `| json`.
+// Non-JSON lines (Postgres, RabbitMQ) pass through without a level label.
+loki.process "json" {
+  stage.json {
+    expressions = { level = "level" }
+  }
+
+  stage.labels {
+    values = { level = "" }
+  }
+
+  forward_to = [loki.write.default.receiver]
+}
+
+loki.write "default" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}

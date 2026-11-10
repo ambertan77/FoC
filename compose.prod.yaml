@@ -4,6 +4,8 @@
 # Scope: Generated the production compose override that pulls service images from ECR.
 # Author review: Reviewed, tested, and edited by Lim Shao Qi.
 
+# Later edit (2026-11-10, Claude Code / Claude Sonnet 5.5, pending author review): added the Grafana/Alloy production overrides below.
+
 # Production override: docker compose -f compose.yaml -f compose.prod.yaml ...
 # Images come from ECR (pushed by .github/workflows/deploy.yml); the SPA is served by S3/CloudFront.
 services:
@@ -19,6 +21,20 @@ services:
   credit-service:
     build: !reset null
     image: ${ECR_REGISTRY:?Set ECR_REGISTRY in .env}/foc/credit-service:${IMAGE_TAG:-latest}
+  notification-service:
+    build: !reset null
+    image: ${ECR_REGISTRY:?Set ECR_REGISTRY in .env}/foc/notification-service:${IMAGE_TAG:-latest}
+
+  # Centralized logging. Grafana stays on 127.0.0.1:3030; reach it with an SSH tunnel:
+  #   ssh -L 3030:localhost:3030 <user>@<EC2_HOST>
+  grafana:
+    environment:
+      # No default in production: a missing password fails the deploy before anything changes.
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?Set GRAFANA_ADMIN_PASSWORD in .env}
+
+  alloy:
+    environment:
+      LOG_ENV: production
 
   # Served from S3 + CloudFront in production.
   frontend:
@@ -39,6 +55,7 @@ services:
       - supplier-service
       - order-service
       - credit-service
+      - notification-service
     networks:
       - default # publishing a port needs a non-internal network
       - backend

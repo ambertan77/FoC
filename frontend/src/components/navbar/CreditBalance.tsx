@@ -19,7 +19,7 @@ const CreditBalance = ({ state, isBusy, onRetry }: CreditBalanceProps) => {
     const canRetry = state.status === "unavailable" || state.status === "delayed";
 
     return (
-        <div className="flex w-fit shrink-0 items-center gap-2 pr-3">
+        <div className="flex w-fit shrink-0 items-center gap-2 pr-2 xl:pr-3">
             <div
                 role="status"
                 aria-live="polite"

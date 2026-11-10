@@ -50,7 +50,7 @@ const MobileMenu = ({
     return (
         <Drawer open={open} onOpenChange={setOpen} swipeDirection="right">
             <DrawerTrigger render={<Button variant="ghost" size="icon-lg" />}>
-                <MenuIcon />
+                <MenuIcon className="size-5" />
             </DrawerTrigger>
 
             <DrawerContent>
@@ -60,7 +60,7 @@ const MobileMenu = ({
                             {user.username}
                         </span>
                         <DrawerClose render={<Button variant="ghost" size="icon-lg" />} >
-                            <MenuIcon />
+                            <MenuIcon className="size-5"/>
                         </DrawerClose>
                     </div>
                 </DrawerHeader>

@@ -1,6 +1,7 @@
 import type { RequestHandler } from "express";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { AppError } from "../errors/errors.js";
+import { logger } from "../libs/logger.js";
 
 function hash(value: string): Buffer {
     return createHash("sha256").update(value, "utf8").digest();
@@ -21,7 +22,7 @@ export const authenticateOrderCreditService: RequestHandler = (
         return;
     }
 
-    console.log("Authenticated request from order-credit-service successfully");
+    logger.debug("Authenticated request from order-credit-service successfully");
 
     next();
 };
