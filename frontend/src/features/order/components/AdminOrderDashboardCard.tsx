@@ -137,7 +137,7 @@ const AdminOrderDashboardCard = ({
     const SORT_ORDER_LABELS: Record<SortOrder, string> =
         sortBy === "expiryAt"
             ? { desc: "Latest expiry first", asc: "Soonest expiry first" }
-            : { desc: "Newest first", asc: "Oldest first" };
+            : { desc: "Most credits first", asc: "Least credits first" };
 
     return (
         <>
