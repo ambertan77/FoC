@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: Claude Code (Opus 5.5)
+// Date: 2026-11-03
+// Scope: Add enabled boolean to the useQuery functions so that hooks run conditionally
+// Author review: Reviewed, tested, and edited by Amber Tan Junning.
+
 import { useQuery } from "@tanstack/react-query";
 import { getUserByIdService } from "../services/order.requester.service";
 import type { Order, ViewerRole } from "../types/order.types";

@@ -1,7 +1,9 @@
 // AI Assistance Disclosure:
 // Tool: Claude AI (Sonnet 5.5 Medium)
-// Date: 2026-09-21
+// Date: 2026-09-21, 2026-10-17, 2026-11-07
 // Scope: Generated a for-loop for inserting a new opening hours row for each supplier, for each day of the week.
+//        Refactor component to use a state to track page number, rather than using the URL
+//        Fixed status tab not selected on the UI by default
 // Author review: Reviewed, tested, and edited by Amber Tan Junning.
 
 import React, { useState, useEffect } from 'react';

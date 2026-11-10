@@ -1,7 +1,7 @@
 // AI Assistance Disclosure:
 // Tool: Claude Code (Opus 5.5)
 // Date: 2026-11-06
-// Scope: Generated code to pass in date props to the date range picker UI component. 
+// Scope: Generated code to pass in date props to the date range picker UI component. Vertically aligned selectors and filters.
 // Author review: Reviewed, tested, and edited by Amber Tan Junning.
 
 import { useState } from "react";

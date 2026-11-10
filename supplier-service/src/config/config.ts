@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: Claude Code (Opus 5.5)
+// Date: 2026-11-06
+// Scope: Added storage-related variables to use local or cloud storage for supplier images
+// Author review: Reviewed, tested, and edited by Amber Tan Junning
+
 import "dotenv/config";
 
 function getEnv(name: string): string {

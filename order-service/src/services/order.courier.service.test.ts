@@ -1,7 +1,8 @@
 // AI Assistance Disclosure:
 // Tool: Claude Code (Opus 5.5)
-// Date: 2026-10-28
+// Date: 2026-10-28, 2026-11-04
 // Scope: Generated boilerplate code for setting up mock Prisma and unit testing for courier-related functions.
+//        Corrected test cases after changes in backend functions (to include optimistic concurrency control).
 // Author review: Reviewed, tested, and edited by Amber Tan Junning.
 
 import test from "node:test";

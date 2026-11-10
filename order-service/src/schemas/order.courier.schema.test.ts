@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: Claude Code (Opus 5.5)
+// Date: 2026-10-28
+// Scope: Generate unit test cases for courier-related schemas.
+// Author review: Reviewed, tested, and edited by Amber Tan Junning.
+
 import test from "node:test";
 import assert from "node:assert/strict";
 import {

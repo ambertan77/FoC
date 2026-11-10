@@ -1,3 +1,10 @@
+// AI Assistance Disclosure:
+// Tool: Claude Code (Opus 5.5)
+// Date: 2026-10-14
+// Scope: Debug totalPages returning undefined by using response.data.data instead of response.data. Match 
+//        the HTTP function used in the frontend with the expected backend method.
+// Author review: Reviewed, tested, and edited by Amber Tan Junning.
+
 import { ENDPOINTS } from "@/api/endpoints";
 import type { 
     CourierOrderHistoryParams, 
