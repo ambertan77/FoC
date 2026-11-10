@@ -2,6 +2,7 @@ import { AppError } from "../errors/errors.js";
 import { prisma } from "../libs/prisma.js";
 import { OrderEventType, OrderStatus } from "../generated/prisma/client.js";
 import { randomUUID } from "node:crypto";
+import { enqueueOrderStatusChanged } from "../libs/order-status-event.js";
 
 /* 
 expiryAt is the deadline for the order to be completed by the courier.
@@ -36,6 +37,7 @@ export async function updateExpiredOrders(): Promise<number> {
         },
         select: {
             id: true,
+            name: true,
             requesterId: true,
             courierId: true,
             status: true,
@@ -108,6 +110,13 @@ export async function updateExpiredOrders(): Promise<number> {
                         amount: order.offeredCredits,
                     }
                 }
+            });
+
+            await enqueueOrderStatusChanged(tx, {
+                order,
+                fromStatus: order.status,
+                toStatus: nextStatus,
+                version: order.version + 1,
             });
 
             return true;

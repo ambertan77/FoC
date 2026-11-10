@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "OrderEventType" ADD VALUE 'ORDER_STATUS_CHANGED';

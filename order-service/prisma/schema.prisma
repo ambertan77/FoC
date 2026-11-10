@@ -35,6 +35,7 @@ enum OrderEventType {
   ORDER_EXPIRED // Credit service release the reserved credits
   ORDER_RECEIVED // Credit service transfer the credits to the courier
   ORDER_FAILED // Credit service release the reserved credits
+  ORDER_STATUS_CHANGED // Notify users of order status change
 }
 
 enum OutboxEventStatus {
