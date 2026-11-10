@@ -2,7 +2,7 @@
 # Tool: Claude Code (Claude Sonnet 5.5)
 # Date: 2026-11-10
 # Scope: Generated the Grafana dashboard provisioning provider.
-# Author review: Reviewed, tested, checked by the author.
+# Author review: Reviewed, tested, checked by Duong Ngoc Mai.
 
 apiVersion: 1
 providers:

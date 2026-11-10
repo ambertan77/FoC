@@ -2,7 +2,7 @@
 # Tool: Claude Code (Claude Sonnet 5.5)
 # Date: 2026-11-10
 # Scope: Generated the centralized logging stack (Loki, Alloy, Grafana) as a compose file included by the root compose.yaml.
-# Author review: Reviewed, tested, checked by the author.
+# Author review: Reviewed, tested, checked by Duong Ngoc Mai.
 
 # Logs flow: service stdout (JSON) -> Docker -> Alloy (reads via the Docker API) -> Loki -> Grafana.
 # Grafana is bound to localhost only; reach it locally at http://localhost:3030, or on EC2 via an SSH tunnel.

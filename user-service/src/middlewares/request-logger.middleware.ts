@@ -2,7 +2,7 @@
 // Tool: Claude Code (Claude Sonnet 5.5)
 // Date: 2026-11-10
 // Scope: Generated the request middleware: assigns or reuses x-request-id, scopes it for all logs in the request, and writes one access-log line per response.
-// Author review: Reviewed, tested, checked by the author.
+// Author review: Reviewed, tested, checked by Duong Ngoc Mai.
 
 import { randomUUID } from "node:crypto";
 import type { RequestHandler } from "express";
