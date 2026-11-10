@@ -1065,43 +1065,6 @@ The service exits at startup if any variable marked **Required** is missing (`sr
 
 > Do not commit `.env`, private keys, or other secrets to the repository.
 
-### Database Setup
-
-From the repository root:
-
-```sh
-cd credit-service
-npm ci
-```
-
-Apply the database migrations and generate the Prisma client:
-
-```sh
-npm run db:deploy
-npm run db:generate
-```
-
-To inspect the database schema, run:
-
-```sh
-npm run db:studio
-```
-
-### Running the service
-
-Start development with `npm run dev`, or run the compiled application with `npm start`.
-
-After the HTTP server begins listening, the service starts four background workers:
-
-- the registration consumer
-- the settlement consumer
-- the reservation-request consumer
-- the result outbox publisher
-
-Each worker reconnects if RabbitMQ becomes unavailable. On `SIGINT` or `SIGTERM`, the service stops the workers and the HTTP server, then disconnects Prisma. If that takes longer than 15 seconds, it exits with code 1.
-
-`GET /healthz` only confirms that the HTTP server is running. It does not check the database, RabbitMQ, or whether students have received credits.
-
 ### Docker
 
 The root `compose.yaml` includes this folder's `compose.yaml`, which defines two containers:

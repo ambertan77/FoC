@@ -1096,32 +1096,6 @@ Create a `.env` file in the root of the Order Service and fill in the required e
 
 > Do not commit `.env`, private keys, or other secrets to the repository.
 
-### Database Setup
-
-From the repository root:
-
-```sh
-cd order-service
-npm ci
-```
-
-Apply the database migrations and generate the Prisma client:
-
-```sh
-npm run db:deploy
-npm run db:generate
-```
-
-To inspect the database schema, run:
-
-```sh
-npm run db:studio
-```
-
-Start development with `npm run dev`, or run the compiled application with `npm start`.
-
-The credit-result consumer, outbox publisher, expiry worker and receipt worker start after the HTTP server begins listening. The consumer and publisher reconnect if RabbitMQ becomes unavailable. `GET /healthz` only confirms that the HTTP server is running; it does not check the database or RabbitMQ.
-
 ### Docker
 
 The root `compose.yaml` includes this folder's `compose.yaml`, which defines two containers:

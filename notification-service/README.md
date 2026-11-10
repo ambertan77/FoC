@@ -85,7 +85,6 @@ The Notification Service does not modify orders. It reacts to order status chang
 | `PENDING_RESERVATION → OPEN` | Requester | The request is available to couriers |
 | `PENDING_RESERVATION → RESERVATION_FAILED` | Requester | Credits could not be reserved |
 | `EXPIRED → OPEN` | Requester | The renewed request is available to couriers again |
-| `OPEN → CANCELED` | Requester | The request was canceled (currently sent with the same text as an expired request) |
 
 ## Asynchronous Workflows with RabbitMQ
 
@@ -495,32 +494,6 @@ Create a `.env` file in the root of the Notification Service and fill in the req
 | `MAX_STREAMS_PER_USER` | Maximum active SSE connections per user. Required: startup fails if it is missing or not a number |
 
 > Do not commit `.env`, private keys, or other secrets to the repository.
-
-### Database Setup
-
-From the repository root:
-
-```sh
-cd notification-service
-npm ci
-```
-
-Apply the database migrations and generate the Prisma client:
-
-```sh
-npm run db:deploy
-npm run db:generate
-```
-
-To inspect the database schema, run:
-
-```sh
-npm run db:studio
-```
-
-Start development with `npm run dev`, or run the compiled application with `npm start`.
-
-The order status consumer starts after the HTTP server begins listening. It reconnects if RabbitMQ becomes unavailable. `GET /healthz` only confirms that the HTTP server is running and reports the number of open SSE connections; it does not check the database or RabbitMQ.
 
 ### Docker
 
