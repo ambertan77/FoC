@@ -6,6 +6,7 @@ const SUPPORTED_EVENT_TYPES = new Set([
     "ORDER_CANCELED",
     "ORDER_EXPIRED",
     "ORDER_FAILED",
+    "ORDER_STATUS_CHANGED",
 ]);
 
 const usage = "Usage: npm run redrive:order-outbox -- --limit <positive integer>";

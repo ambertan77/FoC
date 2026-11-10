@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        service: [user-service, supplier-service, order-service, credit-service]
+        service: [user-service, supplier-service, order-service, credit-service, notification-service]
     steps:
       - uses: actions/checkout@v5
       - uses: aws-actions/configure-aws-credentials@v4
@@ -85,7 +85,7 @@ jobs:
             dc="docker compose -f compose.yaml -f compose.prod.yaml"
             $dc pull
             $dc up -d --no-build --remove-orphans
-            for s in user-service:3000 supplier-service:3001 order-service:3002 credit-service:3003; do
+            for s in user-service:3000 supplier-service:3001 order-service:3002 credit-service:3003 notification-service:3004; do
               name=${s%%:*}; port=${s##*:}
               for i in $(seq 1 30); do
                 $dc exec -T "$name" wget -qO- "http://127.0.0.1:$port/healthz" >/dev/null 2>&1 && break
@@ -119,6 +119,7 @@ jobs:
       VITE_SUPPLIER_API_BASE_URL: /api
       VITE_ORDER_API_BASE_URL: /api
       VITE_CREDIT_API_BASE_URL: /api
+      VITE_NOTIFICATION_API_BASE_URL: /api
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5

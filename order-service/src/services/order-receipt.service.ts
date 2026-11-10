@@ -2,6 +2,7 @@ import { AppError } from "../errors/errors.js";
 import { prisma } from "../libs/prisma.js";
 import { OrderEventType, OrderStatus } from "../generated/prisma/client.js";
 import { randomUUID } from "node:crypto";
+import { enqueueOrderStatusChanged } from "../libs/order-status-event.js";
 
 /* 
 Each requester is given 30 minutes to mark a COMPLETED order as RECEIVED OR FAILED. After 30 minutes, if the 
@@ -9,7 +10,7 @@ requester has yet to update order status, the OrderReceiptWorker will update the
 
 This ensures that: (1) all orders will eventually reach the end of their lifecycle, and (2) credits will not
 get stuck in the reserve wallet. 
-*/ 
+*/
 
 export async function updateOrdersAsReceived(): Promise<number> {
     const thirtyMinutesEarlier: Date = new Date(); // current time
@@ -25,6 +26,7 @@ export async function updateOrdersAsReceived(): Promise<number> {
         },
         select: {
             id: true,
+            name: true,
             requesterId: true,
             courierId: true,
             status: true,
@@ -94,6 +96,13 @@ export async function updateOrdersAsReceived(): Promise<number> {
                         amount: order.offeredCredits,
                     }
                 }
+            });
+
+            await enqueueOrderStatusChanged(tx, {
+                order: order,
+                fromStatus: OrderStatus.COMPLETED,
+                toStatus: OrderStatus.AUTO_RECEIVED,
+                version: order.version + 1,
             });
 
             return true; // all messages and updates to databases have been published successfully

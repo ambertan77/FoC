@@ -18,7 +18,7 @@
 
 The Order Service is responsible for order management and the order lifecycle for **Aaron**.
 
-It uses authorisation and authentication from the User Service and publishes a OutboxEvent whenever another service needs to perform a follow-up action in response to an update to an order status.
+It uses authorisation and authentication from the User Service. It publishes transactional outbox events for credit operations and real-time order status notifications whenever an order changes status.
 
 In the Order Service, there are two main roles: Requester (user who created an order request) and Courier (user who accepted an open order request and is responsible for carrying out the request).
 
@@ -45,6 +45,10 @@ In the Order Service, there are two main roles: Requester (user who created an o
 - Mark accepted or picked-up requests as `AUTO_FAILED` if they have not reached `COMPLETED` by `expiryAt`
 - Mark completed requests as `AUTO_RECEIVED` if the requester does not advance the order status more than 30 minutes after completion time
 - Publish the corresponding credit event so Credit Service can release or return the reserved credits
+
+### Real-Time Notifications
+
+- Notify requesters and couriers of order status changes in real time using Server-Sent Events (SSE)
 
 ## Order Lifecycle
 
@@ -83,7 +87,7 @@ For each transition, the order service performs the below in one database transa
   - An outbox event is a message to be sent/that has been sent to RabbitMQ.
   - A message is sent to RabbitMQ only after the transaction is committed. The outbox event is marked as published only after RabbitMQ confirms the message.
 
-We use the expected version which comes from the payload and the current version for optimistic concurrency control. All order status updates, regardless of whether the endpoints are used by requesters or couriers, use optimistic concurrency control. 
+We use the expected version which comes from the payload and the current version for optimistic concurrency control. All order status updates, regardless of whether the endpoints are used by requesters or couriers, use optimistic concurrency control.
 
 ## Asynchronous Workflows with RabbitMQ
 
@@ -110,11 +114,13 @@ Every message is one of two kinds:
 | `ORDER_FAILED` | Event | Order → Credit | `order.events` (topic) | `order.failed.v1` | `credit.order-events.v1` |
 | `CREDIT_RESERVATION_SUCCEEDED` | Event | Credit → Order | `credit.events` (topic) | `credit.reservation.succeeded.v1` | `order.credit-events.v1` |
 | `CREDIT_RESERVATION_FAILED` | Event | Credit → Order | `credit.events` (topic) | `credit.reservation.failed.v1` | `order.credit-events.v1` |
+| `ORDER_STATUS_CHANGED` | Event | Order → Notification | `order.events` (topic) | `order.status.changed.v1` | `notification.order-events.v1` |
 
 ```Text
 Order Service ── RESERVE_CREDITS (command) ──▶ credit.commands ──▶ credit.reserve.v1 ──▶ Credit Service
 Order Service ── ORDER_* (events) ──────────────────────▶ order.events ─────▶ credit.order-events.v1 ──▶ Credit Service 
 Order Service ◀── CREDIT_RESERVATION_* (events) ── credit.events ◀─── Credit Service (consumed from order.credit-events.v1)
+Order Service ── ORDER_STATUS_CHANGED (event) ──▶ order.events ─────▶ notification.order-events.v1 ──▶ Notification Service
 ```
 
 ### Creating an Order and Reserving Credits
@@ -150,6 +156,38 @@ The Order Service publishes these **events** to the topic exchange `order.events
 
 For these transitions, the order, status-history row, and outbox event are written in the same Order Service transaction. The credit operation happens asynchronously after the event is published. Each event carries the `reservationId`, so Credit Service settles the exact reservation even after renewals.
 
+### Real-Time Notifications
+
+The Order Service publishes an `ORDER_STATUS_CHANGED` event whenever an order changes status.
+
+The event is written to the transactional outbox in the same database transaction as:
+
+- the order update;
+- the order status-history record; and
+- any related credit event.
+
+This guarantees that the notification event is not published unless the status change is successfully committed.
+
+#### Notification Event Payload
+
+```json
+{
+  "eventId": "33333333-3333-4333-8333-333333333333",
+  "eventType": "ORDER_STATUS_CHANGED",
+  "orderId": "11111111-1111-4111-8111-111111111111",
+  "orderName": "Buy coffee",
+  "requesterId": "22222222-2222-4222-8222-222222222222",
+  "courierId": "44444444-4444-4444-8444-444444444444",
+  "fromStatus": "PICKED_UP",
+  "toStatus": "COMPLETED",
+  "version": 4,
+  "offeredCredits": 10,
+  "occurredAt": "2026-11-10T00:00:00.000Z"
+}
+```
+
+The event is published through the Order Service outbox publisher to RabbitMQ. Notification Service consumes the event, stores a notification for each recipient, and pushes it to connected frontend clients through Server-Sent Events.
+
 ### Reliability and Duplicate Handling
 
 The outbox publisher claims pending events, publishes them using RabbitMQ publisher confirms, and marks them published after confirmation. Failed publishes are retried with backoff. Events that exceed the retry limit are marked `DEAD` for inspection and manual redrive.
@@ -175,6 +213,7 @@ Order Service declares the Credit Service owned queues that it publishes to, so 
 | `ORDER_CANCELED` | `order.events` | `order.canceled.v1` | Credit Service | `credit.order-events.v1` |
 | `ORDER_EXPIRED` | `order.events` | `order.expired.v1` | Credit Service | `credit.order-events.v1` |
 | `ORDER_FAILED` | `order.events` | `order.failed.v1` | Credit Service | `credit.order-events.v1` |
+| `ORDER_STATUS_CHANGED` | `order.events` | `order.status.changed.v1` | Notification Service | `notification.order-events.v1` |
 
 Order Service consumes reservation results using this topology:
 
@@ -242,7 +281,7 @@ The worker polls every minute and runs immediately when the service starts. It i
 
 A requester is expected to confirm the status of his/her order 30 minutes after the courier has marked the order as `COMPLETED`. If no confirmation has been received by the system, order service treats the order as one that was successfully received by the requester. This ensures all orders reach a terminal state and consequently, prevents credits from being held indefinitely in the requester's reserve wallet.
 
-The worker polls every minute and runs immediately when the service starts. At every minute, the worker first finds candidate orders to be updated, i.e. orders that are in the `COMPLETED` stage but more than 30 minutes have passed since the time recorded in the order's `completedAt` field. Then, it updates each order as `AUTO_RECEIVED` and create an `ORDER_RECEIVED` event. The worker also records a status-history entry and creates the corresponding outbox event in the same database transaction. It is stopped during graceful service shutdowns. 
+The worker polls every minute and runs immediately when the service starts. At every minute, the worker first finds candidate orders to be updated, i.e. orders that are in the `COMPLETED` stage but more than 30 minutes have passed since the time recorded in the order's `completedAt` field. Then, it updates each order as `AUTO_RECEIVED` and create an `ORDER_RECEIVED` event. The worker also records a status-history entry and creates the corresponding outbox event in the same database transaction. It is stopped during graceful service shutdowns.
 
 ## Tech Stack
 
@@ -616,7 +655,7 @@ Status | Description
 
 ### `GET /api/orders/all`
 
-Gets all orders that have been made by all users. Only authenticated admins can access this endpoint. 
+Gets all orders that have been made by all users. Only authenticated admins can access this endpoint.
 
 ```http
 Authorization: Bearer <access-token>
@@ -625,15 +664,15 @@ Authorization: Bearer <access-token>
 #### Query Parameters
 
 | Query Parameter | Description | Requirement | Default Value |
-|---|---|---|---|
-| page | Page number we are querying for.  | Required |  |  |
-| statuses | Order statuses that we are filtering by. This field is a string that holds comma-separated order statuses.  | Optional |  |
+| --- | --- | --- | --- |
+| page | Page number we are querying for.  | Required | | |
+| statuses | Order statuses that we are filtering by. This field is a string that holds comma-separated order statuses.  | Optional | |
 | sortBy | Parameter used to sort orders by. This parameter can only be `createdAt` or `expiryAt`.  | Optional | createdAt |
 | sortOrder | Parameter used to determine the sorting order. Only `asc` and `desc` are the allowed options.  | Optional | desc |
-| filterLocation | The supplier ID we want to filter orders by. Orders returned will either have a pickup supplier or delivery supplier with the given supplier ID.  | Optional |  |
-| searchString | Orders returned will have a name that partially (or fully) matches this parameter.  | Optional |  |
-| startDate | Supports filtering with a date range. All orders returned must be created either on or after `startDate`. | Optional |  |
-| endDate | Supports filtering with a date range. All orders returned must be created either on or before `endDate`. | Optional  |  |
+| filterLocation | The supplier ID we want to filter orders by. Orders returned will either have a pickup supplier or delivery supplier with the given supplier ID.  | Optional | |
+| searchString | Orders returned will have a name that partially (or fully) matches this parameter.  | Optional | |
+| startDate | Supports filtering with a date range. All orders returned must be created either on or after `startDate`. | Optional | |
+| endDate | Supports filtering with a date range. All orders returned must be created either on or before `endDate`. | Optional  | |
 
 ```text
 ?page=1&statuses="OPEN,ACCEPTED,PICKED_UP,COMPLETED,PENDING_RESERVATION"&sortBy=expiryAt&sortOrder=asc&filterLocation=&searchString=&startDate=&endDate=

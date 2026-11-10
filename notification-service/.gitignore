@@ -1,0 +1,17 @@
+# dependencies
+node_modules
+# Keep environment variables out of version control
+.env
+
+# secrets 
+key
+*.pem
+*.key
+
+# prisma unused folders (agents)
+.agents
+.claude
+.windsurf
+skills-lock.json
+
+/src/generated/prisma

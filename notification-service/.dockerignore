@@ -1,0 +1,10 @@
+node_modules
+dist
+src/generated
+.env
+.env.*
+keys
+*.pem
+*.key
+.git
+.DS_Store

@@ -8,6 +8,7 @@ import {
 import { AppError } from "../errors/errors.js";
 import { prisma } from "../libs/prisma.js";
 import { reservationRequestPayloadSchema, type CreateRequestPayload, type CreditReservationResult, type RenewRequestPayload } from "../schemas/credit-reservation-result.schema.js";
+import { enqueueOrderStatusChanged } from "../libs/order-status-event.js";
 
 function assertSameReplay(
     stored: {
@@ -81,6 +82,13 @@ async function applyCreateResult(
             changedBy: null,
             reason: succeeded ? null : event.reasonCode,
         },
+    });
+
+    await enqueueOrderStatusChanged(tx, {
+        order,
+        fromStatus: OrderStatus.PENDING_RESERVATION,
+        toStatus: nextStatus,
+        version: order.version + 1,
     });
 }
 
@@ -156,6 +164,13 @@ async function applyRenewResult(
                 changedBy: null,
                 reason: "Request renewed",
             },
+        });
+
+        await enqueueOrderStatusChanged(tx, {
+            order,
+            fromStatus: OrderStatus.EXPIRED,
+            toStatus: OrderStatus.OPEN,
+            version: order.version + 1,
         });
     }
 }

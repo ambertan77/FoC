@@ -1,0 +1,47 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Notification {
+  id String @id @default(uuid()) @db.Uuid
+
+  // Monotonic sequence: used as the SSE event id so a reconnecting client
+  // (Last-Event-ID) can replay everything it missed.
+  seq Int @unique @default(autoincrement())
+
+  // Recipient (user-service ID, no cross-service foreign key)
+  userId  String @db.Uuid
+  orderId String @db.Uuid
+
+  // The order event that produced this notification
+  eventId String @db.Uuid
+
+  type  String @db.VarChar(50) // the order's new status
+  title String @db.VarChar(255)
+  body  String @db.VarChar(500)
+  data  Json
+
+  readAt    DateTime? @db.Timestamptz(6)
+  createdAt DateTime  @default(now()) @db.Timestamptz(6)
+
+  // A redelivered event can never notify the same user twice
+  @@unique([userId, eventId])
+  @@index([userId, seq(sort: Desc)])
+  @@index([userId, readAt])
+}
+
+// Inbox: one row per processed order event
+model ProcessedEvent {
+  eventId     String   @id @db.Uuid
+  processedAt DateTime @default(now()) @db.Timestamptz(6)
+}
