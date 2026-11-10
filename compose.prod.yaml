@@ -19,6 +19,9 @@ services:
   credit-service:
     build: !reset null
     image: ${ECR_REGISTRY:?Set ECR_REGISTRY in .env}/foc/credit-service:${IMAGE_TAG:-latest}
+  notification-service:
+    build: !reset null
+    image: ${ECR_REGISTRY:?Set ECR_REGISTRY in .env}/foc/notification-service:${IMAGE_TAG:-latest}
 
   # Served from S3 + CloudFront in production.
   frontend:
@@ -39,6 +42,7 @@ services:
       - supplier-service
       - order-service
       - credit-service
+      - notification-service
     networks:
       - default # publishing a port needs a non-internal network
       - backend
