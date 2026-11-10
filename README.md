@@ -123,13 +123,14 @@ queue instead of cancelling it. The jobs:
    in `AY2627S1-CS3219-P20/FoC`, so on forks it and the rest of the deploy
    are skipped.
 3. **`deploy-backend`**:
-   1. copies the compose files, `gateway/nginx.conf` and `data/csv` to
-      `EC2_APP_DIR`
+   1. copies the compose files, `gateway/nginx.conf`, `observability/` and
+      `data/csv` to `EC2_APP_DIR`
    2. logs in to ECR, pulls the new images and runs
       `docker compose -f compose.yaml -f compose.prod.yaml up -d`
    3. waits for every service's `/healthz` and prints that service's logs
       if one stays unhealthy
-   4. reloads the gateway and saves `IMAGE_TAG` in the server `.env`
+   4. reloads the gateway, restarts Loki, Alloy and Grafana (so edited config
+      is picked up) and saves `IMAGE_TAG` in the server `.env`
    5. finally, checks that `https://<CloudFront domain>/api/users/me`
       returns 401, which proves the CloudFront → gateway → service path
       works
@@ -171,8 +172,10 @@ The workflow assumes this already exists:
   - the instance can pull from ECR
   - port 80 is reachable from CloudFront
 - **Files in `EC2_APP_DIR`**, which the deploy never copies:
-  - `.env` with `ECR_REGISTRY=<account-id>.dkr.ecr.<region>.amazonaws.com`.
-    The deploy adds `IMAGE_TAG` itself.
+  - `.env` with `ECR_REGISTRY=<account-id>.dkr.ecr.<region>.amazonaws.com`
+    and a `GRAFANA_ADMIN_PASSWORD`. The deploy writes it from the
+    `GRAFANA_ADMIN_PASSWORD` GitHub secret if `.env` has none, and fails if
+    neither exists. The deploy adds `IMAGE_TAG` itself.
   - each service's `.env`, filled in from its `.env.example`
   - `user-service/keys/private.pem` and `public.pem`, plus
     `supplier-service/keys/public.pem` (see
@@ -244,12 +247,13 @@ If macOS reports `docker: command not found` and Docker Desktop installed its CL
 
 ### Local ports
 
-Only the frontend is published, on `127.0.0.1`:
+Only the frontend and Grafana are published, both on `127.0.0.1`:
 
 | What | Address |
 | --- | --- |
 | Web app | <http://localhost:5173> (`FRONTEND_PORT` in `frontend/.env`) |
 | API | <http://localhost:5173/api/...>, proxied by the frontend container's nginx |
+| Grafana (logs) | <http://localhost:3030>, see [Centralized Logging](#centralized-logging) |
 
 Nothing else is reachable from the host:
 
@@ -263,6 +267,33 @@ To inspect a database, use `docker compose exec`:
 ```sh
 docker compose exec user-postgres psql -U foc_user users
 ```
+
+---
+
+## Centralized Logging
+
+Every service writes one JSON log line per event to stdout. Alloy reads the
+containers' logs through the Docker API, pushes them to Loki (7-day
+retention), and Grafana shows them.
+
+```
+service stdout (JSON) → Docker → Alloy → Loki → Grafana
+```
+
+- **Open Grafana:** <http://localhost:3030> locally (user `admin`, password
+  `foc-local-only` unless `GRAFANA_ADMIN_PASSWORD` is set). On EC2 it
+  listens on localhost only, so use a tunnel:
+  `ssh -L 3030:localhost:3030 <user>@<EC2_HOST>`, then open the same URL.
+- **Dashboard:** *FoC Service Logs*. Filter by service and level, or paste a
+  request ID into the search box to follow one request across services.
+- **Request IDs:** nginx stamps every request with `X-Request-Id`. Each log
+  line carries it as `reqId`, and `order-service` forwards it to
+  `supplier-service`. It is not carried through RabbitMQ events.
+- **Log level:** set `LOG_LEVEL` (`debug`, `info`, `warn`, `error`) in a
+  service's `.env`. The default is `info`.
+- **Readable logs on the host:** `npm run dev` pipes through `pino-pretty`.
+  Containers always log JSON so Loki can parse it.
+- **Config:** everything lives in `observability/`.
 
 ---
 

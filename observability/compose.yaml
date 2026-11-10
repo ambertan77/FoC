@@ -13,7 +13,8 @@ services:
     command: ["-config.file=/etc/loki/config.yaml"]
     mem_limit: 512m
     volumes:
-      - ./loki/config.yaml:/etc/loki/config.yaml:ro
+      # Mount folders, not files: scp replaces files and a single-file mount keeps the old one.
+      - ./loki:/etc/loki:ro
       - loki_data:/loki
     networks:
       - observability
@@ -32,7 +33,7 @@ services:
       COMPOSE_PROJECT_NAME: ${COMPOSE_PROJECT_NAME:-foc}
       LOG_ENV: ${LOG_ENV:-local}
     volumes:
-      - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - ./alloy:/etc/alloy:ro
       - alloy_data:/var/lib/alloy/data
       # Alloy discovers containers and reads their logs through the Docker API.
       - /var/run/docker.sock:/var/run/docker.sock:ro
