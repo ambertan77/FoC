@@ -2,7 +2,7 @@
 // Tool: Claude Code (Claude Sonnet 5.5)
 // Date: 2026-11-10
 // Scope: Generated the shared pino logger: JSON output with a string level for Loki, secret redaction, and a request-ID mixin backed by AsyncLocalStorage.
-// Author review: Pending review by the author.
+// Author review: Reviewed, tested, checked by the author.
 
 import { AsyncLocalStorage } from "node:async_hooks";
 import pino from "pino";
