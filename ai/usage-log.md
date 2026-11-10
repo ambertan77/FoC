@@ -344,8 +344,6 @@ Tools for all entries: **ChatGPT (5.6 Luna)**, **ChatGPT (Astra 6)**, **Claude C
 - **Files:** `.env.example`, `ai/usage-log.md`, `README.md`, `frontend/README.md`, `user-service/README.md`, `credit-service/README.md`
 - **Prompt:** "can you help me check the repo docs needs any updating, api docs, readmes."
 - **Key response:** Audited the root, frontend and service READMEs and the root `.env.example` against the code (routes, schemas, config, Compose files, workflows, gateway). Produced a list of stale and missing items and a commit-by-commit update plan. The order-service and supplier-service findings were handed to their owners instead of being edited.
-- **Kept/changed:** _To fill in after review._
-- **Verification:** _To fill in after review._
 
 # Detailed AI Usage Log for Amber Tan Junning
 
