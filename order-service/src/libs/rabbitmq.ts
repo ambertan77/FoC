@@ -1,4 +1,10 @@
 // AI Assistance Disclosure:
+// Tool: Claude Code (Claude Sonnet 5.5)
+// Date: 2026-11-10
+// Scope: Later edit to this file: Replaced console.* with the pino logger.
+// Author review: Pending review by the author.
+
+// AI Assistance Disclosure:
 // Tool: ChatGPT (5.6 Luna), Claude Code (Claude Sonnet 5.5)
 // Date: approx. 2026-11-05
 // Scope: Refactored RabbitMQ functionality so its connection, channel, publishing, consuming, and retry-related functions are reusable.

@@ -1,3 +1,9 @@
+// AI Assistance Disclosure:
+// Tool: Claude Code (Claude Sonnet 5.5)
+// Date: 2026-11-10
+// Scope: Later edit to this file: Replaced console.* with the pino logger.
+// Author review: Pending review by the author.
+
 // Code Reference:
 // "Transactional Outbox Pattern in Node.js: Building Reliable ..."
 // LinkedIn, https://www.linkedin.com/pulse/transactional-outbox-pattern-nodejs-building-reliable-sex5c/
