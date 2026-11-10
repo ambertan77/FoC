@@ -1,0 +1,33 @@
+services:
+  # Source: Docker Hub Official Postgres Image — https://hub.docker.com/_/postgres
+  notification-postgres:
+    image: postgres:17
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5437:5432"
+    environment:
+      POSTGRES_DB: ${NOTIFICATION_POSTGRES_DB:?Set NOTIFICATION_POSTGRES_DB in notification-service/.env}
+      POSTGRES_USER: ${NOTIFICATION_POSTGRES_USER:?Set NOTIFICATION_POSTGRES_USER in notification-service/.env}
+      POSTGRES_PASSWORD: ${NOTIFICATION_POSTGRES_PASSWORD:?Set NOTIFICATION_POSTGRES_PASSWORD in notification-service/.env}
+    volumes:
+      - notification_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 5s
+      timeout: 2s
+      retries: 20
+
+  notification-service:
+    build: .
+    restart: unless-stopped
+    # ports:
+    #   - "${PORT:?Set PORT in notification-service/.env}:${PORT}"
+    env_file: .env
+    volumes:
+      - ../user-service/keys/public.pem:${JWT_PUBLIC_KEY_PATH:?Set JWT_PUBLIC_KEY_PATH in notification-service/.env}:ro
+    depends_on:
+      notification-postgres:
+        condition: service_healthy
+
+volumes:
+  notification_postgres_data:
